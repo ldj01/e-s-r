@@ -10,7 +10,7 @@ TOP = ../../..
 include $(TOP)/make.config
 
 # Define scripts
-SCRIPTS = updatelads.py
+SCRIPTS = updatelads.py updatelut.py
 
 #-----------------------------------------------------------------------------
 all:

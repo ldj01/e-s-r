@@ -201,7 +201,12 @@ class SurfaceReflectance():
             app_name = 'lasrc'
         else:
             app_name = 'lasrc_pre_collection'
- 
+
+        # Retrieve the auxiliary data.
+        cmdstr = ("updatelut.py")
+        (status, output) = commands.getstatusoutput(cmdstr)
+        logger.info(output)
+
         # run surface reflectance algorithm, checking the return status.  exit
         # if any errors occur.
         process_sr_opt_str = "--process_sr=true "

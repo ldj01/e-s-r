@@ -11,11 +11,12 @@ DIR_LEDAPS = ledaps
 DIR_LaSRC = lasrc
 
 #-----------------------------------------------------------------------------
-all: all-script all-ledaps all-lasrc
+all: all-script all-ledaps all-lasrc all-lasrc-aux
 
-install: check-environment install-script install-ledaps install-lasrc
+install: check-environment install-script install-ledaps install-lasrc \
+         install-lasrc-aux
 
-clean: clean-script clean-ledaps clean-lasrc
+clean: clean-script clean-ledaps clean-lasrc clean-lasrc-aux
 
 #-----------------------------------------------------------------------------
 all-script:

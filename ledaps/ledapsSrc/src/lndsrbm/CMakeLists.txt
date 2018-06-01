@@ -1,9 +1,9 @@
 include_directories(${ESPA_INCLUDES})
 include_directories(${XML_INCLUDES})
-include_directories(${HDFINC})
-include_directories(${HDFEOS_INC})
+include_directories(${HDF4_INCLUDES})
+include_directories(${HDFEOS_INCLUDES})
 include_directories(${ZLIBINC})
-include_directories(${HDFEOS_GCTPINC})
+include_directories(${GCTP_INCLUDES})
 
 link_directories(${ESPA_LIBS})
 
@@ -25,12 +25,12 @@ target_link_libraries(dump_meta -lespa_raw_binary -lespa_common
 add_executable(xy2geo LS_geoloc_driver.c LS_geoloc.c)
 target_link_libraries(xy2geo -lespa_raw_binary -lespa_common
                       -lespa_format_conversion
-                      ${XML_LIBS} ${HDF4_LIBS} ${HDFEOS_GCTPLIBS} m)
+                      ${XML_LIBS} ${HDF4_LIBS} ${GCTP_LIBS} m)
 
 add_executable(geo2xy LS_geoloc_driver.c LS_geoloc.c)
 target_link_libraries(geo2xy -lespa_raw_binary -lespa_common
                       -lespa_format_conversion
-                      ${XML_LIBS} ${HDF4_LIBS} ${HDFEOS_GCTPLIBS} m)
+                      ${XML_LIBS} ${HDF4_LIBS} ${GCTP_LIBS} m)
 
 add_executable(SDSreader3.0 SDSreader3.0.c)
 target_link_libraries(SDSreader3.0 -lespa_raw_binary -lespa_common

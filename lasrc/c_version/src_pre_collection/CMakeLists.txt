@@ -1,7 +1,7 @@
 include_directories(${ESPA_INCLUDES})
 include_directories(${XML_INCLUDES})
-include_directories(${HDFINC})
-include_directories(${HDFEOS_INC})
+include_directories(${HDF4_INCLUDES})
+include_directories(${HDFEOS_INCLUDES})
 include_directories(${ZLIBINC})
 
 link_directories(${ESPA_LIBS})

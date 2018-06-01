@@ -46,7 +46,7 @@ If this is an OLI-only scene then SR corrections cannot be applied
 If the solar zenith angle > 76 degrees then SR corrections cannot be applied
 Read the input QA band
 If process_sr then make sure the auxiliary files exist
-Compute the TOA reflectance and at-sensor brightness temperatures (BT) (see TOA Algorithm Description)
+Compute the TOA reflectance and brightness temperatures (BT) (see TOA Algorithm Description)
 If write_toa then
     Write the TOA values for bands 1-7 (reflectance bands)
     Append the TOA bands 1-7 to the XML file

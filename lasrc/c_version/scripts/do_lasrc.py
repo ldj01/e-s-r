@@ -18,22 +18,6 @@ SUCCESS = 0
 # auxiliary file needed for processing, based on the date of the Landsat 8
 # input file.
 #
-# History:
-#   Updated on 9/9/2014 by Gail Schmidt, USGS/EROS
-#   Use standard python logging instead of a user-defined log file
-#
-#   Updated on 11/13/2015 by Gail Schmidt, USGS/EROS
-#   Removed the --usebin command line argument.  All executables are expected
-#       to be in the PATH.
-#
-#   Updated on 1/13/2016 by Gail Schmidt, USGS/EROS
-#   Modified to support the new collection filenaming convention
-#
-#   Updated on 8/24/2016 by Gail Schmidt, USGS/EROS
-#   Modified to flag collection scenes for special handling of QA output
-#       in LaSRC processing. Additional command-line option is passed to
-#       the lasrc executable.
-#
 # Usage: do_lasrc.py --help prints the help message
 ############################################################################
 class SurfaceReflectance():
@@ -97,7 +81,7 @@ class SurfaceReflectance():
             # XML input file
             xml_infile = options.xml
             if xml_infile == None:
-                parser.error ("missing input XML file command-line argument");
+                parser.error ('missing input XML file command-line argument');
                 return ERROR
 
             # surface reflectance options
@@ -106,19 +90,20 @@ class SurfaceReflectance():
 
         # get the logger
         logger = logging.getLogger(__name__)
-        msg = 'Surface reflectance processing of Landsat file: %s' % xml_infile
+        msg = ('Surface reflectance processing of Landsat file: {}'
+               .format(xml_infile))
         logger.info (msg)
         
         # make sure the XML file exists
         if not os.path.isfile(xml_infile):
-            msg = "Error: XML file does not exist or is not accessible: " + \
-                xml_infile
+            msg = ('XML file does not exist or is not accessible: {}'
+                   .format(xml_infile))
             logger.error (msg)
             return ERROR
 
         # use the base XML filename and not the full path.
         base_xmlfile = os.path.basename (xml_infile)
-        msg = 'Processing XML file: %s' % base_xmlfile
+        msg = 'Processing XML file: {}'.format(base_xmlfile)
         logger.info (msg)
         
         # get the path of the XML file and change directory to that location
@@ -130,93 +115,76 @@ class SurfaceReflectance():
         mydir = os.getcwd()
         xmldir = os.path.dirname (os.path.abspath (xml_infile))
         if not os.access(xmldir, os.W_OK):
-            msg = 'Path of XML file is not writable: %s.  Script needs ' + \
-                'write access to the XML directory.' % xmldir
+            msg = ('Path of XML file is not writable: {}. Script needs '
+                   'write access to the XML directory.'.format(xmldir))
             logger.error (msg)
             return ERROR
-        msg = 'Changing directories for surface reflectance processing: %s' % \
-            xmldir
+        msg = ('Changing directories for surface reflectance processing: {}'
+               .format(xmldir))
         logger.info (msg)
         os.chdir (xmldir)
 
         # pull the date from the XML filename to determine which auxiliary
-        # file should be used for input.  Example: LC80410272013181LGN00.xml
-        # uses L8ANC2013181.hdf_fused.  Similarly, the new collection naming
-        # convention LC08_L1TP_041027_20130630_20140312_02.xml also used the
-        # 2013181 HDF file.
-        l8_prefixes_old = ['LC8', 'LO8']
+        # file should be used for input.
+        # Example: LC08_L1TP_041027_20130630_20140312_01_T1.xml uses the
+        # L8ANC2013181.hdf_fused HDF file.
         l8_prefixes_collection = ['LC08', 'LO08']
-        if base_xmlfile[0:3] in l8_prefixes_old:
-            # Old-style Level-1 naming convention. Just pull the year and DOY
-            # from the XML filename.
-            processing_collection = False
-            aux_file = 'L8ANC' + base_xmlfile[9:16] + '.hdf_fused'
-        elif base_xmlfile[0:4] in l8_prefixes_collection:
-            # New-style collection naming convention. Pull the year, month,
-            # day from the XML filename. It should be the 4th group, separated
-            # by underscores. Then convert month, day to DOY.
-            processing_collection = True
+        if base_xmlfile[0:4] in l8_prefixes_collection:
+            # Collection naming convention. Pull the year, month, day from the
+            # XML filename. It should be the 4th group, separated by
+            # underscores. Then convert month, day to DOY.
             aux_date = base_xmlfile.split('_')[3]
             aux_year = aux_date[0:4]
             aux_month = aux_date[4:6]
             aux_day = aux_date[6:8]
             myday = datetime.date(int(aux_year), int(aux_month), int(aux_day))
             aux_doy = myday.strftime("%j")
-            aux_file = 'L8ANC' + aux_year + aux_doy + '.hdf_fused'
+            aux_file = 'L8ANC{}{}.hdf_fused'.format(aux_year, aux_doy)
         else:
             msg = ('Base XML filename is not recognized as a valid Landsat8 '
-                   'scene name' + base_xmlfile)
+                   'scene name'.format(base_xmlfile))
             logger.error (msg)
             os.chdir (mydir)
             return ERROR
 
-        # if processing collections, the per-pixel angle bands need to be
-        # generated for band 4 (representative band)
-        if processing_collection:
-            cmdstr = "create_l8_angle_bands --xml %s" % (base_xmlfile)
-#            logger.debug('per-pixel angles command: {0}'.format(cmdstr))
-            (status, output) = commands.getstatusoutput(cmdstr)
-            logger.info(output)
-            exit_code = status >> 8
-            if exit_code != 0:
-                logger.error('Error running create_l8_angle_bands. Processing '
-                             'will terminate.')
-                os.chdir(mydir)
-                return ERROR
+        # generate per-pixel angle bands for band 4 (representative band)
+        cmdstr = 'create_l8_angle_bands --xml {}'.format(base_xmlfile)
+        logger.debug('per-pixel angles command: {0}'.format(cmdstr))
+        (status, output) = commands.getstatusoutput(cmdstr)
+        logger.info(output)
+        exit_code = status >> 8
+        if exit_code != 0:
+            logger.error('Error running create_l8_angle_bands. Processing '
+                         'will terminate.')
+            os.chdir(mydir)
+            return ERROR
 
-            # Mask the angle bands to match the band quality band
-            cmdstr = ('mask_per_pixel_angles.py --xml {}'
-                      .format(base_xmlfile))
-            (status, output) = commands.getstatusoutput(cmdstr)
-            logger.info(output)
-            exit_code = status >> 8
-            if exit_code != 0:
-                logger.error('Error masking angle bands with the band '
-                             'quality band. Processing will terminate.')
-                return ERROR
+        # Mask the angle bands to match the band quality band
+        cmdstr = ('mask_per_pixel_angles.py --xml {}'
+                  .format(base_xmlfile))
+        (status, output) = commands.getstatusoutput(cmdstr)
+        logger.info(output)
+        exit_code = status >> 8
+        if exit_code != 0:
+            logger.error('Error masking angle bands with the band '
+                         'quality band. Processing will terminate.')
+            return ERROR
 
-        # determine the application name depending on whether or not we are
-        # processing collection or pre-collection data
-        if processing_collection:
-            app_name = 'lasrc'
-        else:
-            app_name = 'lasrc_pre_collection'
- 
         # run surface reflectance algorithm, checking the return status.  exit
         # if any errors occur.
-        process_sr_opt_str = "--process_sr=true "
-        write_toa_opt_str = ""
+        process_sr_opt_str = '--process_sr=true '
+        write_toa_opt_str = ''
 
-        if process_sr == "False":
-            process_sr_opt_str = "--process_sr=false "
+        if process_sr == 'False':
+            process_sr_opt_str = '--process_sr=false '
         if write_toa:
-            write_toa_opt_str = "--write_toa "
+            write_toa_opt_str = '--write_toa '
 
-        cmdstr = "%s --xml=%s --aux=%s %s%s--verbose" % \
-            (app_name, xml_infile, aux_file, process_sr_opt_str,
-             write_toa_opt_str)
-        msg = 'Executing lasrc command: %s' % cmdstr
-        logger.info (msg)
+        cmdstr = ('lasrc --xml={} --aux={} {}{}--verbose'
+                  .format(xml_infile, aux_file, process_sr_opt_str,
+                          write_toa_opt_str))
+        msg = 'Executing lasrc command: {}'.format(cmdstr)
+        logger.debug (msg)
         (status, output) = commands.getstatusoutput (cmdstr)
         logger.info (output)
         exit_code = status >> 8

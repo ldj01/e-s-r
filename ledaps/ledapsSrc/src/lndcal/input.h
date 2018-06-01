@@ -118,13 +118,13 @@ typedef struct {
 
 /* Prototypes */
 
-Input_t *OpenInput(Espa_internal_meta_t *metadata, bool process_collection);
+Input_t *OpenInput(Espa_internal_meta_t *metadata);
 bool GetInputLine(Input_t *this, int iband, int iline, unsigned char *line);
 bool GetInputLineTh(Input_t *this, int iline, unsigned char *line);
 bool GetInputLineSunZen(Input_t *this, int iline, int16 *line);
 bool CloseInput(Input_t *this);
 bool FreeInput(Input_t *this);
 bool InputMetaCopy(Input_meta_t *this, int nband, Input_meta_t *copy);
-bool GetXMLInput(Input_t *this, Espa_internal_meta_t *metadata, bool process_collection);
+bool GetXMLInput(Input_t *this, Espa_internal_meta_t *metadata);
 
 #endif

@@ -111,13 +111,10 @@ Param_t *GetParam(int argc, char *argv[])
 
   int c;                           /* current argument index */
   int option_index;                /* index for the command-line option */
-  static int process_collection_flag=0; /* flag to process this scene as a
-                                           collection product */
   static int version_flag=0;       /* flag to print version number instead
                                       of processing */ 
   static struct option long_options[] =
   {
-      {"process_collection", no_argument, &process_collection_flag, 1},
       {"pfile", required_argument, 0, 'p'},
       {"help", no_argument, 0, 'h'},
       {"version", no_argument, &version_flag, 1},
@@ -194,11 +191,6 @@ Param_t *GetParam(int argc, char *argv[])
   this->dem_file = NULL;
   this->dem_flag = false;
   this->thermal_band=false;              /* is the thermal band available */
-  this->process_collection = false;      /* are we processing a collection */
-
-  /* Check the command-line flags */
-  if (process_collection_flag)
-    this->process_collection = true;
 
   /* Populate the data structure */
   this->param_file_name = DupString(param_file_name);

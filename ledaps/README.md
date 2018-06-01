@@ -1,5 +1,5 @@
-## Ledaps Version 3.2.1 Release Notes
-Release Date: August 2017
+## Ledaps Version 3.3.0 Release Notes
+Release Date: March 2018
 
 ### Downloads
 Ledaps source code
@@ -10,7 +10,7 @@ Ledaps auxiliary files
 
     http://edclpdsftp.cr.usgs.gov/downloads/auxiliaries/ledaps_auxiliary/ledaps_aux.1978-2017.tar.gz
 
-See git tag [ledaps-version_3.2.1]
+See git tag [ledaps-version_3.3.0]
 
 ### Installation
   * Install dependent projects and libraries - ESPA product formatter (https://github.com/USGS-EROS/espa-product-formatter) and ESPA python library (https://github.com/USGS-EROS/espa-python-library)
@@ -77,7 +77,7 @@ See git tag [ledaps-version_3.2.1]
     3. CMGDEM HDF file (GTOPO5)
 
 ### Auxiliary Data Updates
-This baseline auxiliary files provided are good into 2014.  In order to update the auxiliary files to the most recent day of year (actually the most current auxiliary files available will be 2-3 days prior to the current day of year do to the latency of the underlying NCEP and TOMS products) the user will want to run the updatencep.py and updatetoms.py scripts available in $PREFIX/bin.  Both scripts can be run with the "--help" argument to print the usage information for each script.  In general the --quarterly argument will reprocess/update all the NCEP/TOMS data back to 1978.  This is good to do every once in a while to make sure any updates to the NCEP or TOMS data products are captured.  The --today command-line argument will process the NCEP/TOMS data for the most recent year.  In general, it is suggested to run the scripts with --quarterly once a quarter.  Then run the scripts with --today on a nightly basis.  This should provide an up-to-date version of the auxiliary input data for LEDAPS.  The easiest way to accomplish this is to set up a nightly and quarterly cron job.
+This baseline auxiliary files provided are good into 2017.  In order to update the auxiliary files to the most recent day of year (actually the most current auxiliary files available will be 2-3 days prior to the current day of year do to the latency of the underlying NCEP and TOMS products) the user will want to run the updatencep.py and updatetoms.py scripts available in $PREFIX/bin.  Both scripts can be run with the "--help" argument to print the usage information for each script.  In general the --quarterly argument will reprocess/update all the NCEP/TOMS data back to 1978.  This is good to do every once in a while to make sure any updates to the NCEP or TOMS data products are captured.  The --today command-line argument will process the NCEP/TOMS data for the most recent year.  In general, it is suggested to run the scripts with --quarterly once a quarter.  Then run the scripts with --today on a nightly basis.  This should provide an up-to-date version of the auxiliary input data for LEDAPS.  The easiest way to accomplish this is to set up a nightly and quarterly cron job.
 
 ### Data Preprocessing
 This version of the LEDAPS application requires the input Landsat products to be in the ESPA internal file format.  After compiling the espa-common raw\_binary libraries and tools, the convert\_lpgs\_to\_espa command-line tool can be used to create the ESPA internal file format for input to the LEDAPS application.
@@ -92,6 +92,10 @@ After compiling the product-formatter raw\_binary libraries and tools, the conve
 ### Product Guide
 
 ## Release Notes
-  1. Clarified the error message for solar angles that are greater than 76
-     degrees.  These are flagged as being too large for surface reflectance
-     processing, but removed the phrase that indicated they are out of range.
+  1. Removed support for pre-Collection data.
+  2. Cleaned up the source code and removed modules that are no longer used.
+     lndcsm (cloud mask) hasn't been used in many years.
+     lndsrbm (post-processing cloud mask) is no longer used.  The cloud QA
+     information written for these products needs to represent what was used
+     for the surface reflectance corrections, not something generated after the
+     corrections were applied.

@@ -321,8 +321,8 @@ Output_t *open_output
             else if (ib == SR_BAND10 || ib == SR_BAND11)  /* thermal bands */
             {
                 sprintf (bmeta[ib].name, "bt_band%d", ib+2);
-                sprintf (bmeta[ib].long_name, "band %d at-satellite brightness "
-                    "temperature", ib+2);
+                sprintf (bmeta[ib].long_name, "band %d top-of-atmosphere "
+                    "brightness temperature", ib+2);
                 sprintf (bmeta[ib].data_units, "temperature (kelvin)");
             }
         }

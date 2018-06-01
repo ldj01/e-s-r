@@ -23,8 +23,8 @@ NOTES:
    10 and 11 are corrected to brightness temperature.
 2. SDstart and SDreaddata have minor memory leaks.  Ultimately both call
    HAregister_atom which makes a malloc call and the memory is never freed.
-3. Conversion algorithms for TOA reflectance and at-sensor brightness
-   temperature are available from
+3. Conversion algorithms for TOA reflectance and TOA brightness temperature are
+   available from
    http://landsat.usgs.gov/Landsat8_Using_Product.php
 4. The TOA and SR corrections utilize solar and view angles.  Previous versions
    simply corrected every pixel for the solar angles at the scene center.
@@ -195,7 +195,7 @@ int main (int argc, char *argv[])
     if (input->meta.inst == INST_OLI && process_sr)
     {
         sprintf (errmsg, "This is an OLI-only scene vs. an OLI-TIRS scene. "
-            "Corrections must be limited to top of atmosphere and at-sensor "
+            "Corrections must be limited to top-of-atmosphere reflectance and "
             "brightness temperature corrections. Use the --process_sr=false "
             "command-line argument to process. (oli-only cannot be corrected "
             "to surface reflectance)");
@@ -209,8 +209,8 @@ int main (int argc, char *argv[])
     if (xts > 76.0 && process_sr)
     {
         sprintf (errmsg, "Solar zenith angle is too large to allow for surface "
-            "reflectance processing.  Corrections must be limited to top of "
-            "atmosphere and at-sensor brightness temperature corrections. "
+            "reflectance processing.  Corrections must be limited to top-of-"
+            "atmosphere reflectance and brightness temperature corrections. "
             "Use the --process_sr=false command-line argument. "
             "(solar zenith angle out of range)");
         error_handler (true, FUNC_NAME, errmsg);
@@ -338,14 +338,14 @@ int main (int argc, char *argv[])
         }
     }
 
-    /* Compute the TOA reflectance and at-sensor brightness temp */
-    printf ("Calculating TOA reflectance and at-sensor brightness temps...");
+    /* Compute the TOA reflectance and TOA brightness temp */
+    printf ("Calculating TOA reflectance and TOA brightness temps...");
     retval = compute_toa_refl (input, &xml_metadata, qaband, nlines, nsamps,
         gmeta->instrument, sza, sband, radsat);
     if (retval != SUCCESS)
     {
-        sprintf (errmsg, "Error computing TOA reflectance and at-sensor "
-            "brightness temperatures.");
+        sprintf (errmsg, "Error computing TOA reflectance and TOA brightness "
+            "temperatures.");
         error_handler (true, FUNC_NAME, errmsg);
         exit (ERROR);
     }
@@ -583,10 +583,10 @@ void usage ()
             "reflectance values for the input Landsat 8 DN products.  Surface "
             "reflectance correction and/or top of atmosphere correction is "
             "applied and written for bands 1-7.  Top of atmosphere and "
-            "at-sensor corrections are applied and written for bands 9 "
-            "(cirrus), 10 (thermal), and 11 (thermal).  Surface reflectance "
-            "corrections are available for OLI_TIRS products.  OLI-only scenes "
-            "are corrected up through TOA and not surface reflectance.\n\n");
+            "corrections are applied and written for bands 9 (cirrus), "
+            "10 (thermal), and 11 (thermal).  Surface reflectance corrections "
+            "are available for OLI_TIRS products.  OLI-only scenes are "
+            "corrected up through TOA and not surface reflectance.\n\n");
     printf ("usage: lasrc "
             "--xml=input_xml_filename "
             "--aux=input_auxiliary_filename "
@@ -612,17 +612,20 @@ void usage ()
             "used, none of the other parameters are used or required.\n");
 
     printf ("\nlasrc --help will print the usage statement\n");
-    printf ("\nExample: lasrc --xml=LC80410272013181LGN00.xml "
+    printf ("\nExample: lasrc "
+            "--xml=LC08_L1TP_041027_20130630_20140312_01_T1.xml "
             "--aux=L8ANC2013181.hdf_fused --verbose\n");
     printf ("   ==> Writes bands 9-11 as TOA reflectance and brightness "
             "temperature.  Writes bands 1-7 as surface reflectance.\n\n");
 
-    printf ("\nExample: lasrc --xml=LC80410272013181LGN00.xml "
+    printf ("\nExample: lasrc "
+            "--xml=LC08_L1TP_041027_20130630_20140312_01_T1.xml "
             "--aux=L8ANC2013181.hdf_fused --write_toa --verbose\n");
     printf ("   ==> Writes bands 1-11 as TOA reflectance and brightness "
             "temperature.  Writes bands 1-7 as surface reflectance.\n");
 
-    printf ("\nExample: lasrc --xml=LC80410272013181LGN00.xml "
+    printf ("\nExample: lasrc "
+            "--xml=LC08_L1TP_041027_20130630_20140312_01_T1.xml "
             "--aux=L8ANC2013181.hdf_fused --process_sr=false --verbose\n");
     printf ("   ==> Writes bands 1-11 as TOA reflectance and brightness "
             "temperature.  Surface reflectance corrections are not applied.\n");

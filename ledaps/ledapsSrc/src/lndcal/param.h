@@ -70,7 +70,6 @@
 typedef struct {
   char *param_file_name;         /* Parameter file name */
   char *input_xml_file_name;     /* Input XML metadata file name */
-  bool process_collection;       /* Process scene as a collection product */
   char *LEDAPSVersion;           /* LEDAPS Version */
 } Param_t;
 

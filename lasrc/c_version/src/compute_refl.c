@@ -6,7 +6,7 @@
 /******************************************************************************
 MODULE:  compute_toa_refl
 
-PURPOSE:  Computes the TOA reflectance and at-sensor brightness temps for all
+PURPOSE:  Computes the TOA reflectance and TOA brightness temps for all
 the bands except the pan band. Uses a per-pixel solar zenith angle for the
 TOA corrections. Also determines radiometric saturation for each band, as
 available.
@@ -79,7 +79,7 @@ int compute_toa_refl
     }
 
     /* Loop through all the bands (except the pan band) and compute the TOA
-       reflectance and at-sensor brightness temp */
+       reflectance and TOA brightness temp */
     for (ib = DN_BAND1; ib <= DN_BAND11; ib++)
     {
         /* Don't process the pan band */
@@ -187,8 +187,7 @@ int compute_toa_refl
                     /* Compute the TOA spectral radiance */
                     tmpf = xcals * uband[i] + xcalo;
 
-                    /* Compute the at-satellite brightness temp (K) and
-                       scale for output */
+                    /* Compute TOA brightness temp (K) and scale for output */
                     tmpf = k2b10 / log (k1b10 / tmpf + 1.0);
                     tmpf = tmpf * MULT_FACTOR_TH;  /* scale the value */
 
@@ -241,8 +240,7 @@ int compute_toa_refl
                     /* Compute the TOA spectral radiance */
                     tmpf = xcals * uband[i] + xcalo;
 
-                    /* Compute the at-satellite brightness temp (K) and
-                       scale for output */
+                    /* Compute TOA brightness temp (K) and scale for output */
                     tmpf = k2b11 / log (k1b11 / tmpf + 1.0);
                     tmpf = tmpf * MULT_FACTOR_TH;  /* scale the value */
 

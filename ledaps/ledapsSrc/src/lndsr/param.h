@@ -70,7 +70,6 @@
 typedef struct {
   char *param_file_name;      /* Parameter file name */
   char *input_xml_file_name;  /* Input XML metadata file name */
-  bool process_collection;    /* Process scene as a collection product */
   bool thermal_band;          /* True if thermal band file available */
   char *ncep_file_name[4];    /* Bracketing NCEP file names */
   char *prwv_file_name;       /* Bracketing NCEP hdf file names */

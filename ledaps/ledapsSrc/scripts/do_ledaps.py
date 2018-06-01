@@ -42,32 +42,6 @@ def isLeapYear(year):
 # Created Python script so that lnd* application status values can be checked
 # for successful completion and failures can be flagged.
 #
-# History:
-#   Updated on 11/29/2012 by Gail Schmidt, USGS/EROS
-#   Created the Ledaps class and added modules to run the LEDAPS code and
-#       determine if the proper ancillary data exists for a requested year
-#       and year/doy.
-#   Updated on 12/6/2012 by Gail Schmidt, USGS/EROS
-#   Modified the run_ledaps method to change to the XML directory
-#       before running the LEDAPS software, and then return to the current
-#       directory upon successful or failure exit.
-#   Updated on 3/7/2014 by Gail Schmidt, USGS/EROS
-#   Modified the run_ledaps script to work with the input XML file as
-#       part of the switch to utilize the ESPA internal raw binary file
-#   Updated on 10/09/2014 by Ron Dilley, USGS/EROS
-#   Modified to be pep8 compliant.
-#   Updated on 11/12/2015 by Nathan Genetzky, USGS/EROS
-#   Modified to use the Python logger vs. print statements
-#   Updated on 11/13/2015 by Gail Schmidt, USGS/EROS
-#   Removed the --usebin command-line option.  All executables for LEDAPS
-#       will be expected in the PATH.
-#   Updated on 9/7/2016 by Gail Schmidt, USGS/EROS
-#   Modified to flag collection scenes for special handling of QA output
-#       in LEDAPS processing. Additional command-line option is passed to
-#       the lndsr executable. Also, collection processing will not include
-#       the lndsrbm post-processing of the QA, since the goal is to represent
-#       the QA which was used for surface reflectance corrections.
-#
 # Usage: do_ledaps.py --help prints the help message
 ############################################################################
 class Ledaps():
@@ -249,16 +223,9 @@ class Ledaps():
         # Processing down in the XML file directory itself, but always return
         # to the original directory after processing or error
         try:
-            # Determine if this scene is pre-collection or a collection scene
-            prefixes_old = ['LT4', 'LT5', 'LE7']
             prefixes_collection = ['LT04', 'LT05', 'LE07']
-            if base_xmlfile[0:3] in prefixes_old:
-                # Old-style (pre-collection) Level-1 naming convention
-                processing_collection = False
-                logger.debug('Processing pre-collection data')
-            elif base_xmlfile[0:4] in prefixes_collection:
-                # New-style collection naming convention
-                processing_collection = True
+            if base_xmlfile[0:4] in prefixes_collection:
+                # Collection naming convention
                 logger.debug('Processing collection data')
             else:
                 msg = ('Base XML filename is not recognized as a valid Landsat '
@@ -267,32 +234,28 @@ class Ledaps():
                 return ERROR
 
             # Set up the command-line option for lndsr for processing
-            # collections. If processing collections, then the per-pixel angle
-            # bands need to be generated for band 4 (representative band) and
-            # the thermal band(s)
-            process_collection_opt_str = ''
-            if processing_collection:
-                process_collection_opt_str = '--process_collection'
-                cmdstr = ('create_landsat_angle_bands --xml {}'
-                          .format(base_xmlfile))
-                (status, output) = commands.getstatusoutput(cmdstr)
-                logger.info(output)
-                exit_code = status >> 8
-                if exit_code != 0:
-                    logger.error('Error running create_landsat_angle_bands. '
-                                 'Processing will terminate.')
-                    return ERROR
+            # collections. The per-pixel angle bands need to be generated for
+            # band 4 (representative band) and the thermal band(s)
+            cmdstr = ('create_landsat_angle_bands --xml {}'
+                      .format(base_xmlfile))
+            (status, output) = commands.getstatusoutput(cmdstr)
+            logger.info(output)
+            exit_code = status >> 8
+            if exit_code != 0:
+                logger.error('Error running create_landsat_angle_bands. '
+                             'Processing will terminate.')
+                return ERROR
 
-                # Mask the angle bands to match the band quality band
-                cmdstr = ('mask_per_pixel_angles.py --xml {}'
-                          .format(base_xmlfile))
-                (status, output) = commands.getstatusoutput(cmdstr)
-                logger.info(output)
-                exit_code = status >> 8
-                if exit_code != 0:
-                    logger.error('Error masking angle bands with the band '
-                                 'quality band. Processing will terminate.')
-                    return ERROR
+            # Mask the angle bands to match the band quality band
+            cmdstr = ('mask_per_pixel_angles.py --xml {}'
+                      .format(base_xmlfile))
+            (status, output) = commands.getstatusoutput(cmdstr)
+            logger.info(output)
+            exit_code = status >> 8
+            if exit_code != 0:
+                logger.error('Error masking angle bands with the band '
+                             'quality band. Processing will terminate.')
+                return ERROR
 
             # Set up the command-line option for lndpm if processing surface
             # reflectance
@@ -312,8 +275,7 @@ class Ledaps():
                 logger.error('Error running lndpm.  Processing will terminate.')
                 return ERROR
 
-            cmdstr = ('lndcal --pfile lndcal.{}.txt {}'
-                      .format(xml, process_collection_opt_str))
+            cmdstr = 'lndcal --pfile lndcal.{}.txt'.format(xml)
             (status, output) = commands.getstatusoutput(cmdstr)
             logger.info(output)
             exit_code = status >> 8
@@ -322,8 +284,7 @@ class Ledaps():
                 return ERROR
 
             if process_sr == 'True':
-                cmdstr = ('lndsr --pfile lndsr.{}.txt {}'
-                          .format(xml, process_collection_opt_str))
+                cmdstr = 'lndsr --pfile lndsr.{}.txt'.format(xml)
                 (status, output) = commands.getstatusoutput(cmdstr)
                 logger.info(output)
                 exit_code = status >> 8
@@ -331,16 +292,6 @@ class Ledaps():
                     logger.error('Error running lndsr. Processing will '
                                  'terminate.')
                     return ERROR
-
-                if not processing_collection:
-                    cmdstr = 'lndsrbm.py -f lndsr.{}.txt'.format(xml)
-                    (status, output) = commands.getstatusoutput(cmdstr)
-                    logger.info(output)
-                    exit_code = status >> 8
-                    if exit_code != 0:
-                        logger.error('Error running lndsrbm. Processing will '
-                                     'terminate.')
-                        return ERROR
 
         finally:
             # Return to the original directory

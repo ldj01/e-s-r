@@ -88,7 +88,7 @@ int main (int argc, char *argv[]) {
       "gains and biases should be in that file.", "main");
   
   /* Open input files */
-  input = OpenInput (&xml_metadata, param->process_collection);
+  input = OpenInput (&xml_metadata);
   if (input == (Input_t *)NULL)
     EXIT_ERROR("setting up input from XML structure", "main");
 
@@ -117,14 +117,11 @@ int main (int argc, char *argv[]) {
    if (line_in == NULL) 
      EXIT_ERROR("allocating input line buffer", "main");
 
-  /* Allocate memory for the input solar zenith representative band buffer, if
-     processing Collections */
-  if (param->process_collection) {
-    input_psize = sizeof(int16);
-    line_in_sun_zen = calloc (nps, input_psize);
-     if (line_in_sun_zen == NULL) 
-       EXIT_ERROR("allocating input line buffer for solar zenith band", "main");
-  }
+  /* Allocate memory for the input solar zenith representative band buffer */
+  input_psize = sizeof(int16);
+  line_in_sun_zen = calloc (nps, input_psize);
+  if (line_in_sun_zen == NULL) 
+    EXIT_ERROR("allocating input line buffer for solar zenith band", "main");
 
   /* Create and open output thermal band, if one exists */
   if ( input->nband_th > 0 ) {
@@ -217,7 +214,7 @@ int main (int argc, char *argv[]) {
       if (!GetInputLineTh(input, iline, line_in))
         EXIT_ERROR("reading input data for a line", "main");
 
-      /* Handle the brightness temp corrections */
+      /* Handle the TOA brightness temp corrections */
       if (!Cal6(lut, input, line_in, line_out_th, &line_out_qa[curr_line],
         &cal_stats6, iline))
         EXIT_ERROR("doing calibration for a line", "main");
@@ -249,11 +246,9 @@ int main (int argc, char *argv[]) {
         EXIT_ERROR("reading input data for a line", "main");
     }
     
-    /* Read input representative solar zenith band, if processing Collections */
-    if (param->process_collection) {
-      if (!GetInputLineSunZen(input, iline, line_in_sun_zen))
-        EXIT_ERROR("reading input solar zenith data for a line", "main");
-    }
+    /* Read input representative solar zenith band */
+    if (!GetInputLineSunZen(input, iline, line_in_sun_zen))
+      EXIT_ERROR("reading input solar zenith data for a line", "main");
 
     /* Handle the TOA reflectance corrections for every band, and write the
        results */

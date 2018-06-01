@@ -54,7 +54,6 @@
 typedef struct {
   bool open;            /* Flag to indicate whether output file is open 
                            for access; 'true' = open, 'false' = not open */
-  int nband_tot;        /* Number of output image bands for processing */
   int nband_out;        /* Number of output image bands for writing */
   Img_coord_int_t size; /* Output image size */
   Espa_internal_meta_t metadata;  /* metadata container to hold the band

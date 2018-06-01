@@ -27,8 +27,7 @@ bool Cal(Param_t *param, Lut_t *lut, int iband, Input_t *input,
   float ref;                          /* TOA reflectance value */
   float fval;                         /* temporary float value */
   float sun_zen;                      /* solar zenith angle for the current
-                                         pixel (vs. scene center) to be used
-                                         with Collection products (radians) */
+                                         pixel (radians) */
   int nsamp= input->size.s;
   int ifill= (int)lut->in_fill;
 
@@ -39,7 +38,6 @@ bool Cal(Param_t *param, Lut_t *lut, int iband, Input_t *input,
   /* Get the TOA reflectance gain/bias if they are available, otherwise use
      the TOA reflectance equation from the Landsat handbook. */
   if (input->meta.use_toa_refl_consts) {
-    /* Collections and some pre-Collections */
     refl_gain = lut->meta.refl_gain[iband];
     refl_bias = lut->meta.refl_bias[iband];
 
@@ -82,15 +80,11 @@ bool Cal(Param_t *param, Lut_t *lut, int iband, Input_t *input,
        Otherwise compute the TOA radiance then reflectance, per the Landsat
        handbook equations. */
     rad = (rad_gain * fval) + rad_bias;
-    if (input->meta.use_toa_refl_consts && param->process_collection) {
-      /* processing Collections; use per-pixel angles - convert the degree
-         values to radians and then unscale */
+    if (input->meta.use_toa_refl_consts) {
+      /* use per-pixel angles - convert the degree values to radians and then
+         unscale */
       sun_zen = line_in_sun_zen[is] * 0.01 * RAD;
       ref = ((refl_gain * fval) + refl_bias) / cos (sun_zen);
-    }
-    else if (input->meta.use_toa_refl_consts) {
-      /* not processing Collections so don't use per-pixel angles */
-      ref = ((refl_gain * fval) + refl_bias) / lut->cos_sun_zen;
     }
     else {
       ref = rad * ref_conv;
@@ -177,7 +171,7 @@ bool Cal6(Lut_t *lut, Input_t *input, unsigned char *line_in, int16 *line_out,
       continue;
     }
 
-    /* compute the brightness temperature in Kelvin and apply scaling of
+    /* compute the TOA brightness temperature in Kelvin and apply scaling of
        10.0 (tied to lut->scale_factor_th). valid ranges are set up in lut.c
        as well. */
     rad = (rad_gain * (float)val) + rad_bias;

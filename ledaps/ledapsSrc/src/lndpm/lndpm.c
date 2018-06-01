@@ -29,7 +29,7 @@ void usage ();
 MODULE:  main (lndpm)
 
 PURPOSE: Create the parameter files that are needed by the LEDAPS applications
-(lndcal, lndsr, lndsrbm.)
+(lndcal, lndsr)
 
 RETURN VALUE:
 Type = int

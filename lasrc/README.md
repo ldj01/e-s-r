@@ -1,5 +1,5 @@
-## LaSRC Version 1.3.0 Release Notes
-Release Date: September 2017
+## LaSRC Version 1.4.0 Release Notes
+Release Date: March 2018
 
 ### Downloads
 LaSRC (Landsat Surface Reflectance Code) source code
@@ -10,7 +10,7 @@ LaSRC auxiliary files
 
     http://edclpdsftp.cr.usgs.gov/downloads/auxiliaries/lasrc_auxiliary/lasrc_aux.2013-2017.tar.gz
 
-See git tag [lasrc-version_1.3.0]
+See git tag [lasrc-version_1.4.0]
 
 ### Installation
   * Install dependent libraries - ESPA product formatter (https://github.com/USGS-EROS/espa-product-formatter)
@@ -80,14 +80,4 @@ After compiling the product-formatter raw\_binary libraries and tools, the conve
 ### Product Guide
 
 ## Release Notes
-1. Modified the aerosol inversion algorithm to produce the aerosol for a
-   representative pixel in an NxN window. This cuts down on the number of
-   aerosol inversions and therefore allows the application to run in
-   significantly less time. The remaining pixels in the NxN window are then
-   interpolated using the surrounding/closest representative NxN window
-   aerosol values. Special handling is in place for clouds, cloud shadows, and
-   water.
-2. The ipflag values output in sr_aerosol have been updated to allow the
-   clouds, shadows, water, and interpolated pixels to be masked.
-3. A bug in the routine which frees the RADSAT and SR_AEROSOL bits was fixed.
-   This bug intermittently created core dumps.
+1. Removed support for pre-Collection scenes.

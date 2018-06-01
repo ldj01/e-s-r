@@ -1,5 +1,4 @@
 add_subdirectory(lndcal)
 add_subdirectory(lndpm)
 add_subdirectory(lndsr)
-add_subdirectory(lndsrbm)
 add_subdirectory(6sV-1.0B)

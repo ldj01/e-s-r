@@ -47,7 +47,7 @@
 #define INPUT_FILL (0)
 
 /* Functions */
-Input_t *OpenInput(Espa_internal_meta_t *metadata, bool process_collection)
+Input_t *OpenInput(Espa_internal_meta_t *metadata)
 /* 
 !C******************************************************************************
 
@@ -75,7 +75,7 @@ Input_t *OpenInput(Espa_internal_meta_t *metadata, bool process_collection)
     RETURN_ERROR("allocating Input data structure", "OpenInput", NULL);
 
   /* Initialize and get input from header file */
-  if (!GetXMLInput (this, metadata, process_collection)) {
+  if (!GetXMLInput (this, metadata)) {
     free(this);
     this = NULL;
     RETURN_ERROR("getting input from header file", "OpenInput", NULL);
@@ -98,13 +98,11 @@ Input_t *OpenInput(Espa_internal_meta_t *metadata, bool process_collection)
       else
         this->open_th = true;
     }
-    if (process_collection) {
-      this->fp_bin_sun_zen = fopen(this->file_name_sun_zen, "r");
-      if (this->fp_bin_sun_zen == NULL) 
-        error_string = "opening solar zenith representative band binary file";
-      else
-        this->open_sun_zen = true;
-    }
+    this->fp_bin_sun_zen = fopen(this->file_name_sun_zen, "r");
+    if (this->fp_bin_sun_zen == NULL) 
+      error_string = "opening solar zenith representative band binary file";
+    else
+      this->open_sun_zen = true;
   } else 
     error_string = "invalid file type";
 
@@ -350,8 +348,7 @@ bool InputMetaCopy(Input_meta_t *this, int nband, Input_meta_t *copy)
 #define DATE_STRING_LEN (50)
 #define TIME_STRING_LEN (50)
 
-bool GetXMLInput(Input_t *this, Espa_internal_meta_t *metadata,
-                 bool process_collection)
+bool GetXMLInput(Input_t *this, Espa_internal_meta_t *metadata)
 /* 
 !C******************************************************************************
 
@@ -649,8 +646,7 @@ bool GetXMLInput(Input_t *this, Espa_internal_meta_t *metadata,
                 this->meta.k2_const = metadata->band[i].k2_const;
             }
         }
-        else if (process_collection &&
-            !strcmp (metadata->band[i].name, "solar_zenith_band4"))
+        else if (!strcmp (metadata->band[i].name, "solar_zenith_band4"))
         {
             /* get the solar zenith representative band info */
             this->file_name_sun_zen = strdup (metadata->band[i].file_name);
@@ -663,11 +659,11 @@ bool GetXMLInput(Input_t *this, Espa_internal_meta_t *metadata,
         RETURN_ERROR (temp, "GetXMLInput", false);
     }
 
-    /* Make sure the solar zenith band was found if processing Collections */
-    if (process_collection && this->file_name_sun_zen == NULL)
+    /* Make sure the solar zenith band was found */
+    if (this->file_name_sun_zen == NULL)
     {
         sprintf (temp, "Representative band for the solar zenith data was "
-            "not found in the XML file.  It is required for Collections.");
+            "not found in the XML file.");
         RETURN_ERROR (temp, "GetXMLInput", false);
     }
 

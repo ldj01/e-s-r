@@ -58,36 +58,21 @@ Output_t *OpenOutput(Espa_internal_meta_t *in_meta, Input_t *input,
   char scene_name[STR_SIZE];   /* scene name for the current scene */
   int ib;             /* looping variables */
   int nband;          /* number of bands for this dataset */
-  int nband_tot;      /* number of total bands with QA, for processing */
   int nband_out;      /* number of total bands with QA, for writing/output */
-  int nband_out_extra; /* number of extra QA bands for writing/output */
   int rep_indx=-1;    /* band index in XML file for the current product */
   char production_date[MAX_DATE_LEN+1]; /* current date/time for production */
   time_t tp;          /* time structure */
   struct tm *tm;      /* time structure for UTC time */
   Espa_band_meta_t *bmeta = NULL;  /* pointer to the band metadata array
                          within the output structure */
-  char *band_name_extra[NBAND_SR_EXTRA] = {"atmos_opacity", "cloud_qa",
-    "fill_qa", "ddv_qa", "cloud_shadow_qa", "snow_qa", "land_water_qa",
-    "adjacent_cloud_qa"};
-    /* The atmospheric opacity and cloud bands are the only ones used for
-       Collections.  The others are used for pre-collections. */
+  char *band_name_extra[NBAND_SR_EXTRA] = {"atmos_opacity", "cloud_qa"};
 
   /* Determine the number of output bands. Don't plan to write the last 3 QA
      bands (nb_dark_pixels, avg_dark_sr_b7, or std_dark_sr_b7) */
   nband = input->nband;
-  if (!param->process_collection)
-  { /* Use all QA bands */
-    nband_tot = nband + NBAND_SR_EXTRA;
-    nband_out = nband_tot;
-    nband_out_extra = nband_out - nband;
-  }
-  else
-  { /* Only QA bands are the atmospheric opacity and cloud QA */
-    nband_tot = nband + NBAND_SR_EXTRA;
-    nband_out = nband_tot - 6;
-    nband_out_extra = nband_out - nband;
-  }
+
+  /* Only QA bands are the atmospheric opacity and cloud QA */
+  nband_out = nband + NBAND_SR_EXTRA;
 
   /* Check parameters */
   if (input->size.l < 1)
@@ -145,7 +130,6 @@ Output_t *OpenOutput(Espa_internal_meta_t *in_meta, Input_t *input,
 
   /* Populate the data structure */
   this->open = false;
-  this->nband_tot = nband_tot;
   this->nband_out = nband_out;
   this->size.l = input->size.l;
   this->size.s = input->size.s;
@@ -192,79 +176,26 @@ Output_t *OpenOutput(Espa_internal_meta_t *in_meta, Input_t *input,
     }
     else  /* QA bands */
     {
-      if (!param->process_collection) {
-        /* Processing pre-collection with all the QA bands as individual */
-        bmeta[ib].data_type = ESPA_UINT8;
-        strcpy (bmeta[ib].category, "qa");
-        sprintf (bmeta[ib].name, "sr_%s", band_name_extra[ib-nband]);
-        strcpy (bmeta[ib].long_name, band_name_extra[ib-nband]);
-        strcpy (bmeta[ib].data_units, "quality/feature classification");
-        bmeta[ib].valid_range[0] = 0.0;
-        bmeta[ib].valid_range[1] = 255.0;
-  
-        /* Set up QA bitmap information */
-        if (allocate_class_metadata (&bmeta[ib], 2) != SUCCESS)
-          RETURN_ERROR("allocating 2 classes", "OpenOutput", NULL); 
-  
-        bmeta[ib].class_values[0].class = 0;     /* off */
-        bmeta[ib].class_values[1].class = 255;   /* on */
-        switch (ib - nband_out_extra + 2) {
-          case (FILL):
-            strcpy (bmeta[ib].class_values[0].description, "not fill");
-            strcpy (bmeta[ib].class_values[1].description, "fill");
-            break;
-          case (DDV):
-            strcpy (bmeta[ib].class_values[0].description,
-              "not dark dense vegetation");
-            strcpy (bmeta[ib].class_values[1].description,
-              "dark dense vegetation");
-            break;
-          case (CLOUD):
-            strcpy (bmeta[ib].class_values[0].description, "not cloud");
-            strcpy (bmeta[ib].class_values[1].description, "cloud");
-            break;
-          case (CLOUD_SHADOW):
-            strcpy (bmeta[ib].class_values[0].description, "not cloud shadow");
-            strcpy (bmeta[ib].class_values[1].description, "cloud shadow");
-            break;
-          case (SNOW):
-            strcpy (bmeta[ib].class_values[0].description, "not snow");
-            strcpy (bmeta[ib].class_values[1].description, "snow");
-            break;
-          case (LAND_WATER):
-            strcpy (bmeta[ib].class_values[0].description, "land");
-            strcpy (bmeta[ib].class_values[1].description, "water");
-            break;
-          case (ADJ_CLOUD):
-            strcpy (bmeta[ib].class_values[0].description,
-              "not adjacent cloud");
-            strcpy (bmeta[ib].class_values[1].description, "adjacent cloud");
-            break;
-        }
-      }
-      else {
-        /* Processing collection data with a single bit-packed QA band */
-        bmeta[ib].data_type = ESPA_UINT8;
-        strcpy (bmeta[ib].category, "qa");
-        sprintf (bmeta[ib].name, "sr_%s", band_name_extra[ib-nband]);
-        strcpy (bmeta[ib].long_name, band_name_extra[ib-nband]);
-        strcpy (bmeta[ib].data_units, "quality/feature classification");
-        bmeta[ib].valid_range[0] = 0.0;
-        bmeta[ib].valid_range[1] = 255.0;
+      /* Single bit-packed QA band */
+      bmeta[ib].data_type = ESPA_UINT8;
+      strcpy (bmeta[ib].category, "qa");
+      sprintf (bmeta[ib].name, "sr_%s", band_name_extra[ib-nband]);
+      strcpy (bmeta[ib].long_name, band_name_extra[ib-nband]);
+      strcpy (bmeta[ib].data_units, "quality/feature classification");
+      bmeta[ib].valid_range[0] = 0.0;
+      bmeta[ib].valid_range[1] = 255.0;
 
-        /* Set up cloud bitmap information */
-        if (allocate_bitmap_metadata (&bmeta[ib], 6) != SUCCESS)
-          RETURN_ERROR("Allocating cloud bitmap", "OpenOutput", NULL);
+      /* Set up cloud bitmap information */
+      if (allocate_bitmap_metadata (&bmeta[ib], 6) != SUCCESS)
+        RETURN_ERROR("Allocating cloud bitmap", "OpenOutput", NULL);
 
-        /* Identify the bitmap values for the mask */
-        strcpy (bmeta[ib].bitmap_description[0], "dark dense vegetation");
-        strcpy (bmeta[ib].bitmap_description[1], "cloud");
-        strcpy (bmeta[ib].bitmap_description[2], "cloud shadow");
-        strcpy (bmeta[ib].bitmap_description[3], "adjacent to cloud");
-        strcpy (bmeta[ib].bitmap_description[4], "snow");
-        strcpy (bmeta[ib].bitmap_description[5], "land/water");
-
-      }
+      /* Identify the bitmap values for the mask */
+      strcpy (bmeta[ib].bitmap_description[0], "dark dense vegetation");
+      strcpy (bmeta[ib].bitmap_description[1], "cloud");
+      strcpy (bmeta[ib].bitmap_description[2], "cloud shadow");
+      strcpy (bmeta[ib].bitmap_description[3], "adjacent to cloud");
+      strcpy (bmeta[ib].bitmap_description[4], "snow");
+      strcpy (bmeta[ib].bitmap_description[5], "land/water");
     }
 
     /* Set up the filename with the scene name and band name and open the

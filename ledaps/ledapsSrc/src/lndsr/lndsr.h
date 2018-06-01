@@ -14,9 +14,8 @@
 #include "envi_header.h"
 #include "espa_geoloc.h"
 
-/* Extra bands - atmos_opacity, cloud_QA, fill_QA, DDV_QA, cloud_shadow_QA,
-   snow_QA, land_water_QA, adjacent_cloud_QA */
-#define NBAND_SR_EXTRA (8)
+/* Extra bands - atmos_opacity, cloud_QA */
+#define NBAND_SR_EXTRA (2)
 #define NBAND_REFL_MAX (6)
 #define NBAND_PRWV_MAX (3)
 #define NBAND_SR_MAX (NBAND_REFL_MAX + NBAND_SR_EXTRA)

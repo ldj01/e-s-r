@@ -1,47 +1,3 @@
-/**************************************************************************
-! Developers:
-  Modified on 11/23/2012 by Gail Schmidt, USGS EROS
-  Modified the fill_QA band to mark a pixel as fill if the pixel is fill in
-  any reflective band and not just band 1.
-
-  Modified on 11/23/2012 by Gail Schmidt, USGS EROS
-  Modified bug in cld_diags.std_b7_clear to be based on the sqrt of band 7
-  and not temperature band 6
-
-  Modified on 11/9/2012 by Gail Schmidt, USGS EROS
-  Modified to make sure no QA bits are set to on if the current pixel is fill
-
-  Modified on 9/20/2012 by Gail Schmidt, USGS EROS
-  Modified the packed QA band to be individual QA bands with pixels set to
-  on or off.  NOTE - this requires mods to downstream processing (lndsrbm)
-  as well, which uses and modifies the QA band.
-
-  Modified on 3/25/2013 by Gail Schmidt, USGS EROS
-  Adjusted the sun azimuth for polar scenes which are ascending/flipped.  The
-  sun azimuth is north up, but these scenes are south up.  So the azimuth
-  needs to be adjusted by 180 degrees when applied to the scene.
-
-  Modified on 2/3/2014 by Gail Schmidt, USGS EROS, v2.0.0
-  Modified application to use the ESPA internal raw binary file format.
-  tempnam is deprecated, so switched to mkstemp.
-
-  Modified on 8/5/2014 by Gail Schmidt, USGS/EROS
-  Obtain the location of the ESPA schema file from an environment variable
-  vs. the ESPA http site.
-
-  Modified on 10/24/2014 by Gail Schmidt, USGS/EROS
-  Modified the handling of PRWV variables to be float values without any
-  scale factor or add offset versus the previous version which was int16
-  with a scale factor and add offset.  The underlying NCEP variables have
-  changed, as delivered from NOAA/NCEP.
-
-  Modified on 10/14/2015 by Gail Schmidt, USGS/EROS
-  Flagged scenes with a solar zenith angle above 76 degrees as not able to
-  process through to surface reflectance.  These scenes can be processed
-  to TOA and BT, however surface reflectance results for these low solar
-  elevation angles are not reliable.
-**************************************************************************/
-
 #include <stdio.h>
 #include <stdlib.h>
 #include <sys/stat.h>
@@ -210,8 +166,7 @@ int main (int argc, char *argv[]) {
     Envi_header_t envi_hdr;             /* output ENVI header information */
   
     /* Vermote additional variable declaration for the cloud mask May 29 2007 */
-    int anom;
-    float t6,t6s_seuil;
+    float t6s_seuil;
   
     debug_flag= DEBUG_FLAG;
     no_ozone_file=0;
@@ -248,7 +203,7 @@ int main (int argc, char *argv[]) {
     input_b6 = OpenInput(&xml_metadata, true /* thermal */);
     if (input_b6 == NULL) {
         param->thermal_band = false;
-        printf ("WARNING: no thermal brightness temp band available. "
+        printf ("WARNING: no TOA brightness temp band available. "
             "Processing without.");
     }
     else
@@ -263,8 +218,8 @@ int main (int argc, char *argv[]) {
        scene falls into that category. */
     if (input->meta.sun_zen * DEG > 76.0) {
         EXIT_ERROR ("Solar zenith angle is too large to allow for surface "
-            "reflectance processing.  Corrections must be limited to top of "
-            "atmosphere and at-sensor brightness temperature corrections. "
+            "reflectance processing.  Corrections must be limited to top-of-"
+            "atmosphere reflectance and brightness temperature corrections. "
             "Use the --process_sr=False command-line argument when running "
             "do_ledaps.py.", "main");
     }
@@ -473,11 +428,11 @@ int main (int argc, char *argv[]) {
         EXIT_ERROR("allocating ar_gridcell.spres_dem", "main");
 
     /* Allocate memory for output lines */
-    line_out_buf = calloc(output->size.s * output->nband_tot, sizeof(int16));
+    line_out_buf = calloc(output->size.s * output->nband_out, sizeof(int16));
     if (line_out_buf == NULL) 
         EXIT_ERROR("allocating output line buffer", "main");
     line_out[0] = line_out_buf;
-    for (ib = 1; ib < output->nband_tot; ib++)
+    for (ib = 1; ib < output->nband_out; ib++)
         line_out[ib] = line_out[ib - 1] + output->size.s;
 
     /* Allocate memory for the aerosol lines */
@@ -1224,14 +1179,8 @@ int main (int argc, char *argv[]) {
             loc.s=is;
             j_aot=is/lut->ar_region_size.s;
 
-            /* Initialize all QA bands to off */
-            line_out[lut->nband+FILL][is] = QA_OFF;
-            line_out[lut->nband+DDV][is] = QA_OFF;
+            /* Initialize QA band to off */
             line_out[lut->nband+CLOUD][is] = QA_OFF;
-            line_out[lut->nband+CLOUD_SHADOW][is] = QA_OFF;
-            line_out[lut->nband+SNOW][is] = QA_OFF;
-            line_out[lut->nband+LAND_WATER][is] = QA_OFF;   /* land */
-            line_out[lut->nband+ADJ_CLOUD][is] = QA_OFF;
 
             /* Determine if this is a fill pixel -- mark as fill if any
                reflective band for this pixel is fill */
@@ -1246,99 +1195,43 @@ int main (int argc, char *argv[]) {
             if (!refl_is_fill) {
                 /* AOT / opacity */
                 ArInterp(lut, &loc, line_ar, &inter_aot); 
-                line_out[lut->nband][is] = inter_aot;
+                line_out[lut->nband+ATMOS_OPACITY][is] = inter_aot;
 
-                if (!param->process_collection) {
-                    /* Pre-collection processing */
-                    /**
-                    Set bits for internal cloud mask.  This is written as
-                    separate bands for each QA.
-                    bit 0: fill
-                    bit 6: dense dark vegetation (DDV)
-                    bit 8: SR-based cloud
-                    bit 9: SR-based cloud shadow
-                    bit 10: SR-based snow
-                    bit 11: Spectral test-based land/water mask
-                    bit 12: SR-based adjacent cloud
-                    **/
-                    if (ddv_line[0][is]&0x01)  /* dark target bit */
-                        line_out[lut->nband+DDV][is] = QA_ON;
-    
-                    if (ddv_line[0][is]&0x10)  /* land */
-                        line_out[lut->nband+LAND_WATER][is] = QA_OFF;
-                    else  /* water */
-                        line_out[lut->nband+LAND_WATER][is] = QA_ON;
-    
-                    if (ddv_line[0][is]&0x20)   /* internal cloud mask bit */
-                        line_out[lut->nband+CLOUD][is] = QA_ON;
-    
-                    if (ddv_line[0][is]&0x80)   /* internal snow mask bit */
-                        line_out[lut->nband+SNOW][is] = QA_ON;
-    
-                    /* try to redo the cloud mask Vermote May 29 2007 */
-                    /* reset cloud shadow and cloud adjacent bits - these are
-                       set again in lndsrbm */
-                    line_out[lut->nband+CLOUD_SHADOW][is] = QA_OFF;
-                    line_out[lut->nband+ADJ_CLOUD][is] = QA_OFF;
-                    
-                    anom=line_out[0][is]-line_out[2][is]/2.;
-                    t6=b6_line[0][is]*0.1;
-                    if (((anom > 300) && (line_out[4][is] > 300) &&
-                         (t6 < t6s_seuil)) || ((line_out[2][is] > 5000) &&
-                         (t6 < t6s_seuil)))   /* internal cloud mask bit */
-                        line_out[lut->nband+CLOUD][is] = QA_ON;
-                    else  /* reset internal cloud mask bit */
-                        line_out[lut->nband+CLOUD][is] = QA_OFF;
-    
-                }
-                else {
-                    /* Processing Collection products. QA is written out in the
-                       cloud band as a bit-packed product (16-bit). We will use
-                       QA values as-is (versus resetting them for pre-collection
-                       products) because lndsrbm will not be called as a
-                       post-processing QA step. We want the QA to reflect the
-                       cloud, etc. status that was used in the aerosol and
-                       surface reflectance computations. We are not interested
-                       in post-processing of the QA information, as there are
-                       better QA products available. */
-                    if (ddv_line[0][is]&0x01)
-                        line_out[lut->nband+CLOUD][is] |= (1 << DDV_BIT);
+                /* QA is written out in the cloud band as a bit-packed product
+                   (16-bit). We will use QA values as-is and no further
+                   post-processing QA step will be implemented. We want the QA
+                   to reflect the cloud, etc. status that was used in the
+                   aerosol and surface reflectance computations. We are not
+                   interested in post-processing of the QA information, as
+                   there are better QA products available. */
+                if (ddv_line[0][is]&0x01)
+                    line_out[lut->nband+CLOUD][is] |= (1 << DDV_BIT);
 
-                    if (ddv_line[0][is]&0x04)
-                        line_out[lut->nband+CLOUD][is] |= (1 << ADJ_CLOUD_BIT);
+                if (ddv_line[0][is]&0x04)
+                    line_out[lut->nband+CLOUD][is] |= (1 << ADJ_CLOUD_BIT);
 
-                    if (!(ddv_line[0][is]&0x10))  /* if water, turn on */
-                        line_out[lut->nband+CLOUD][is] |= (1 << LAND_WATER_BIT);
+                if (!(ddv_line[0][is]&0x10))  /* if water, turn on */
+                    line_out[lut->nband+CLOUD][is] |= (1 << LAND_WATER_BIT);
 
-                    if (ddv_line[0][is]&0x20)
-                        line_out[lut->nband+CLOUD][is] |= (1 << CLOUD_BIT);
+                if (ddv_line[0][is]&0x20)
+                    line_out[lut->nband+CLOUD][is] |= (1 << CLOUD_BIT);
 
-                    if (ddv_line[0][is]&0x40)
-                        line_out[lut->nband+CLOUD][is] |=
-                            (1 << CLOUD_SHADOW_BIT);
+                if (ddv_line[0][is]&0x40)
+                    line_out[lut->nband+CLOUD][is] |=
+                        (1 << CLOUD_SHADOW_BIT);
 
-                    if (ddv_line[0][is]&0x80)
-                        line_out[lut->nband+CLOUD][is] |= (1 << SNOW_BIT);
-                }
+                if (ddv_line[0][is]&0x80)
+                    line_out[lut->nband+CLOUD][is] |= (1 << SNOW_BIT);
             }
             else {
                 line_out[lut->nband][is]=lut->aerosol_fill;
-                line_out[lut->nband+FILL][is] = QA_ON;  /* set fill bit */
             }
         } /* for is */
 
         /* Write each output band */
         for (ib = 0; ib < output->nband_out; ib++) {
-            if (ib >= lut->nband+FILL) {  /* QA bands */
-                /* fill, DDV, cloud, cloud shadow, snow, land/water,
-                   and adjacent cloud QA bands are all 8-bit products */
-                if (!PutOutputLine(output, ib, il, line_out[ib]))
-                    EXIT_ERROR("writing output QA data for a line", "main");
-            }
-            else {  /* image bands */
-                if (!PutOutputLine(output, ib, il, line_out[ib]))
-                    EXIT_ERROR("writing output data for a line", "main");
-            }
+            if (!PutOutputLine(output, ib, il, line_out[ib]))
+                EXIT_ERROR("writing output data for a line", "main");
         }
     }  /* for il */
     printf("\n");

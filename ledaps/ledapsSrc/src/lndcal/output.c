@@ -191,8 +191,8 @@ Output_t *OpenOutput(Espa_internal_meta_t *in_meta, Input_t *input,
         bmeta[ib].scale_factor = lut->scale_factor_ref;
         bmeta[ib].scale_factor = lut->scale_factor_th;
         bmeta[ib].add_offset = lut->add_offset_th;
-        sprintf (bmeta[ib].long_name, "band %d brightness temperature",
-          input->meta.iband_th);
+        sprintf (bmeta[ib].long_name, "band %d top-of-atmosphere brightness "
+          "temperature", input->meta.iband_th);
         strcpy (bmeta[ib].data_units, lut->units_th);
         bmeta[ib].valid_range[0] = (float) lut->valid_range_th[0];
         bmeta[ib].valid_range[1] = (float) lut->valid_range_th[1];

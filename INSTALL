@@ -1,0 +1,9 @@
+This is the INSTALL file for the espa-surface-reflectance package.  This
+package uses CMake for managing the build and installation. Following are
+the command-line steps to perform, assuming the necessary COTS package
+environment variables have been set:
+
+mkdir build && cd build
+cmake .. -DCMAKE_INSTALL_PREFIX:PATH=<installation_path>
+make
+make install

@@ -1,12 +1,9 @@
 #!/usr/bin/env python
 
-############################################################################
-# Original development on 9/2/2014 by Gail Schmidt, USGS EROS
-# Updated on 9/9/2015 by Gail Schmidt, USGS EROS
-#   Modified the wget calls to retry up to 5 times if the download fails.
-############################################################################
+from __future__ import (division, print_function, absolute_import, unicode_literals)
 import sys
 import os
+import shutil
 import fnmatch
 import datetime
 import commands
@@ -16,6 +13,13 @@ import subprocess
 from optparse import OptionParser
 import requests
 import logging
+from config_utils import get_cfg_file_path, retrieve_cfg
+from api_interface import api_connect
+
+try:
+    from StringIO import StringIO   # python2
+except ImportError:
+    from io import StringIO         # python3
 
 # Global static variables
 ERROR = 1
@@ -24,81 +28,33 @@ START_YEAR = 2013      # quarterly processing will reprocess back to the
                        # start year to make sure all data is up to date
                        # Landsat 8 was launched on Feb. 11, 2013
 
-############################################################################
-# DatasourceResolver class
-############################################################################
-class DatasourceResolver:
-    # Specify the base location for the LAADS data as well as the
-    # correct subdirectories for each of the instrument-specific ozone
-    # products
-    # These are version 006 products
-    SERVER_URL = 'ladsweb.modaps.eosdis.nasa.gov'
-    TERRA_CMA = '/allData/6/MOD09CMA/'
-    TERRA_CMG = '/allData/6/MOD09CMG/'
-    AQUA_CMA = '/allData/6/MYD09CMA/'
-    AQUA_CMG = '/allData/6/MYD09CMG/'
+##NOTE: For non-ESPA environments, the TOKEN needs to be defined.  This is
+##the application token that is required for accessing the LAADS data
+##https://ladsweb.modaps.eosdis.nasa.gov/tools-and-services/data-download-scripts/
+TOKEN = None
+USERAGENT = 'espa.cr.usgs.gov/updatelads.py 1.4.1--' + sys.version.replace('\n','').replace('\r','')
 
+# Specify the base location for the LAADS data as well as the
+# correct subdirectories for each of the instrument-specific ozone
+# products
+# These are version 006 products
+SERVER_URL = 'https://ladsweb.modaps.eosdis.nasa.gov'
+TERRA_CMA = '/archive/allData/6/MOD09CMA/'
+TERRA_CMG = '/archive/allData/6/MOD09CMG/'
+AQUA_CMA = '/archive/allData/6/MYD09CMA/'
+AQUA_CMG = '/archive/allData/6/MYD09CMG/'
 
-    #######################################################################
-    # Description: buildURLs builds the URLs for the Terra and Aqua CMG and
-    # CMA products for the current year and DOY, and put that URL on the list.
-    #
-    # Inputs:
-    #   year - year of desired LAADS data
-    #   DOY - day of year of desired LAADS data
-    #
-    # Returns:
-    #   None - error resolving the instrument and associated URL for the
-    #          specified year and DOY
-    #   urlList - List of URLs to pull the LAADS data from for the specified
-    #             year and DOY.
-    #
-    # Notes:
-    #######################################################################
-    def buildURLs(self, year, doy):
-        urlList = []     # create empty URL list
-
-        # append TERRA CMA data (MOD09CMA)
-        url = ('ftp://{}{}{}/{:03d}/MOD09CMA.A{}{:03d}.006.*.hdf'
-               .format(self.SERVER_URL, self.TERRA_CMA, year, doy, year, doy))
-        urlList.append(url)
-
-        # append TERRA CMG data (MOD09CMG)
-        url = ('ftp://{}{}{}/{:03d}/MOD09CMG.A{}{:03d}.006.*.hdf'
-               .format(self.SERVER_URL, self.TERRA_CMG, year, doy, year, doy))
-        urlList.append(url)
-
-        # append AQUA CMA data (MYD09CMA)
-        url = ('ftp://{}{}{}/{:03d}/MYD09CMA.A{}{:03d}.006.*.hdf'
-               .format(self.SERVER_URL, self.AQUA_CMA, year, doy, year, doy))
-        urlList.append(url)
-
-        # append AQUA CMG data (MYD09CMG)
-        url = ('ftp://{}{}{}/{:03d}/MYD09CMG.A{}{:03d}.006.*.hdf'
-               .format(self.SERVER_URL, self.AQUA_CMG, year, doy, year, doy))
-        urlList.append(url)
-
-        return urlList
-
-############################################################################
-# End DatasourceResolver class
-############################################################################
-
-
-############################################################################
-# Description: isLeapYear will determine if the specified year is a leap
-# year.
-#
-# Inputs:
-#   year - year to determine if it is a leap year (integer)
-#
-# Returns:
-#     True - yes, this is a leap year
-#     False - no, this is not a leap year
-#
-# Notes:
-############################################################################
 def isLeapYear (year):
+    """
+    Determines if the specified year is a leap year.
+
+    Args:
+      year: year to determine if it is a leap year (integer)
+
+    Returns:
+      True: yes, this is a leap year
+      False: no, this is not a leap year
+    """
     if (year % 4) == 0:
         if (year % 100) == 0:
             if (year % 400) == 0:
@@ -111,28 +67,121 @@ def isLeapYear (year):
         return False
 
 
-############################################################################
-# Description: downloadLads will retrieve the files for the specified year
-# and DOY from the LAADS ftp site and download to the desired destination.
-# If the destination directory does not exist, then it is made before
-# downloading.  Existing files in the download directory are removed/cleaned.
-# This will download the Aqua/Terra CMG and CMA files for the current year, DOY.
-#
-# Inputs:
-#   year - year of data to download (integer)
-#   doy - day of year of data to download (integer)
-#   destination - name of the directory on the local system to download the
-#                 LAADS files
-#
-# Returns:
-#     ERROR - error occurred while processing
-#     SUCCESS - processing completed successfully
-#
-# Notes:
-#   We could use the Python ftplib or urllib modules, however the wget
-#   function is pretty short and sweet, so we'll stick with wget.
-############################################################################
-def downloadLads (year, doy, destination):
+def geturl(url, token=None, out=None):
+    """
+    Pulls the file specified by URL.  If there is a problem with the
+    connection, then retry up to 5 times.
+
+    Args:
+      url: URL for the file to be downloaded
+      token: application token for the desired website
+      out: directory where the downloaded file will be written
+
+    Returns: None
+    """
+    # get the logger
+    logger = logging.getLogger(__name__)
+
+    # get the headers for the application data download
+    headers = {'user-agent' : USERAGENT}
+    if not token is None:
+        headers['Authorization'] = 'Bearer ' + token
+
+    # Use CURL to download the file
+    import subprocess
+    try:
+        # Setup CURL command using silent mode and change location if reported
+        args = ['curl', '--fail', '-sS', '-L', '--retry', '5',
+                '--retry-delay', '60', '--get', url]
+        for (k,v) in headers.items():
+            args.extend(['-H', ': '.join([k, v])])
+        if out is None:
+            # python3's subprocess.check_output returns stdout as a
+            # byte string
+            result = subprocess.check_output(args)
+            return result.decode('utf-8') if isinstance(result, bytes) else result
+        else:
+            # download of the actual LAADS data product
+            retval = subprocess.call(args, stdout=out)
+
+            # make sure the download was successful or retry up to 5 more times
+            # and sleep in between
+            if retval:
+                retry_count = 1
+                while ((retry_count <= 5) and (retval)):
+                    time.sleep(60)
+                    logger.info('Retry {} of download for {}'
+                                .format(retry_count, url))
+                    retval = subprocess.call(args, stdout=out)
+                    retry_count += 1
+    
+                if retval:
+                    logger.warn('Unsuccessful download of {} (retried 5 times)'
+                                .format(url))
+
+    except subprocess.CalledProcessError as e:
+        msg = ('curl GET error for URL (). {}:{}'
+               .format(url, e.message, e.output))
+        logger.error(msg)
+
+    return None
+
+
+def buildURLs(year, doy):
+    """
+    Builds the URLs for the Terra and Aqua CMG and CMA products for the
+    current year and DOY, and put that URL on the list.
+
+    Args:
+      year: year of desired LAADS data
+      doy: day of year of desired LAADS data
+
+    Returns:
+      None: error resolving the instrument and associated URL for the
+            specified year and DOY
+      urlList: list of URLs to pull the LAADS data from for the specified
+               year and DOY.
+    """
+    urlList = []     # create empty URL list
+
+    # append TERRA CMA data (MOD09CMA)
+    url = ('{}{}{}/{:03d}/'.format(SERVER_URL, TERRA_CMA, year, doy))
+    urlList.append(url)
+
+    # append TERRA CMG data (MOD09CMG)
+    url = ('{}{}{}/{:03d}/'.format(SERVER_URL, TERRA_CMG, year, doy))
+    urlList.append(url)
+
+    # append AQUA CMA data (MYD09CMA)
+    url = ('{}{}{}/{:03d}/'.format(SERVER_URL, AQUA_CMA, year, doy))
+    urlList.append(url)
+
+    # append AQUA CMG data (MYD09CMG)
+    url = ('{}{}{}/{:03d}/'.format(SERVER_URL, AQUA_CMG, year, doy))
+    urlList.append(url)
+
+    return urlList
+
+
+def downloadLads (year, doy, destination, token=None):
+    """
+    Retrieves the files for the specified year and DOY from the LAADS https
+    interface and download to the desired destination.  If the destination
+    directory does not exist, then it is made before downloading.  Existing
+    files in the download directory are removed/cleaned.  This will download
+    the Aqua/Terra CMG and CMA files for the current year, DOY.
+
+    Args:
+      year: year of data to download (integer)
+      doy: day of year of data to download (integer)
+      destination: name of the directory on the local system to download the
+          LAADS files
+      token: application token for the desired website
+
+    Returns:
+      ERROR: error occurred while processing
+      SUCCESS: processing completed successfully
+    """
     # get the logger
     logger = logging.getLogger(__name__)
 
@@ -154,7 +203,7 @@ def downloadLads (year, doy, destination):
 
     # obtain the list of URL(s) for our particular date.  this includes the
     # locations for the Aqua and Terra CMG/CMA files.
-    urlList = DatasourceResolver().buildURLs(year, doy)
+    urlList = buildURLs(year, doy)
     if urlList is None:
         msg = ('LAADS URLs could not be resolved for year {} and DOY {}'
                .format(year, doy))
@@ -162,54 +211,69 @@ def downloadLads (year, doy, destination):
         return ERROR
 
     # download the data for the current year from the list of URLs.
-    # if there is a problem with the connection, then retry up to 5 times.
-    # don't use the verbose version which fills the log files with the download
-    # percentages.
-    msg = 'Downloading data for year {} to {}'.format(year, destination)
+    msg = 'Downloading data for {}/{} to {}'.format(year, doy, destination)
     logger.info(msg)
     for url in urlList:
         msg = 'Retrieving {} to {}'.format(url, destination)
         logger.info(msg)
-        cmd = ('wget --tries=5 --no-verbose {}'.format(url))
-        retval = subprocess.call(cmd, shell=True, cwd=destination)
 
-        # make sure the wget was successful or retry up to 5 more times and
-        # sleep in between
-        if retval:
-            retry_count = 1
-            while ((retry_count <= 5) and (retval)):
-                time.sleep(60)
-                logger.info('Retry {} of wget for {}'
-                            .format(retry_count, url))
-                retval = subprocess.call(cmd, shell=True, cwd=destination)
-                retry_count += 1
+        # get a listing of files in this URL
+        try:
+            import csv
+            files = [f for f in csv.DictReader(StringIO(geturl('%s.csv' % url, token)), skipinitialspace=True)]
+        except ImportError:
+            import json
+            files = json.loads(geturl(url + '.json', token))
 
-            if retval:
-                logger.warn('Unsuccessful download of {} (retried 5 times)'
-                            .format(url))
+        # log a warning if no files were found
+        if len(files) == 0:
+            msg = 'No files were found in {}. Continue processing.'.format(url)
+            logger.warn(msg)
+            continue
+
+        # loop through the file listing and download the files. skip any
+        # directories, which technically shouldn't even exist.
+        for f in files:
+            # currently we use filesize of 0 to indicate directory, and there
+            # should only be files in this path
+            filesize = int(f['size'])
+            path = os.path.join(destination, f['name'])
+            url = url + '/' + f['name']
+            if filesize != 0:
+                try:
+                    if not os.path.exists(path):
+                        logger.debug('downloading: {}'.format(path))
+                        with open(path, 'w+b') as fh:
+                            geturl(url, token, fh)
+                    else:
+                        logger.warn('Skipping: {}'.format(path))
+
+                except IOError as e:
+                    msg = 'Open {}: {}'.format(e.filename, e.strerror)
+                    logger.warn(msg)
+                    return ERROR
 
     return SUCCESS
 
 
-############################################################################
-# Description: getLadsData downloads the daily MODIS Aqua/Terra CMG and CMA
-# data files for the desired year, then combines those files into one daily
-# product containing the various ozone, water vapor, temperature, etc. SDSs.
-#
-# Inputs:
-#   auxdir - name of the base L8_SR auxiliary directory which contains
-#            the LAADS directory
-#   year - year of LAADS data to be downloaded and processed (integer)
-#   today - specifies if we are just bringing the LAADS data up to date vs.
-#           reprocessing the data
-#
-# Returns:
-#     ERROR - error occurred while processing
-#     SUCCESS - processing completed successfully
-#
-# Notes:
-############################################################################
-def getLadsData (auxdir, year, today):
+def getLadsData (auxdir, year, today, token):
+    """
+    Description: getLadsData downloads the daily MODIS Aqua/Terra CMG and CMA
+    data files for the desired year, then combines those files into one daily
+    product containing the various ozone, water vapor, temperature, etc. SDSs.
+    
+    Args:
+      auxdir: name of the base L8_SR auxiliary directory which contains the
+              LAADS directory
+      year: year of LAADS data to be downloaded and processed (integer)
+      today: specifies if we are just bringing the LAADS data up to date vs.
+             reprocessing the data
+      token: application token for the desired website
+
+    Returns:
+        ERROR: error occurred while processing
+        SUCCESS: processing completed successfully
+    """
     # get the logger
     logger = logging.getLogger(__name__)
 
@@ -267,7 +331,7 @@ def getLadsData (auxdir, year, today):
         found_mod09cmg = True
         found_myd09cma = True
         found_myd09cmg = True
-        status = downloadLads (year, doy, dloaddir)
+        status = downloadLads (year, doy, dloaddir, token)
         if status == ERROR:
             # warning message already printed
             return ERROR
@@ -486,6 +550,30 @@ def main ():
         logger.error(msg)
         return ERROR
 
+    # Get the application token for the LAADS https interface. for ESPA
+    # systems, pull the token from the config file.
+    if TOKEN is None:
+        # ESPA Processing Environment
+        # Read ~/.usgs/espa/processing.conf to get the URL for the ESPA API.
+        # Connect to the ESPA API and get the application token for downloading
+        # the LAADS data from the internal database.
+        PROC_CFG_FILENAME = 'processing.conf'
+        proc_cfg = retrieve_cfg(PROC_CFG_FILENAME)
+        rpcurl = proc_cfg.get('processing', 'espa_api')
+        server = api_connect(rpcurl)
+        if server:
+            token = server.get_configuration('aux.downloads.laads.token')
+    else:
+        # Non-ESPA processing.  TOKEN needs to be defined at the top of this
+        # script.
+        token = TOKEN
+
+    if token is None:
+        logger.error('Application token is None. This needs to be a valid '
+            'token provided for accessing the LAADS data. '
+            'https://ladsweb.modaps.eosdis.nasa.gov/tools-and-services/data-download-scripts/')
+        return ERROR
+
     # if processing today then process the current year.  if the current
     # DOY is within the first month, then process the previous year as well
     # to make sure we have all the recently available data processed.
@@ -511,7 +599,7 @@ def main ():
     for yr in range(eyear, syear-1, -1):
         msg = 'Processing year: {}'.format(yr)
         logger.info(msg)
-        status = getLadsData(auxdir, yr, today)
+        status = getLadsData(auxdir, yr, today, token)
         if status == ERROR:
             msg = ('Problems occurred while processing LAADS data for year {}'
                    .format(yr))

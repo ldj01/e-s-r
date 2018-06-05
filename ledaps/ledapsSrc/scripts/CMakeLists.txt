@@ -1,1 +1,1 @@
-install(PROGRAMS do_ledaps.py ncdump DESTINATION bin)
+install(PROGRAMS do_ledaps.py DESTINATION bin)

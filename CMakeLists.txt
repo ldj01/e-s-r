@@ -92,3 +92,13 @@ set (ESPA_LIBS $ENV{ESPALIB} CACHE PATH "ESPA library path" FORCE)
 add_subdirectory(scripts)
 add_subdirectory(lasrc)
 add_subdirectory(ledaps)
+
+add_custom_target(lasrc-aux
+                  COMMAND "${CMAKE_COMMAND}"
+                          -DCMAKE_INSTALL_COMPONENT=lasrc-aux
+                          -P "${CMAKE_BINARY_DIR}/cmake_install.cmake")
+
+add_custom_target(ledaps-aux
+                  COMMAND "${CMAKE_COMMAND}"
+                          -DCMAKE_INSTALL_COMPONENT=ledaps-aux
+                          -P "${CMAKE_BINARY_DIR}/cmake_install.cmake")

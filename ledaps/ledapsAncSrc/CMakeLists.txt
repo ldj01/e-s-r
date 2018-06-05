@@ -13,5 +13,7 @@ add_executable(ncep_repackage ncep_reanalysis_surface_repackage.c)
 target_link_libraries(ncep_repackage ${XML_LIBS} ${HDF4_LIBS}
                       ${HDFEOS_LIBS} ${NETCDF_LIBS} m)
 
-install(TARGETS convert_ozone ncep_repackage DESTINATION bin)
-install(PROGRAMS updatencep.py updatetoms.py DESTINATION bin)
+install(TARGETS convert_ozone ncep_repackage DESTINATION bin
+        COMPONENT ledaps-aux EXCLUDE_FROM_ALL)
+install(PROGRAMS updatencep.py updatetoms.py DESTINATION bin
+        COMPONENT ledaps-aux EXCLUDE_FROM_ALL)

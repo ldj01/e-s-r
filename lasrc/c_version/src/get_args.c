@@ -52,6 +52,10 @@ int get_args
         {"process_sr", required_argument, 0, 'p'},
         {"help", no_argument, 0, 'h'},
         {"version", no_argument, &version_flag, 1},
+        {"offset_refl", required_argument, 0, 'm'},
+        {"offset_therm", required_argument, 0, 'n'},
+        {"scale_refl", required_argument, 0, 'r'},
+        {"scale_therm", required_argument, 0, 't'},
         {0, 0, 0, 0}
     };
 
@@ -59,6 +63,14 @@ int get_args
     *verbose = false;
     *write_toa = false;
     *process_sr = true;    /* default is to process SR products */
+
+    /* Initialize to default value */
+    scale_refl = SCALE_FACTOR;
+    scale_therm = SCALE_FACTOR_TH;
+    output_mult_refl = 1 / SCALE_FACTOR;
+    output_mult_therm = 1 / SCALE_FACTOR_TH;
+    offset_refl = OFFSET_REFL;
+    offset_therm = OFFSET_THERM;
 
     /* Loop through all the cmd-line options */
     opterr = 0;   /* turn off getopt_long error msgs as we'll print our own */
@@ -107,6 +119,24 @@ int get_args
                 }
                 break;
      
+            case 'm':
+                offset_refl = atof(optarg);
+                break;
+
+            case 'n':
+                offset_therm = atof(optarg);
+                break;
+
+            case 'r':
+                scale_refl = atof(optarg);
+                output_mult_refl = 1 / scale_refl;
+                break;
+
+            case 't':
+                scale_therm = atof(optarg);
+                output_mult_therm = 1 / scale_therm;
+                break;
+
             case '?':
             default:
                 sprintf (errmsg, "Unknown option %s", argv[optind-1]);

@@ -2029,7 +2029,7 @@ int memory_allocation_main
     uint16 **qaband,     /* O: QA band for the input image, nlines x nsamps */
     uint16 **radsat,     /* O: radiometric saturation band for the input image,
                                nlines x nsamps */
-    int16 ***sband       /* O: output surface reflectance and brightness temp
+    uint16 ***sband      /* O: output surface reflectance and brightness temp
                                bands */
 )
 {
@@ -2087,7 +2087,7 @@ int memory_allocation_main
 
     /* Given that the QA band is its own separate array of uint16s, we need
        one less band for the signed image data */
-    *sband = calloc (NBAND_TTL_OUT-1, sizeof (int16*));
+    *sband = calloc (NBAND_TTL_OUT-1, sizeof (uint16*));
     if (*sband == NULL)
     {
         sprintf (errmsg, "Error allocating memory for sband");
@@ -2096,7 +2096,7 @@ int memory_allocation_main
     }
     for (i = 0; i < NBAND_TTL_OUT-1; i++)
     {
-        (*sband)[i] = calloc (nlines*nsamps, sizeof (int16));
+        (*sband)[i] = calloc (nlines*nsamps, sizeof (uint16));
         if ((*sband)[i] == NULL)
         {
             sprintf (errmsg, "Error allocating memory for sband");
@@ -2133,15 +2133,15 @@ int memory_allocation_sr
 (
     int nlines,          /* I: number of lines in the scene */
     int nsamps,          /* I: number of samples in the scene */
-    int16 **aerob1,      /* O: atmospherically corrected band 1 data
+    uint16 **aerob1,     /* O: atmospherically corrected band 1 data
                                (TOA refl), nlines x nsamps */
-    int16 **aerob2,      /* O: atmospherically corrected band 2 data
+    uint16 **aerob2,     /* O: atmospherically corrected band 2 data
                                (TOA refl), nlines x nsamps */
-    int16 **aerob4,      /* O: atmospherically corrected band 4 data
+    uint16 **aerob4,     /* O: atmospherically corrected band 4 data
                                (TOA refl), nlines x nsamps */
-    int16 **aerob5,      /* O: atmospherically corrected band 5 data
+    uint16 **aerob5,     /* O: atmospherically corrected band 5 data
                                (TOA refl), nlines x nsamps */
-    int16 **aerob7,      /* O: atmospherically corrected band 7 data
+    uint16 **aerob7,      /* O: atmospherically corrected band 7 data
                                (TOA refl), nlines x nsamps */
     uint8 **ipflag,      /* O: QA flag to assist with aerosol interpolation,
                                nlines x nsamps */

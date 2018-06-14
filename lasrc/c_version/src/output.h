@@ -5,17 +5,17 @@
 #include "input.h"
 
 /* Define some of the constants to use in the output data products */
-#define FILL_VALUE -9999
+#define FILL_VALUE 0
 #define RADSAT_FILL_VALUE 1
 #define CLOUD_FILL_VALUE 0
-#define SCALE_FACTOR 0.0001
-#define MULT_FACTOR 10000.0
-#define SCALE_FACTOR_TH 0.1
-#define MULT_FACTOR_TH 10.0
-#define MIN_VALID -2000
-#define MAX_VALID 16000
-#define MIN_VALID_TH 1500
-#define MAX_VALID_TH 3500
+#define SCALE_FACTOR 0.000275
+#define SCALE_FACTOR_TH 0.0034
+#define OFFSET_REFL -0.20
+#define OFFSET_THERM 150
+#define MIN_VALID -0.20   /* unscaled */
+#define MAX_VALID 1.60    /* unscaled */
+#define MIN_VALID_TH 150  /* unscaled */
+#define MAX_VALID_TH 350  /* unscaled */
 #define L1_SATURATED 65535       /* saturation value of the Level-1 pixel */
 
 /* Define the output product types */

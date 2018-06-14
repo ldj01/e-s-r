@@ -14,7 +14,7 @@ NOTES:
 
 #include <time.h>
 #include <ctype.h>
-#include "output.h"
+#include "lasrc.h"
 
 /******************************************************************************
 MODULE:  open_output
@@ -279,22 +279,24 @@ Output_t *open_output
         }
         else
         {
-            bmeta[ib].data_type = ESPA_INT16;
+            bmeta[ib].data_type = ESPA_UINT16;
             bmeta[ib].fill_value = FILL_VALUE;
             strcpy (bmeta[ib].category, "image");
             strcpy (bmeta[ib].data_units, "reflectance");
 
             if (ib == SR_BAND10 || ib == SR_BAND11)  /* thermal bands */
             {
-                bmeta[ib].scale_factor = SCALE_FACTOR_TH;
-                bmeta[ib].valid_range[0] = (float) MIN_VALID_TH;
-                bmeta[ib].valid_range[1] = (float) MAX_VALID_TH;
+                bmeta[ib].scale_factor = scale_therm;
+                bmeta[ib].valid_range[0] = roundf ((MIN_VALID_TH - offset_therm) * output_mult_therm);
+                bmeta[ib].valid_range[1] = roundf ((MAX_VALID_TH - offset_therm) * output_mult_therm);
+                bmeta[ib].add_offset = offset_therm;
             }
             else
             {
-                bmeta[ib].scale_factor = SCALE_FACTOR;
-                bmeta[ib].valid_range[0] = (float) MIN_VALID;
-                bmeta[ib].valid_range[1] = (float) MAX_VALID;
+                bmeta[ib].scale_factor = scale_refl;
+                bmeta[ib].valid_range[0] = roundf ((MIN_VALID - offset_refl) * output_mult_refl);
+                bmeta[ib].valid_range[1] = roundf ((MAX_VALID - offset_refl) * output_mult_refl);
+                bmeta[ib].add_offset = offset_refl;
             }
 
             if (ib >= SR_BAND1 && ib <= SR_BAND7)

@@ -76,8 +76,19 @@ class SurfaceReflectance():
             parser.add_option ("--write_toa", dest="write_toa", default=False,
                 action="store_true",
                 help="write the intermediate TOA reflectance products")
+            parser.add_option ("--scale_refl", dest="scale_refl", type="float",
+                help="scaling value for reflective bands")
+            parser.add_option ("--offset_refl", dest="offset_refl", type="float",
+                help="offset value for reflective bands")
+            parser.add_option ("--scale_therm", dest="scale_therm", type="float",
+                help="scaling value for thermal bands")
+            parser.add_option ("--offset_therm", dest="offset_therm", type="float",
+                help="offset value for thermal bands")
+            parser.add_option("--verbose", dest="verbose", default=False, 
+                action="store_true", help="Turn verbose logging on")
+
             (options, args) = parser.parse_args()
-    
+
             # XML input file
             xml_infile = options.xml
             if xml_infile == None:
@@ -87,6 +98,11 @@ class SurfaceReflectance():
             # surface reflectance options
             process_sr = options.process_sr
             write_toa = options.write_toa
+            scale_refl = options.scale_refl
+            offset_refl = options.offset_refl
+            scale_therm = options.scale_therm
+            offset_therm = options.offset_therm
+            verbose = options.verbose
 
         # get the logger
         logger = logging.getLogger(__name__)
@@ -174,15 +190,32 @@ class SurfaceReflectance():
         # if any errors occur.
         process_sr_opt_str = '--process_sr=true '
         write_toa_opt_str = ''
+        verbose_opt_str = ''
+        scale_refl_opt_str = ''
+        scale_therm_opt_str = ''
+        offset_refl_opt_str = ''
+        offset_therm_opt_str = ''
 
         if process_sr == 'False':
             process_sr_opt_str = '--process_sr=false '
         if write_toa:
             write_toa_opt_str = '--write_toa '
+        if verbose:
+            verbose_opt_str = '--verbose '
+        if scale_refl != None:
+            scale_refl_opt_str = '--scale_refl={} '.format(scale_refl) 
+        if scale_therm != None :
+            scale_therm_opt_str = '--scale_therm={} '.format(scale_therm) 
+        if offset_refl != None:
+            offset_refl_opt_str = '--offset_refl={} '.format(offset_refl) 
+        if offset_therm != None:
+            offset_therm_opt_str = '--offset_therm={} '.format(offset_therm) 
 
-        cmdstr = ('lasrc --xml={} --aux={} {}{}--verbose'
+        cmdstr = ('lasrc --xml={} --aux={} {}{}{}{}{}{}{}'
                   .format(xml_infile, aux_file, process_sr_opt_str,
-                          write_toa_opt_str))
+                          write_toa_opt_str, verbose_opt_str,
+                          scale_refl_opt_str, scale_therm_opt_str,
+                          offset_refl_opt_str, offset_therm_opt_str))
         msg = 'Executing lasrc command: {}'.format(cmdstr)
         logger.debug (msg)
         (status, output) = commands.getstatusoutput (cmdstr)

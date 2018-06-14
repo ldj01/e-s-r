@@ -21,6 +21,14 @@
 /* Defines */
 #define ESPA_EPSILON 0.00001
 
+/* Globals */
+double scale_refl;           /* scale for reflective bands */
+double offset_refl;          /* add offset for reflective bands */
+double scale_therm;          /* scale for thermal bands */
+double offset_therm;         /* add offset for thermal bands */
+double output_mult_refl;     /* scale_refl inverse */
+double output_mult_therm;    /* scale_therm inverse */
+
 /* Prototypes */
 void usage ();
 
@@ -55,7 +63,7 @@ int compute_toa_refl
     char *instrument,   /* I: instrument to be processed (OLI, TIRS) */
     int16 *sza,         /* I: scaled per-pixel solar zenith angles (degrees),
                               nlines x nsamps */
-    int16 **sband,      /* O: output TOA reflectance and brightness temp
+    uint16 **sband,     /* O: output TOA reflectance and brightness temp
                               values (scaled) */
     uint16 *radsat      /* O: radiometric saturation QA band, nlines x nsamps;
                               array should be all zeros on input to this
@@ -72,7 +80,7 @@ int compute_sr_refl
     int nlines,         /* I: number of lines in reflectance, thermal bands */
     int nsamps,         /* I: number of samps in reflectance, thermal bands */
     float pixsize,      /* I: pixel size for the reflectance bands */
-    int16 **sband,      /* I/O: input TOA and output surface reflectance */
+    uint16 **sband,     /* I/O: input TOA and output surface reflectance */
     int16 *sza,         /* I: per-pixel solar zenith angles, nlines x nsamps */
     int16 *saa,         /* I: per-pixel solar azimuth angles, nlines x nsamps */
     int16 *vza,         /* I: per-pixel view zenith angles, nlines x nsamps */
@@ -171,8 +179,8 @@ bool is_shadow
 
 bool is_water
 (
-    int16 band4_pix,     /* I: Band 4 reflectance for current pixel */
-    int16 band5_pix      /* I: Band 5 reflectance for current pixel */
+    uint16 band4_pix,     /* I: Band 4 reflectance for current pixel */
+    uint16 band5_pix      /* I: Band 5 reflectance for current pixel */
 );
 
 bool find_closest_non_fill
@@ -189,7 +197,7 @@ bool find_closest_non_fill
 bool find_closest_non_cloud_shadow_water
 (
     uint16 *qaband,    /* I: QA band for the input image, nlines x nsamps */
-    int16 **sband,     /* I: input surface reflectance, nlines x nsamps */
+    uint16 **sband,    /* I: input surface reflectance, nlines x nsamps */
     int nlines,        /* I: number of lines in QA band */
     int nsamps,        /* I: number of samps in QA band */
     int center_line,   /* I: line for the center of the aerosol window */
@@ -201,7 +209,7 @@ bool find_closest_non_cloud_shadow_water
 bool find_closest_non_water
 (
     uint16 *qaband,    /* I: QA band for the input image, nlines x nsamps */
-    int16 **sband,     /* I: input surface reflectance */
+    uint16 **sband,    /* I: input surface reflectance */
     int nlines,        /* I: number of lines in QA band */
     int nsamps,        /* I: number of samps in QA band */
     int center_line,   /* I: line for the center of the aerosol window */
@@ -213,7 +221,7 @@ bool find_closest_non_water
 void mask_aero_window
 (
     uint16 *qaband,    /* I: QA band for the input image, nlines x nsamps */
-    int16 **sband,     /* I: input surface reflectance */
+    uint16 **sband,    /* I: input surface reflectance */
     int nlines,        /* I: number of lines in QA band */
     int nsamps,        /* I: number of samps in QA band */
     int center_line,   /* I: line for the center of the aerosol window */

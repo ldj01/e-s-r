@@ -12,9 +12,10 @@ LICENSE TYPE:  NASA Open Source Agreement Version 1.3
 NOTES:
 *****************************************************************************/
 
+#include <math.h>
 #include <time.h>
 #include <ctype.h>
-#include "output.h"
+#include "lasrc.h"
 
 /******************************************************************************
 MODULE:  open_output
@@ -53,6 +54,13 @@ Output_t *open_output
     Espa_band_meta_t *bmeta = NULL;  /* pointer to the band metadata array
                                         within the output structure */
     int nband;                   /* number of output bands to be created */
+
+    double scale_refl;    /* scale for reflective bands */
+    double offset_refl;   /* add offset for reflective bands */
+    double scale_therm;   /* scale for thermal bands */
+    double offset_therm;  /* add offset for thermal bands */
+    double mult_refl;     /* scale_refl inverse */
+    double mult_therm;    /* scale_therm inverse */
 
     /* Create the Output data structure */
     output = (Output_t *) malloc (sizeof (Output_t));
@@ -140,6 +148,14 @@ Output_t *open_output
     for (ib = 0; ib < output->nband; ib++)
         output->fp_bin[ib] = NULL;
  
+    /* Get some values */
+    scale_refl = get_scale_refl();
+    offset_refl = get_offset_refl();
+    scale_therm = get_scale_therm();
+    offset_therm = get_offset_therm();
+    mult_refl = get_mult_refl();
+    mult_therm = get_mult_therm();
+
     for (ib = 0; ib < nband; ib++)
     {
         strncpy (bmeta[ib].short_name, in_meta->band[refl_indx].short_name, 4);
@@ -279,22 +295,30 @@ Output_t *open_output
         }
         else
         {
-            bmeta[ib].data_type = ESPA_INT16;
+            bmeta[ib].data_type = ESPA_UINT16;
             bmeta[ib].fill_value = FILL_VALUE;
             strcpy (bmeta[ib].category, "image");
             strcpy (bmeta[ib].data_units, "reflectance");
 
             if (ib == SR_BAND10 || ib == SR_BAND11)  /* thermal bands */
             {
-                bmeta[ib].scale_factor = SCALE_FACTOR_TH;
-                bmeta[ib].valid_range[0] = (float) MIN_VALID_TH;
-                bmeta[ib].valid_range[1] = (float) MAX_VALID_TH;
+                bmeta[ib].scale_factor = scale_therm;
+                bmeta[ib].valid_range[0] = 
+                    roundf ((MIN_VALID_TH - offset_therm) *
+                            mult_therm);
+                bmeta[ib].valid_range[1] = 
+                    roundf ((MAX_VALID_TH - offset_therm) *
+                            mult_therm);
+                bmeta[ib].add_offset = offset_therm;
             }
             else
             {
-                bmeta[ib].scale_factor = SCALE_FACTOR;
-                bmeta[ib].valid_range[0] = (float) MIN_VALID;
-                bmeta[ib].valid_range[1] = (float) MAX_VALID;
+                bmeta[ib].scale_factor = scale_refl;
+                bmeta[ib].valid_range[0] = 
+                    roundf ((MIN_VALID - offset_refl) * mult_refl);
+                bmeta[ib].valid_range[1] = 
+                    roundf ((MAX_VALID - offset_refl) * mult_refl);
+                bmeta[ib].add_offset = offset_refl;
             }
 
             if (ib >= SR_BAND1 && ib <= SR_BAND7)

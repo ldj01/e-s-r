@@ -73,7 +73,7 @@ int main (int argc, char *argv[])
     int16 *saa = NULL;  /* per-pixel solar azimuth angles, nlines x nsamps */
     int16 *vza = NULL;  /* per-pixel view zenith angles, nlines x nsamps */
     int16 *vaa = NULL;  /* per-pixel view azimuth angles, nlines x nsamps */
-    int16 **sband = NULL;     /* output surface reflectance and brightness
+    uint16 **sband = NULL;    /* output surface reflectance and brightness
                                  temp bands, qa band is separate as a uint16 */
     uint16 *qaband = NULL;    /* QA band for the input image, nlines x nsamps */
     uint16 *radsat = NULL;    /* QA band for radiometric saturation of the
@@ -370,7 +370,7 @@ int main (int argc, char *argv[])
             printf ("  Band %d: %s\n", ib+1,
                 toa_output->metadata.band[ib].file_name);
             if (put_output_lines (toa_output, sband[ib], ib, 0, nlines,
-                sizeof (int16)) != SUCCESS)
+                sizeof (uint16)) != SUCCESS)
             {
                 sprintf (errmsg, "Writing output TOA data for band %d", ib+1);
                 error_handler (true, FUNC_NAME, errmsg);
@@ -420,7 +420,7 @@ int main (int argc, char *argv[])
         printf ("  Band %d: %s\n", ib+2,
             toa_output->metadata.band[ib].file_name);
         if (put_output_lines (toa_output, sband[ib], ib, 0, nlines,
-            sizeof (int16)) != SUCCESS)
+            sizeof (uint16)) != SUCCESS)
         {
             sprintf (errmsg, "Writing output TOA data for band %d", ib+2);
             error_handler (true, FUNC_NAME, errmsg);
@@ -543,7 +543,8 @@ int main (int argc, char *argv[])
     free_metadata (&xml_metadata);
 
     /* Close the input product */
-    printf ("Closing input/output and freeing pointers ...\n");
+    if (verbose)
+       printf ("Closing input/output and freeing pointers ...\n");
     close_input (input);
     free_input (input);
 
@@ -590,7 +591,9 @@ void usage ()
     printf ("usage: lasrc "
             "--xml=input_xml_filename "
             "--aux=input_auxiliary_filename "
-            "--process_sr=true:false --write_toa [--verbose] [--version]\n");
+            "--process_sr=true:false --write_toa [--verbose] [--version] "
+            "[--scale_refl=<X.X>] [--offset_refl=<X.X>] "
+            "[--scale_therm=<X.X>] [--offset_therm=<X.X>] \n");
 
     printf ("\nwhere the following parameters are required:\n");
     printf ("    -xml: name of the input XML file to be processed\n");
@@ -610,6 +613,10 @@ void usage ()
             "is false)\n");
     printf ("    -version: print the LaSRC version. When this parameter is "
             "used, none of the other parameters are used or required.\n");
+    printf ("    -scale_refl: Scaling value for reflective bands.\n");
+    printf ("    -offset_refl: Offset value for reflective bands.\n");
+    printf ("    -scale_therm: Scaling value for thermal bands.\n");
+    printf ("    -offset_therm: Offset value for thermal bands.\n");
 
     printf ("\nlasrc --help will print the usage statement\n");
     printf ("\nExample: lasrc "

@@ -1,5 +1,13 @@
 #include <getopt.h>
+#include <stdlib.h>
 #include "lasrc.h"
+
+static double scale_refl;    /* scale for reflective bands */
+static double offset_refl;   /* add offset for reflective bands */
+static double scale_therm;   /* scale for thermal bands */
+static double offset_therm;  /* add offset for thermal bands */
+static double mult_refl;     /* scale_refl inverse */
+static double mult_therm;    /* scale_therm inverse */
 
 /******************************************************************************
 MODULE:  get_args
@@ -52,6 +60,10 @@ int get_args
         {"process_sr", required_argument, 0, 'p'},
         {"help", no_argument, 0, 'h'},
         {"version", no_argument, &version_flag, 1},
+        {"offset_refl", required_argument, 0, 'm'},
+        {"offset_therm", required_argument, 0, 'n'},
+        {"scale_refl", required_argument, 0, 'r'},
+        {"scale_therm", required_argument, 0, 't'},
         {0, 0, 0, 0}
     };
 
@@ -59,6 +71,14 @@ int get_args
     *verbose = false;
     *write_toa = false;
     *process_sr = true;    /* default is to process SR products */
+
+    /* Initialize to default value */
+    scale_refl = SCALE_FACTOR;
+    scale_therm = SCALE_FACTOR_TH;
+    mult_refl = 1 / SCALE_FACTOR;
+    mult_therm = 1 / SCALE_FACTOR_TH;
+    offset_refl = OFFSET_REFL;
+    offset_therm = OFFSET_THERM;
 
     /* Loop through all the cmd-line options */
     opterr = 0;   /* turn off getopt_long error msgs as we'll print our own */
@@ -107,6 +127,24 @@ int get_args
                 }
                 break;
      
+            case 'm':
+                offset_refl = atof(optarg);
+                break;
+
+            case 'n':
+                offset_therm = atof(optarg);
+                break;
+
+            case 'r':
+                scale_refl = atof(optarg);
+                mult_refl = 1 / scale_refl;
+                break;
+
+            case 't':
+                scale_therm = atof(optarg);
+                mult_therm = 1 / scale_therm;
+                break;
+
             case '?':
             default:
                 sprintf (errmsg, "Unknown option %s", argv[optind-1]);
@@ -150,4 +188,35 @@ int get_args
         *write_toa = true;
 
     return (SUCCESS);
+}
+
+/* Value retrieval functions. */
+double get_scale_refl(void)
+{
+    return scale_refl;
+}
+
+double get_scale_therm(void)
+{
+    return scale_therm;
+}
+
+double get_offset_refl(void)
+{
+    return offset_refl;
+}
+
+double get_offset_therm(void)
+{
+    return offset_therm;
+}
+
+double get_mult_refl(void)
+{
+    return mult_refl;
+}
+
+double get_mult_therm(void)
+{
+    return mult_therm;
 }

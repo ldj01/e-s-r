@@ -12,7 +12,7 @@
 void aerosol_interp
 (
     Espa_internal_meta_t *xml_metadata, /* I: XML metadata information */
-    int16 **sband,     /* I/O: input TOA reflectance */
+    uint16 **sband,    /* I/O: input TOA reflectance */
     uint16 *qaband,    /* I: QA band for the input image, nlines x nsamps */
     uint8 *ipflag,     /* I/O: QA flag to assist with aerosol interpolation,
                                nlines x nsamps.  It is expected that the ipflag

@@ -146,7 +146,7 @@ c     print *,it,cr,ca,h(it),zx
       endif
       
       if(tr.gt.acu2.and.ta.gt.acu2.and.iaer_prof.eq.1)then     
-      call aero_prof(ta,piz,tr,hr,ntp,xmus,
+      call aero_prof(ta,piz,tr,hr,ntp,xmusinv,
      s   h,ch,ydel,xdel,altc)
       endif
       

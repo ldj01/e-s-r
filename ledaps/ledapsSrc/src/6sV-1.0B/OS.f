@@ -184,6 +184,8 @@ c     print *,'discre ',it,cr,ca,xdel(it),ydel(it),zx
   14  continue
       endif
 
+c acu2 is not declared or set in this routine, so not sure if the
+c following conditional is correct.
       if(tr.gt.acu2.and.ta.gt.acu2.and.iaer_prof.eq.1)then
        call aero_prof(ta,piz,tr,hr,ntp,xmusinv,
      s   h,ch,ydel,xdel,altc)
@@ -275,12 +277,12 @@ c use integer for g95 compatible
          temp = nbisca
 c use integer for g95 compatible
          filut(i,temp)=180.0
-	 scaa=iscama
+         scaa=iscama
          do j=2,nfilut(i)-1
           scaa=scaa-4.0
           cscaa=cos(scaa*pi/180.)
           cfi=-(cscaa+xmus*lutmuv)/(sqrt(1-xmus*xmus)
-     S	  *sqrt(1.-lutmuv*lutmuv))
+     S       *sqrt(1.-lutmuv*lutmuv))
           filut(i,j)=acos(cfi)*180.0/pi
          enddo
       enddo

@@ -26,35 +26,37 @@ C following is a set of intermediate variable used in the computation
 c  of factor 
       real phw
       real cs,cv,ss,sv,zx,zy,tantilt,tilt,proba,xe,xn,xe2,xn2
-      real coef,cos2chi,coschi,sinchi
+      real coef
+c      real cos2chi, coschi, sinchi
       real sigmaC,sigmaU,C21,C03,C40,C04,C22
-      real mus,muv,sinv,cksi,ksi,r1f
+      real mus,muv,sinv,cksi,ksi
+c      real r1f
       real nr,ni
 
-        m=1.33	
-	nr=1.33
-	ni=0.0
+        m=1.33
+        nr=1.33
+        ni=0.0
         pi=acos(0.0)*2.0
         dtr=pi/180.0
-	csca=-cos(xts*dtr)*cos(xtv*dtr)-sin(xts*dtr)
+        csca=-cos(xts*dtr)*cos(xtv*dtr)-sin(xts*dtr)
      s      *sin(xtv*dtr)*cos(phi*dtr)
         sca=acos(csca)
-	alpha=(pi-sca)/2.0
+        alpha=(pi-sca)/2.0
 C Originally from Deuze et al cannot mak it work to be investigated	
- 	rl=(sqrt(m*m-sin(alpha)*sin(alpha))-m*m*cos(alpha))/
+        rl=(sqrt(m*m-sin(alpha)*sin(alpha))-m*m*cos(alpha))/
      s        (sqrt(m*m-sin(alpha)*sin(alpha))+m*m*cos(alpha))
 C     
- 	rr=(cos(alpha)-sqrt(m*m-sin(alpha)*sin(alpha)))/
+        rr=(cos(alpha)-sqrt(m*m-sin(alpha)*sin(alpha)))/
      s       (cos(alpha)+sqrt(m*m-sin(alpha)*sin(alpha))) 
 C     
         r1=(rl*rl+rr*rr)/2.
        	r2=(rl*rl-rr*rr)/2.
- 	r3=rl*rr
- 	r3=0.0
-	
+        r3=rl*rr
+        r3=0.0
+
 
 C       rpsur=sqrt(r2*r2+r3*r3)
-C	chi=atan2(r3,r2)     
+C       chi=atan2(r3,r2)     
 
 C adjust with agitated surface 
       phw=azw*dtr
@@ -101,11 +103,11 @@ C      write(6,*) "R2 fresnel:",R2f," r2 actual:",r2
 C Compute Reflectance of the sun glint
 C      Rog=pi*R1*proba/4./cs/cv/(cos(tilt)**4)
         factor=pi*proba/4./cs/cv/(cos(tilt)**4)
-	
+
 C compute rotation angle for Q and U
         muv=cos(xtv*dtr)
-	mus=cos(xts*dtr)
-	sinv=sin(xtv*dtr)
+        mus=cos(xts*dtr)
+        sinv=sin(xtv*dtr)
         if (xtv.gt.0.5) then
         if (sin(phi*dtr).lt.0) then
         cksi=(muv*csca+mus)/sqrt(1.-csca*csca)/sinv
@@ -115,18 +117,18 @@ C compute rotation angle for Q and U
         else
         cksi=1.0
         endif
-	if (cksi.gt.1.) cksi=1.
-	if (cksi.lt.-1.) cksi=-1.
+        if (cksi.gt.1.) cksi=1.
+        if (cksi.lt.-1.) cksi=-1.
         ksi=acos(cksi)/dtr
-C	write(6,*) "KSI=",ksi	
+C        write(6,*) "KSI=",ksi	
 
 C apply rotation mattrix
-	ropq=r2*(2.*cksi*cksi-1.)*factor
-	ropu=-r2*2.*cksi*sqrt(1.-cksi*cksi)*factor
-	return
-	end
-	
-	Subroutine pfresnel(nr,ni,coschi,sinchi,r1,r2)
+        ropq=r2*(2.*cksi*cksi-1.)*factor
+        ropu=-r2*2.*cksi*sqrt(1.-cksi*cksi)*factor
+        return
+        end
+
+        Subroutine pfresnel(nr,ni,coschi,sinchi,r1,r2)
 C
 C to compute the Fresnel's coefficient of reflection (see for
 C example M. Born and E. Wolf, Principles of Optics, Pergamon Press, fifth
@@ -151,8 +153,3 @@ c absolute value for a1 to get v=0 when ni=0
       R2=(Rl2-Rr2)/2.
       return
       end
-
-	
-	
-	
-       

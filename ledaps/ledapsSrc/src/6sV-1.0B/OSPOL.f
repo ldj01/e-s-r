@@ -88,12 +88,12 @@ c the optical thickness above plane are recomputed to give o.t above pla
       acu2=1.e-4
       mum1=mu-1
 c if plane observations recompute scale height for aerosol knowing:
-c the aerosol optical depth as measure from the plane 	= tamoyp
-c the rayleigh scale height = 			= hr (8km)
-c the rayleigh optical depth  at plane level 		= trmoyp
-c the altitude of the plane 				= palt
-c the rayleigh optical depth for total atmos		= trmoy
-c the aerosol optical depth for total atmos		= tamoy
+c the aerosol optical depth as measure from the plane   = tamoyp
+c the rayleigh scale height =                   = hr (8km)
+c the rayleigh optical depth  at plane level            = trmoyp
+c the altitude of the plane                             = palt
+c the rayleigh optical depth for total atmos            = trmoy
+c the aerosol optical depth for total atmos             = tamoy
 c if not plane observations then ha is equal to 2.0km
 c ntp local variable: if ntp=nt     no plane observation selected
 c                        ntp=nt-1   plane observation selected
@@ -252,9 +252,9 @@ c
       phi=phirad
       do 716 l=1,np
         do 716 m=-mu,mu
-	  xli(m,l)=0.
-	  xlq(m,l)=0.
-	  xlu(m,l)=0.
+          xli(m,l)=0.
+          xlq(m,l)=0.
+          xlu(m,l)=0.
  716  continue
       do ifi=1,nfi
       xlphim(ifi)=0.
@@ -521,20 +521,20 @@ c
               xdb=xdb-xu1*gtkj-xu2*gtkmj
               ii2=ii2+xdb*z
               xdb=xi1*bpjmk+xi2*bpjk+xq1*grkmj+xq2*grkj
-	      xdb=xdb+xu1*gtkmj+xu2*gtkj
+              xdb=xdb+xu1*gtkmj+xu2*gtkj
               ii1=ii1+xdb*z
               xdb=xi1*grjk+xi2*grjmk+xq1*arrjk+xq2*arrjmk
               xdb=xdb-xu1*artjk+xu2*artjmk
-	      qq2=qq2+xdb*z
-	      xdb=xi1*grjmk+xi2*grjk+xq1*arrjmk+xq2*arrjk
-	      xdb=xdb-xu1*artjmk+xu2*artjk
-	      qq1=qq1+xdb*z
+              qq2=qq2+xdb*z
+              xdb=xi1*grjmk+xi2*grjk+xq1*arrjmk+xq2*arrjk
+              xdb=xdb-xu1*artjmk+xu2*artjk
+              qq1=qq1+xdb*z
               xdb=xi1*gtjk-xi2*gtjmk+xq1*artkj+xq2*artkmj
               xdb=xdb-xu1*attjk-xu2*attjmk
-	      uu2=uu2-xdb*z
+              uu2=uu2-xdb*z
               xdb=xi1*gtjmk-xi2*gtjk-xq1*artkmj-xq2*artkj
               xdb=xdb-xu1*attjmk-xu2*attjk
-	      uu1=uu1-xdb*z
+              uu1=uu1-xdb*z
  477        continue
             if (abs(ii2).lt.1.E-30) ii2=0.
             if (abs(ii1).lt.1.E-30) ii1=0.
@@ -580,33 +580,33 @@ c
               grjmk=gr(j,-k)*x
               grkj=gr(k,j)*x
               grkmj=gr(k,-j)*x
-	      arrjk=arr(j,k)*x
-	      arrjmk=arr(j,-k)*x
-	      artjk=art(j,k)*x
-	      artjmk=art(j,-k)*x
-	      artkj=art(k,j)*x
-	      artkmj=art(k,-j)*x
-	      attjk=att(j,k)*x
-	      attjmk=att(j,-k)*x
+              arrjk=arr(j,k)*x
+              arrjmk=arr(j,-k)*x
+              artjk=art(j,k)*x
+              artjmk=art(j,-k)*x
+              artkj=art(k,j)*x
+              artkmj=art(k,-j)*x
+              attjk=att(j,k)*x
+              attjmk=att(j,-k)*x
 
               xdb=xi1*bpjk+xi2*bpjmk+xq1*grkj+xq2*grkmj
               xdb=xdb-xu1*gtkj-xu2*gtkmj
               ii2=ii2+xdb*z
               xdb=xi1*bpjmk+xi2*bpjk+xq1*grkmj+xq2*grkj
-	      xdb=xdb+xu1*gtkmj+xu2*gtkj
+              xdb=xdb+xu1*gtkmj+xu2*gtkj
               ii1=ii1+xdb*z
               xdb=xi1*grjk+xi2*grjmk+xq1*arrjk+xq2*arrjmk
               xdb=xdb-xu1*artjk+xu2*artjmk
-	      qq2=qq2+xdb*z
-	      xdb=xi1*grjmk+xi2*grjk+xq1*arrjmk+xq2*arrjk
-	      xdb=xdb-xu1*artjmk+xu2*artjk
-	      qq1=qq1+xdb*z
+              qq2=qq2+xdb*z
+              xdb=xi1*grjmk+xi2*grjk+xq1*arrjmk+xq2*arrjk
+              xdb=xdb-xu1*artjmk+xu2*artjk
+              qq1=qq1+xdb*z
               xdb=xi1*gtjk-xi2*gtjmk+xq1*artkj+xq2*artkmj
               xdb=xdb-xu1*attjk-xu2*attjmk
-	      uu2=uu2-xdb*z
+              uu2=uu2-xdb*z
               xdb=xi1*gtjmk-xi2*gtjk-xq1*artkmj-xq2*artkj
               xdb=xdb-xu1*attjmk-xu2*attjk
-	      uu1=uu1-xdb*z
+              uu1=uu1-xdb*z
    47       continue
             if (abs(ii2).lt.1.E-30) ii2=0.
             if (abs(ii1).lt.1.E-30) ii1=0.
@@ -721,7 +721,7 @@ c
             a1=roIavion(2)
             d1=roIavion(1)
             g1=roIavion(0)
-	    r1=roIavion(-1)
+            r1=roIavion(-1)
             if(abs(a1).ge.acu.and.abs(d1).ge.acu.and.abs(r1).ge.acu)
      &          then
               y = (g1/d1 - d1/a1)/(1 - g1/d1)**2*(g1/r1)
@@ -934,8 +934,8 @@ c
             endif
 
  614    continue
- 
- 
+
+
 C Look up table generation 
       do m=1,mu
       do l=1,nfilut(m)
@@ -948,11 +948,11 @@ C Look up table generation
       enddo
       enddo
 C end of look up table generation 
- 
- 
- 
- 
- 
+
+
+
+
+
         if(is.eq.0) then
           do k=1,mum1
             xli(0,1)=xli(0,1)+rm(k)*gb(k)*i3(-k)
@@ -972,7 +972,7 @@ C end of look up table generation
         phimul=(ifi-1)*pi/(nfi-1)
         xlphim(ifi)=xlphim(ifi)+delta0s*roIavion(-1)*cos(is*(phimul+pi))
         enddo
-	
+        
           z=0.
           do 616 l=-mu,mu
             if (abs(i4(l)).lt.acu) goto 617

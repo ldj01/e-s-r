@@ -43,8 +43,9 @@ void aerosol_interp
     int center_samp;       /* sample for the center of the aerosol window */
     int center_samp1;      /* sample+1 for the center of the aerosol window */
     int refl_indx = -99;   /* index of band 1 or first band */
-    int tmp_percent = 0;  /* current percentage for printing status */
-    int curr_tmp_percent; /* percentage for current line */
+    int tmp_percent = 0;   /* current percentage for printing status */
+    int percent_step;      /* 10% of nlines */
+    int next_percent;      /* next 10% nlines count */
     int aero_pix11;        /* pixel location for aerosol window values
                               [lcmg][scmg] */
     int aero_pix12;        /* pixel location for aerosol window values
@@ -55,19 +56,12 @@ void aerosol_interp
                               [lcmg2][scmg2] */
     float xaero, yaero;    /* x/y location for aerosol pixel within the overall
                               larger aerosol window grid */
-    float pixel_size_x;    /* x pixel size */
-    float pixel_size_y;    /* y pixel size */
     float aero11;          /* aerosol value at window line, samp */
     float aero12;          /* aerosol value at window line, samp+1 */
     float aero21;          /* aerosol value at window line+1, samp */
     float aero22;          /* aerosol value at window line+1, samp+1 */
     float u, v;            /* line, sample fractional distance from current
                               pixel (weight applied to furthest line, sample) */
-    float one_minus_u;     /* 1.0 - u (weight applied to closest line) */
-    float one_minus_v;     /* 1.0 - v (weight applied to closest sample) */
-    float one_minus_u_x_one_minus_v;  /* (1.0 - u) * (1.0 - v) */
-    float one_minus_u_x_v; /* (1.0 - u) * v */
-    float u_x_one_minus_v; /* u * (1.0 - v) */
     float u_x_v;           /* u * v */
 
     /* Use band 1 band-related metadata for the reflectance information for
@@ -85,34 +79,39 @@ void aerosol_interp
     if (refl_indx == -99)
         refl_indx = 0;
 
-    /* Copy the information from the XML file */
-    pixel_size_x = xml_metadata->band[refl_indx].pixel_size[0];
-    pixel_size_y = xml_metadata->band[refl_indx].pixel_size[1];
-
     /* Interpolate the aerosol data for each pixel location */
-    tmp_percent = 0;
-    for (line = 0; line < nlines; line++)
+    tmp_percent = 10;
+    percent_step = nlines/tmp_percent;
+    next_percent = percent_step;
+    center_line = HALF_AERO_WINDOW;
+    int center_lindex = center_line*nsamps;
+    int center_lindex1;
+    int aero_lindex = AERO_WINDOW;
+    int aero_window_index_step = AERO_WINDOW*nsamps;
+    float aero_step = 1.0/AERO_WINDOW;
+    for (line = 0, curr_pix = 0; line < nlines; line++)
     {
         /* update status */
-        curr_tmp_percent = 100 * line / nlines;
-        if (curr_tmp_percent > tmp_percent)
+        if (line > next_percent)
         {
-            tmp_percent = curr_tmp_percent;
-            if (tmp_percent % 10 == 0)
-            {
-                printf ("%d%% ", tmp_percent);
-                fflush (stdout);
-            }
+            printf ("%d%% ", tmp_percent);
+            fflush (stdout);
+            next_percent += percent_step;
+            tmp_percent += 10;
         }
 
         /* Determine the line of the representative center pixel in the
            aerosol NxN window array */
-        center_line = (int) (line / AERO_WINDOW) * AERO_WINDOW +
-            HALF_AERO_WINDOW;
+        if (line == aero_lindex)
+        {
+            center_line += AERO_WINDOW;
+            center_lindex += aero_window_index_step;
+            aero_lindex += AERO_WINDOW;
+        }
 
         /* Determine fractional location of this line in the aerosol window.
            Negative values are at the top of the window. */
-        yaero = (float) (line - center_line) / AERO_WINDOW;
+        yaero = (line - center_line)*aero_step;
         u = yaero - (int) yaero;
 
         /* Determine if this pixel is closest to the line below or the line
@@ -121,25 +120,42 @@ void aerosol_interp
         if (u < 0.0)
         {
             center_line1 = center_line - AERO_WINDOW;
+            center_lindex1 = center_lindex - aero_window_index_step;
 
             /* If the aerosol window line value is outside the bounds of the
                scene, then just use the same line in the aerosol window */
             if (center_line1 < 0)
+            {
                 center_line1 = center_line;
+                center_lindex1 = center_lindex;
+            }
         }
         else
         {
             center_line1 = center_line + AERO_WINDOW;
+            center_lindex1 = center_lindex + aero_window_index_step;
 
             /* If the aerosol window line value is outside the bounds of the
                scene, then just use the same line in the aerosol window */
             if (center_line1 >= nlines-1)
+            {
                 center_line1 = center_line;
+                center_lindex1 = center_lindex;
+            }
         }
 
-        curr_pix = line * nsamps;
+        center_samp = HALF_AERO_WINDOW;
+        int aero_sindex = AERO_WINDOW;
         for (samp = 0; samp < nsamps; samp++, curr_pix++)
         {
+            /* Determine the sample of the representative center pixel in the
+               aerosol NxN window array */
+            if (samp == aero_sindex)
+            {
+                center_samp += AERO_WINDOW;
+                aero_sindex += AERO_WINDOW;
+            }
+
             /* If this pixel is fill, then don't process */
             if (level1_qa_is_fill (qaband[curr_pix]))
                 continue;
@@ -169,21 +185,15 @@ void aerosol_interp
                 continue;
             }
 
-            /* Determine the sample of the representative center pixel in the
-               aerosol NxN window array */
-            center_samp = (int) (samp / AERO_WINDOW) * AERO_WINDOW +
-                HALF_AERO_WINDOW;
+            /* If the current line, sample are the center line, sample, then
+               skip to the next pixel.  We already have the aerosol value. */
+            if (samp == center_samp && line == center_line)
+                continue;
 
             /* Determine fractional location of this sample in the aerosol
                window.  Negative values are at the left of the window. */
-            xaero = (float) (samp - center_samp) / AERO_WINDOW;
+            xaero = (samp - center_samp)*aero_step;
             v = xaero - (int) xaero;
-
-            /* If the current line, sample are the same as the center line,
-               sample, then skip to the next pixel.  We already have the
-               aerosol value. */
-            if (samp == center_samp && line == center_line)
-                continue;
 
             /* Determine if this pixel is closest to the sample to the left or
                the sample to the right.  If the fractional value is on the left
@@ -212,10 +222,10 @@ void aerosol_interp
 
             /* Determine the four aerosol window pixels to be used for
                interpolating the current pixel */
-            aero_pix11 = center_line * nsamps + center_samp;
-            aero_pix12 = center_line * nsamps + center_samp1;
-            aero_pix21 = center_line1 * nsamps + center_samp;
-            aero_pix22 = center_line1 * nsamps + center_samp1;
+            aero_pix11 = center_lindex + center_samp;
+            aero_pix12 = center_lindex + center_samp1;
+            aero_pix21 = center_lindex1 + center_samp;
+            aero_pix22 = center_lindex1 + center_samp1;
 
             /* Get the aerosol values */
             aero11 = taero[aero_pix11];
@@ -227,21 +237,13 @@ void aerosol_interp
                where it is in the window. */
             u = fabs (u);
             v = fabs (v);
-
-            /* Determine the fractional distance between the integer location
-               and floating point pixel location to be used for interpolation */
-            one_minus_u = 1.0 - u;
-            one_minus_v = 1.0 - v;
-            one_minus_u_x_one_minus_v = one_minus_u * one_minus_v;
-            one_minus_u_x_v = one_minus_u * v;
-            u_x_one_minus_v = u * one_minus_v;
             u_x_v = u * v;
 
             /* Interpolate the aerosol */
-            taero[curr_pix] = aero11 * one_minus_u_x_one_minus_v +
-                              aero12 * one_minus_u_x_v +
-                              aero21 * u_x_one_minus_v +
-                              aero22 * u_x_v;
+            taero[curr_pix] = aero11
+                            + u*(aero21 - aero11)
+                            + v*(aero12 - aero11)
+                            + u_x_v*(aero11 - aero12 - aero21 + aero22);
 
             /* Set the aerosol to window interpolated. Clear anything else. */
             ipflag[curr_pix] = (1 << IPFLAG_INTERP_WINDOW);
@@ -304,12 +306,15 @@ void aerosol_fill_median
 )
 {
     int line, samp;       /* looping variable for lines and samples */
+    int curr_line_index;  /* array index of first sample in current line */
     int curr_pix;         /* current pixel in 1D arrays of nlines * nsamps */
 
     /* Loop through the center of the NxN window pixels */
-    for (line = HALF_AERO_WINDOW; line < nlines; line += AERO_WINDOW)
+    int lindex_step = AERO_WINDOW*nsamps;
+    for (line = HALF_AERO_WINDOW, curr_line_index = line*nsamps;
+         line < nlines; line += AERO_WINDOW, curr_line_index += lindex_step)
     {
-        curr_pix = line * nsamps + HALF_AERO_WINDOW;
+        curr_pix = curr_line_index + HALF_AERO_WINDOW;
         for (samp = HALF_AERO_WINDOW; samp < nsamps;
              samp += AERO_WINDOW, curr_pix += AERO_WINDOW)
         {
@@ -359,6 +364,7 @@ float find_median_aerosol
     char errmsg[STR_SIZE];                         /* error message */
     char FUNC_NAME[] = "find_median_aerosol";      /* function name */
     int line, samp;       /* looping variable for lines and samples */
+    int curr_line_index;  /* array index of first sample in current line */
     int curr_pix;         /* current pixel in 1D arrays of nlines * nsamps */
     int nbclrpix;         /* number of clear aerosol pixels in this array */
     int nwindows;         /* number of NxN windows in the image */
@@ -381,9 +387,11 @@ float find_median_aerosol
     /* Loop through the NxN center window values and write the clear aerosol
        values to the aerosol array for determining the median */
     nbclrpix = 0;
-    for (line = HALF_AERO_WINDOW; line < nlines; line += AERO_WINDOW)
+    int lindex_step = AERO_WINDOW*nsamps;
+    for (line = HALF_AERO_WINDOW, curr_line_index = line*nsamps;
+         line < nlines; line += AERO_WINDOW, curr_line_index += lindex_step)
     {
-        curr_pix = line * nsamps + HALF_AERO_WINDOW;
+        curr_pix = curr_line_index + HALF_AERO_WINDOW;
         for (samp = HALF_AERO_WINDOW; samp < nsamps;
              samp += AERO_WINDOW, curr_pix += AERO_WINDOW)
         {

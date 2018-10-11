@@ -15,6 +15,120 @@ NOTES:
 #include "hdf.h"
 #include "mfhdf.h"
 
+/* local prototypes */
+static void local_chand
+(
+    float xphi,    /* I: azimuthal difference between sun and observation
+                         (deg) */
+    float xmuv,    /* I: cosine of observation zenith angle */
+    float xmus,    /* I: cosine of solar zenith angle */
+    float xtau,    /* I: molecular optical depth */
+    float *xrray   /* O: molecular reflectance, 0.0 to 1.0 */
+);
+
+static void comptg
+(
+    int iband,                   /* I: band index (0-based) */
+    float xts,                   /* I: solar zenith angle */
+    float xtv,                   /* I: observation zenith angle */
+    float xmus,                  /* I: cosine of solar zenith angle */
+    float xmuv,                  /* I: cosine of observation zenith angle */
+    float uoz,                   /* I: total column ozone */
+    float uwv,                   /* I: total column water vapor (precipital
+                                       water vapor) */
+    float atm_pres,              /* I: pressure at sea level */
+    double ogtransa1[NSR_BANDS], /* I: other gases transmission coeff */
+    double ogtransb0[NSR_BANDS], /* I: other gases transmission coeff */
+    double ogtransb1[NSR_BANDS], /* I: other gases transmission coeff */
+    double wvtransa[NSR_BANDS],  /* I: water vapor transmission coeff */
+    double wvtransb[NSR_BANDS],  /* I: water vapor transmission coeff */
+    double oztransa[NSR_BANDS],  /* I: ozone transmission coeff */
+    float *tgoz,                 /* O: ozone transmission */
+    float *tgwv,                 /* O: water vapor transmission */
+    float *tgwvhalf,             /* O: water vapor transmission, half content */
+    float *tgog                  /* O: other gases transmission */
+);
+
+static void compsalb
+(
+    int ip1,            /* I: index variable for surface pressure */
+    int ip2,            /* I: index variable for surface pressure */
+    int iaot1,          /* I: index variable for AOT */
+    int iaot2,          /* I: index variable for AOT */
+    float raot550nm,    /* I: nearest value of AOT */
+    int iband,          /* I: band index (0-based) */
+    float pres,         /* I: surface pressure */
+    float tpres[NPRES_VALS],   /* I: surface pressure table */
+    float aot550nm[NAOT_VALS], /* I: AOT look-up table */
+    float *sphalbt,     /* I: spherical albedo table
+                              [NSR_BANDS x NPRES_VALS x NAOT_VALS] */
+    float *normext,     /* I: aerosol extinction coefficient at the current
+                              wavelength (normalized at 550nm)
+                              [NSR_BANDS x NPRES_VALS x NAOT_VALS] */
+    float *satm,        /* O: spherical albedo */
+    float *next         /* O: */
+);
+
+static void comptrans
+(
+    int ip1,            /* I: index variable for surface pressure */
+    int ip2,            /* I: index variable for surface pressure */
+    int iaot1,          /* I: index variable for AOT */
+    int iaot2,          /* I: index variable for AOT */
+    float xts,          /* I: zenith angle */
+    float raot550nm,    /* I: nearest value of AOT */
+    int iband,          /* I: band index (0-based) */
+    float pres,         /* I: surface pressure */
+    float tpres[NPRES_VALS],   /* I: surface pressure table */
+    float aot550nm[NAOT_VALS], /* I: AOT look-up table */
+    float *transt,      /* I: transmission table
+                       [NSR_BANDS x NPRES_VALS x NAOT_VALS x NSUNANGLE_VALS] */
+    float xtsstep,      /* I: zenith angle step value */
+    float xtsmin,       /* I: minimum zenith angle value */
+    float tts[NSOLAR_ZEN_VALS], /* I: sun angle table */
+    float *xtts         /* O: downward transmittance */
+);
+
+static void comproatm
+(
+    int ip1,            /* I: index variable for surface pressure */
+    int ip2,            /* I: index variable for surface pressure */
+    int iaot1,          /* I: index variable for AOT */
+    int iaot2,          /* I: index variable for AOT */
+    float xts,          /* I: solar zenith angle (deg) */
+    float xtv,          /* I: observation zenith angle (deg) */
+    float xmus,         /* I: cosine of solar zenith angle */
+    float xmuv,         /* I: cosine of observation zenith angle */
+    float cosxfi,       /* I: cosine of azimuthal difference */
+    float raot550nm,    /* I: nearest value of AOT */
+    int iband,          /* I: band index (0-based) */
+    float pres,         /* I: surface pressure */
+    float tpres[NPRES_VALS],   /* I: surface pressure table */
+    float aot550nm[NAOT_VALS], /* I: AOT look-up table */
+    float *rolutt,      /* I: intrinsic reflectance table
+                           [NSR_BANDS x NPRES_VALS x NAOT_VALS x NSOLAR_VALS] */
+    float *tsmax,       /* I: maximum scattering angle table
+                              [NVIEW_ZEN_VALS x NSOLAR_ZEN_VALS] */
+    float *tsmin,       /* I: minimum scattering angle table
+                              [NVIEW_ZEN_VALS x NSOLAR_ZEN_VALS] */
+    float *nbfic,       /* I: communitive number of azimuth angles
+                              [NVIEW_ZEN_VALS x NSOLAR_ZEN_VALS] */
+    float *nbfi,        /* I: number of azimuth angles
+                              [NVIEW_ZEN_VALS x NSOLAR_ZEN_VALS] */
+    float tts[NSOLAR_ZEN_VALS],  /* I: sun angle table */
+    int32 indts[NSUNANGLE_VALS], /* I: index for the sun angle table */
+    float *ttv,         /* I: view angle table
+                              [NVIEW_ZEN_VALS x NSOLAR_ZEN_VALS] */
+    float xtsstep,      /* I: solar zenith step value */
+    float xtsmin,       /* I: minimum solar zenith value */
+    float xtvstep,      /* I: observation step value */
+    float xtvmin,       /* I: minimum observation value */
+    int its,            /* I: index for the sun angle table */
+    int itv,            /* I: index for the view angle table */
+    float *roatm        /* O: atmospheric intrinsic reflectance */
+);
+
+
 /******************************************************************************
 MODULE:  atmcorlamb2_new
 
@@ -47,25 +161,26 @@ void atmcorlamb2_new
     float mraot550nm;      /* nearest value of AOT -- modified local variable */
     float mraot550nm_sq;   /* mraot550nm squared */
     float mraot550nm_cube; /* mraot550nm cubed */
-    float lambda[] = {0.443, 0.480, 0.585, 0.655, 0.865, 1.61, 2.2};
+    const float lambda[] = {0.443, 0.480, 0.585, 0.655, 0.865, 1.61, 2.2};
+    static float lambda_scaled[7] = {0};
     float roatm;           /* intrinsic atmospheric reflectance */
     float ttatmg;          /* total atmospheric transmission */
     float satm;            /* spherical albedo */
 
+    /* Set the scaled lambda array the first time in. */
+    if (lambda_scaled[0] == 0)
+    {
+        int i;
+        for (i=0; i<7; i++)
+            lambda_scaled[i] = lambda[i]/0.55;
+    }
+
     /* Modifiy the AOT value based on the angstroem coefficient and lambda
        values */
-    if  (eps < 0.0)
+    if  (eps < 0.0 || iband > DN_BAND7)
         mraot550nm = raot550nm;
     else
-    {
-        if (iband <= DN_BAND7)
-        {
-            mraot550nm = (raot550nm / normext_ib_0_3) *
-                (pow ((lambda[iband] / 0.55), -eps));
-        }
-        else
-            mraot550nm = raot550nm;
-    }
+        mraot550nm = raot550nm/normext_ib_0_3*pow(lambda_scaled[iband], -eps);
 
     /* Check the upper limit of the modified AOT value */
     if (mraot550nm >= roatm_upper)
@@ -73,7 +188,7 @@ void atmcorlamb2_new
 
     /* Store the square and cube of the modified AOT value for multiple use */
     mraot550nm_sq = mraot550nm * mraot550nm;
-    mraot550nm_cube = mraot550nm * mraot550nm *mraot550nm;
+    mraot550nm_cube = mraot550nm_sq * mraot550nm;
 
     /* Compute the intrinsic atmospheric reflectance from the coefficients */
     roatm = roatm_coef[3] +
@@ -94,10 +209,8 @@ void atmcorlamb2_new
            satm_coef[0] * mraot550nm_cube;
 
     /* Perform atmospheric correction */
-    *roslamb = (double) rotoa / tgo;
-    *roslamb = *roslamb - roatm;
-    *roslamb = *roslamb / ttatmg;
-    *roslamb = *roslamb / (1.0 + satm * (*roslamb));
+    *roslamb = rotoa - tgo*roatm;
+    *roslamb /= tgo*ttatmg + satm*(*roslamb);
 }
 
 
@@ -201,8 +314,17 @@ int atmcorlamb2
     int its;            /* index for the sun angle table */
     int itv;            /* index for the view angle table */
     int indx;           /* index for normext array */
-    float lambda[] = {0.443, 0.480, 0.585, 0.655, 0.865, 1.61, 2.2, 4.0, 4.0,
-                      4.0, 4.0, 4.0, 4.0, 4.0, 4.0, 4.0};
+    const float lambda[] = {0.443, 0.480, 0.585, 0.655, 0.865, 1.61, 2.2, 4.0,
+                            4.0, 4.0, 4.0, 4.0, 4.0, 4.0, 4.0, 4.0};
+    static float lambda_scaled[7] = {0};
+
+    /* Set the scaled lambda array the first time in. */
+    if (lambda_scaled[0] == 0)
+    {
+        int i;
+        for (i=0; i<7; i++)
+            lambda_scaled[i] = lambda[i]/0.55;
+    }
 
     /* Modifiy the AOT value based on the angstroem coefficient and lambda
        values */
@@ -213,8 +335,8 @@ int atmcorlamb2
         if (iband <= DN_BAND7)
         {
             indx = iband * NPRES_VALS * NAOT_VALS + 3;
-            mraot550nm = (raot550nm / normext[indx]) *
-                (pow ((lambda[iband] / 0.55), -eps));
+            mraot550nm = raot550nm/normext[indx]*pow(lambda_scaled[iband],
+                                                     -eps);
         }
         else
             mraot550nm = raot550nm;
@@ -294,14 +416,11 @@ int atmcorlamb2
     local_chand (xfi, xmuv, xmus, xtaur, xrorayp);
 
     /* Perform atmospheric correction */
-    *roslamb = (double) rotoa / (tgog * tgoz);
-    *roslamb = (*roslamb) - ((*roatm) - (*xrorayp)) * tgwvhalf - (*xrorayp);
-    *roslamb = (*roslamb) / (ttatm * tgwv);
-    *roslamb = (*roslamb) / (1.0 + (*satm) * (*roslamb));
-
     *tgo = tgog * tgoz;
-    *roatm = ((*roatm) - (*xrorayp)) * tgwvhalf + (*xrorayp);
+    *roatm = (*roatm - *xrorayp)*tgwvhalf + *xrorayp;
     *ttatmg = ttatm * tgwv;
+    *roslamb = rotoa/(*tgo) - *roatm;
+    *roslamb /= *ttatmg + *satm*(*roslamb);
 
     /* Successful completion */
     return (SUCCESS);
@@ -327,7 +446,7 @@ NOTES:
         = .985852645 / 1.02829471
         = .958725777
 ******************************************************************************/
-void local_chand
+static void local_chand
 (
     float xphi,    /* I: azimuthal difference between sun and observation
                          (deg) */
@@ -359,8 +478,8 @@ void local_chand
     const float as1[2] = {0.19666292, -5.439061e-02};
     const float as2[2] = {0.14545937, -2.910845e-02};
 
-    phios = (180.0 - xphi) * DEG2RAD;
-    xcosf2 = cos (phios);
+    phios = xphi * DEG2RAD;
+    xcosf2 = -cos (phios);
     xcosf3 = cos (2.0 * phios);
 
     /* xmus and xmuv squared is used frequently */
@@ -368,13 +487,15 @@ void local_chand
     xmuv2 = xmuv * xmuv;
 
     xph1 = 1.0 + (3.0 * xmus2 - 1.0) * (3.0 * xmuv2 - 1.0) * xfd * 0.125;
-    xph2 = -xmus * xmuv * sqrt(1.0 - xmus2) * sqrt(1.0 - xmuv2);
-    xph2 = xph2 * xfd * 0.5 * 1.5;
     xph3 = (1.0 - xmus2) * (1.0 - xmuv2);
-    xph3 = xph3 * xfd * 0.5 * 0.375;
+    xph2 = -xmus * xmuv * sqrt(xph3);
+    xph2 = xph2 * xfd * 0.75;
+    xph3 = xph3 * xfd * 0.1875;
 
-    xitm = (1.0 - exp(-xtau * (1.0 / xmus + 1.0 / xmuv))) *
-        xmus / (4.0 * (xmus + xmuv));
+    /* The original xitm below has an xmus factor that has been removed from
+       the following in order to reduce multiplications and the final
+       division by xmus in xrray. */
+    xitm = (1.0 - exp(-xtau * (1.0 / xmus + 1.0 / xmuv)))/(4*(xmus + xmuv));
     xp1 = xph1 * xitm;
     xp2 = xph2 * xitm;
     xp3 = xph3 * xitm;
@@ -401,14 +522,11 @@ void local_chand
         fs0 += pl[i] * as0[i];
     fs1 = pl[0] * as1[0] + pl[1] * as1[1];
     fs2 = pl[0] * as2[0] + pl[1] * as2[1];
-    xitot1 = xp1 + cfonc1 * fs0 * xmus;
-    xitot2 = xp2 + cfonc2 * fs1 * xmus;
-    xitot3 = xp3 + cfonc3 * fs2 * xmus;
+    xitot1 = xp1 + cfonc1 * fs0;
+    xitot2 = xp2 + cfonc2 * fs1;
+    xitot3 = xp3 + cfonc3 * fs2;
 
-    *xrray = xitot1;
-    *xrray += xitot2 * xcosf2 * 2.0;
-    *xrray += xitot3 * xcosf3 * 2.0;
-    *xrray /= xmus;
+    *xrray = xitot1 + 2*(xitot2*xcosf2 + xitot3*xcosf3);
 }
 
 
@@ -423,7 +541,7 @@ Type = N/A
 NOTES:
 1. Standard sea level pressure is 1013 millibars.
 ******************************************************************************/
-void comptg
+static void comptg
 (
     int iband,                   /* I: band index (0-based) */
     float xts,                   /* I: solar zenith angle */
@@ -460,14 +578,14 @@ void comptg
 
     x = m * uwv;
     if (x > 1.0E-06)
-        *tgwv = exp(-a * exp(log(x) * b));
+        *tgwv = exp(-a * pow(x, b));
     else
         *tgwv = 1.0;
 
     /* Compute water vapor transmission half the content */
     x *= 0.5;
     if (x > 1.0E-06)
-        *tgwvhalf = exp(-a * exp(log(x) * b));
+        *tgwvhalf = exp(-a * pow(x, b));
     else
         *tgwvhalf = 1.0;
 
@@ -488,7 +606,7 @@ Type = N/A
 
 NOTES:
 ******************************************************************************/
-void compsalb
+static void compsalb
 (
     int ip1,            /* I: index variable for surface pressure */
     int ip2,            /* I: index variable for surface pressure */
@@ -579,7 +697,7 @@ NOTES:
    basis.  Therefore we will leave this routine as-is.
 3. This function is also dependent upon surface pressure and AOT.
 ******************************************************************************/
-void comptrans
+static void comptrans
 (
     int ip1,            /* I: index variable for surface pressure */
     int ip2,            /* I: index variable for surface pressure */
@@ -689,7 +807,7 @@ NOTES:
    Therefore we will leave this routine as-is.
 2. This function is also dependent upon surface pressure and AOT.
 ******************************************************************************/
-void comproatm
+static void comproatm
 (
     int ip1,          /* I: index variable for surface pressure */
     int ip2,          /* I: index variable for surface pressure */
@@ -762,11 +880,6 @@ void comproatm
           0.832909123, 0.955511445, 1.098612289,
           1.252762969, 1.386294361, 1.504077397,
           1.609437912};
-    double one_minus_u;           /* 1.0 - u */
-    double one_minus_t;           /* 1.0 - t */
-    double u_x_one_minus_t;       /* u * (1.0 - t) */
-    double one_minus_u_x_one_minus_t;  /* (1.0 - u) * (1.0 - t) */
-    double one_minus_u_x_t;       /* (1.0 - u) * t */
     int iband_indx;  /* index of the current iband */
     int ip1_indx;    /* index of the current ip1 (without the band) */
     int ip2_indx;    /* index of the current ip2 (without the band) */
@@ -941,14 +1054,11 @@ void comproatm
     /* Note: t and u are used elsewhere through this function */
     t = (tts[its+1] - xts) / (tts[its+1] - tts[its]);
     u = (ttv[itv1_its_indx] - xtv) / (ttv[itv1_its_indx] - ttv[itv_its_indx]);
-    one_minus_u = 1.0 - u;
-    one_minus_t = 1.0 - t;
-    u_x_one_minus_t = u * one_minus_t;
-    one_minus_u_x_one_minus_t = one_minus_u * one_minus_t;
-    one_minus_u_x_t = one_minus_u * t;
 
-    roiaot1 = ro1 * t * u + ro2 * u_x_one_minus_t + ro3 * one_minus_u_x_t +
-        ro4 * one_minus_u_x_one_minus_t;
+    roiaot1 = ro4
+            + u*(ro2 - ro4)
+            + t*(ro3 - ro4)
+            + u*t*(ro1 - ro2 - ro3 + ro4);
 
     /* Compute for ip1, iaot2 */
     iaot2_indx = iaot2 * NSOLAR_VALS;
@@ -1078,8 +1188,10 @@ void comproatm
     rosup = rolutt[iband_ip1_iaot2_indx + iindex + 1];
     ro4 = roinf + (rosup - roinf) * (scaa - sca1) / (sca2 - sca1);
 
-    roiaot2 = ro1 * t * u + ro2 * u_x_one_minus_t + ro3 * one_minus_u_x_t +
-        ro4 * one_minus_u_x_one_minus_t;
+    roiaot2 = ro4
+            + u*(ro2 - ro4)
+            + t*(ro3 - ro4)
+            + u*t*(ro1 - ro2 - ro3 + ro4);
 
     /* Interpolation as log of tau */
     /* Note: delaaot is calculated here and used later in this function */
@@ -1216,8 +1328,10 @@ void comproatm
     rosup = rolutt[iband_ip2_iaot1_indx + iindex + 1];
     ro4 = roinf + (rosup - roinf) * (scaa - sca1) / (sca2 - sca1);
 
-    roiaot1 = ro1 * t * u + ro2 * u_x_one_minus_t + ro3 * one_minus_u_x_t +
-        ro4 * one_minus_u_x_one_minus_t;
+    roiaot1 = ro4
+            + u*(ro2 - ro4)
+            + t*(ro3 - ro4)
+            + u*t*(ro1 - ro2 - ro3 + ro4);
 
     /* Compute for ip2, iaot2 */
     iaot2_indx = iaot2 * NSOLAR_VALS;
@@ -1347,8 +1461,10 @@ void comproatm
     rosup = rolutt[iband_ip2_iaot2_indx + iindex + 1];
     ro4 = roinf + (rosup - roinf) * (scaa - sca1) / (sca2 - sca1);
 
-    roiaot2 = ro1 * t * u + ro2 * u_x_one_minus_t + ro3 * one_minus_u_x_t +
-        ro4 * one_minus_u_x_one_minus_t;
+    roiaot2 = ro4
+            + u*(ro2 - ro4)
+            + t*(ro3 - ro4)
+            + u*t*(ro1 - ro2 - ro3 + ro4);
 
     /* Interpolation as log of tau */
     ro = roiaot1 + (roiaot2 - roiaot1) * deltaaot;
@@ -1826,10 +1942,11 @@ int readluts
             {
                 itau_indx = itau * NSOLAR_VALS;
                 curr_indx = iband_indx + ipres_indx + itau_indx;
-                for (ival = 0; ival < NSOLAR_VALS; ival++, curr_indx++)
+                int tmp_indx = itau*NPRES_VALS + ipres;
+                for (ival = 0; ival < NSOLAR_VALS;
+                     ival++, curr_indx++, tmp_indx += NAOT_VALS*NPRES_VALS)
                 {
-                    rolutt[curr_indx] = rolut[ival*NAOT_VALS*NPRES_VALS +
-                                              itau*NPRES_VALS + ipres];
+                    rolutt[curr_indx] = rolut[tmp_indx];
                 }
             }
         }
@@ -1909,10 +2026,10 @@ int readluts
                 /* Grab the remaining 22 values in the line.  Store the iaot
                    in the more efficient order for processing, not necessarily
                    for reading. */
-                for (iaot = 0; iaot < NAOT_VALS; iaot++)
+                curr_indx = iband_indx + ipres_indx + i;
+                for (iaot = 0; iaot < NAOT_VALS;
+                     iaot++, curr_indx += NSUNANGLE_VALS)
                 {
-                    curr_indx = iband_indx + ipres_indx + iaot*NSUNANGLE_VALS
-                        + i;
                     if (fscanf (fp, "%f", &transt[curr_indx]) != 1)
                     {
                         sprintf (errmsg, "Reading transmission values from "
@@ -1947,7 +2064,8 @@ int readluts
     }
 
     /* 8 bands of data */
-    for (iband = 0; iband < NSR_BANDS; iband++)
+    for (iband = 0, iband_indx = 0; iband < NSR_BANDS;
+         iband++, iband_indx += NPRES_VALS*NAOT_VALS)
     {
         /* This first read contains information about the source of the data;
            ignore for now */
@@ -1961,8 +2079,8 @@ int readluts
 
         /* 7 pressure levels (1050.0 mb, 1013.0 mb, 900.0 mb, 800.0 mb,
            700.0, 600.0 mb, 500.0 mb) */
-        iband_indx = iband * NPRES_VALS * NAOT_VALS;
-        for (ipres = 0; ipres < NPRES_VALS; ipres++)
+        for (ipres = 0, ipres_indx = 0; ipres < NPRES_VALS;
+             ipres++, ipres_indx += NAOT_VALS)
         {
             /* This next read contains information about the pressure level of
                the data; ignore for now */
@@ -1975,7 +2093,6 @@ int readluts
             }
 
             /* 22 lines of spherical albedo information */
-            ipres_indx = ipres * NAOT_VALS;
             curr_indx = iband_indx + ipres_indx;
             for (iaot = 0; iaot < NAOT_VALS; iaot++, curr_indx++)
             {
@@ -2036,8 +2153,9 @@ int memory_allocation_main
     char FUNC_NAME[] = "memory_allocation_main"; /* function name */
     char errmsg[STR_SIZE];   /* error message */
     int i;                   /* looping variables */
+    int npixels = nlines*nsamps;
 
-    *sza = calloc (nlines*nsamps, sizeof (int16));
+    *sza = calloc (npixels, sizeof (int16));
     if (*sza == NULL)
     {
         sprintf (errmsg, "Error allocating memory for sza");
@@ -2045,7 +2163,7 @@ int memory_allocation_main
         return (ERROR);
     }
 
-    *saa = calloc (nlines*nsamps, sizeof (int16));
+    *saa = calloc (npixels, sizeof (int16));
     if (*saa == NULL)
     {
         sprintf (errmsg, "Error allocating memory for saa");
@@ -2053,7 +2171,7 @@ int memory_allocation_main
         return (ERROR);
     }
 
-    *vza = calloc (nlines*nsamps, sizeof (int16));
+    *vza = calloc (npixels, sizeof (int16));
     if (*vza == NULL)
     {
         sprintf (errmsg, "Error allocating memory for vza");
@@ -2061,7 +2179,7 @@ int memory_allocation_main
         return (ERROR);
     }
 
-    *vaa = calloc (nlines*nsamps, sizeof (int16));
+    *vaa = calloc (npixels, sizeof (int16));
     if (*vaa == NULL)
     {
         sprintf (errmsg, "Error allocating memory for vaa");
@@ -2069,7 +2187,7 @@ int memory_allocation_main
         return (ERROR);
     }
 
-    *qaband = calloc (nlines*nsamps, sizeof (uint16));
+    *qaband = calloc (npixels, sizeof (uint16));
     if (*qaband == NULL)
     {
         sprintf (errmsg, "Error allocating memory for qaband");
@@ -2077,7 +2195,7 @@ int memory_allocation_main
         return (ERROR);
     }
 
-    *radsat = calloc (nlines*nsamps, sizeof (uint16));
+    *radsat = calloc (npixels, sizeof (uint16));
     if (*radsat == NULL)
     {
         sprintf (errmsg, "Error allocating memory for radsat");
@@ -2096,7 +2214,7 @@ int memory_allocation_main
     }
     for (i = 0; i < NBAND_TTL_OUT-1; i++)
     {
-        (*sband)[i] = calloc (nlines*nsamps, sizeof (uint16));
+        (*sband)[i] = calloc (npixels, sizeof (uint16));
         if ((*sband)[i] == NULL)
         {
             sprintf (errmsg, "Error allocating memory for sband");
@@ -2189,8 +2307,9 @@ int memory_allocation_sr
 {
     char FUNC_NAME[] = "memory_allocation_sr"; /* function name */
     char errmsg[STR_SIZE];   /* error message */
+    int npixels = nlines*nsamps;
 
-    *aerob1 = calloc (nlines*nsamps, sizeof (uint16));
+    *aerob1 = calloc (npixels, sizeof (uint16));
     if (*aerob1 == NULL)
     {
         sprintf (errmsg, "Error allocating memory for aerob1");
@@ -2198,7 +2317,7 @@ int memory_allocation_sr
         return (ERROR);
     }
 
-    *aerob2 = calloc (nlines*nsamps, sizeof (uint16));
+    *aerob2 = calloc (npixels, sizeof (uint16));
     if (*aerob2 == NULL)
     {
         sprintf (errmsg, "Error allocating memory for aerob2");
@@ -2206,7 +2325,7 @@ int memory_allocation_sr
         return (ERROR);
     }
 
-    *aerob4 = calloc (nlines*nsamps, sizeof (uint16));
+    *aerob4 = calloc (npixels, sizeof (uint16));
     if (*aerob4 == NULL)
     {
         sprintf (errmsg, "Error allocating memory for aerob4");
@@ -2214,7 +2333,7 @@ int memory_allocation_sr
         return (ERROR);
     }
 
-    *aerob5 = calloc (nlines*nsamps, sizeof (uint16));
+    *aerob5 = calloc (npixels, sizeof (uint16));
     if (*aerob5 == NULL)
     {
         sprintf (errmsg, "Error allocating memory for aerob5");
@@ -2222,7 +2341,7 @@ int memory_allocation_sr
         return (ERROR);
     }
 
-    *aerob7 = calloc (nlines*nsamps, sizeof (uint16));
+    *aerob7 = calloc (npixels, sizeof (uint16));
     if (*aerob7 == NULL)
     {
         sprintf (errmsg, "Error allocating memory for aerob7");
@@ -2230,7 +2349,7 @@ int memory_allocation_sr
         return (ERROR);
     }
 
-    *twvi = calloc (nlines*nsamps, sizeof (float));
+    *twvi = calloc (npixels, sizeof (float));
     if (*twvi == NULL)
     {
         sprintf (errmsg, "Error allocating memory for twvi");
@@ -2238,7 +2357,7 @@ int memory_allocation_sr
         return (ERROR);
     }
 
-    *tozi = calloc (nlines*nsamps, sizeof (float));
+    *tozi = calloc (npixels, sizeof (float));
     if (*tozi == NULL)
     {
         sprintf (errmsg, "Error allocating memory for tozi");
@@ -2246,7 +2365,7 @@ int memory_allocation_sr
         return (ERROR);
     }
 
-    *tp = calloc (nlines*nsamps, sizeof (float));
+    *tp = calloc (npixels, sizeof (float));
     if (*tp == NULL)
     {
         sprintf (errmsg, "Error allocating memory for tp");
@@ -2254,7 +2373,7 @@ int memory_allocation_sr
         return (ERROR);
     }
 
-    *taero = calloc (nlines*nsamps, sizeof (float));
+    *taero = calloc (npixels, sizeof (float));
     if (*taero == NULL)
     {
         sprintf (errmsg, "Error allocating memory for taero");
@@ -2262,7 +2381,7 @@ int memory_allocation_sr
         return (ERROR);
     }
 
-    *teps = calloc (nlines*nsamps, sizeof (float));
+    *teps = calloc (npixels, sizeof (float));
     if (*teps == NULL)
     {
         sprintf (errmsg, "Error allocating memory for teps");
@@ -2270,7 +2389,7 @@ int memory_allocation_sr
         return (ERROR);
     }
 
-    *ipflag = calloc (nlines*nsamps, sizeof (uint8));
+    *ipflag = calloc (npixels, sizeof (uint8));
     if (*ipflag == NULL)
     {
         sprintf (errmsg, "Error allocating memory for ipflag");
@@ -3208,4 +3327,3 @@ int read_auxiliary_files
     /* Successful completion */
     return (SUCCESS);
 }
-

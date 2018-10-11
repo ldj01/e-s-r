@@ -78,9 +78,4 @@ int get_output_lines
     void *buf         /* I: pointer to the buffer to be returned */
 );
 
-char *upper_case_str
-(
-    char *str    /* I: string to be converted to upper case */
-);
-
 #endif

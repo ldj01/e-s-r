@@ -637,29 +637,3 @@ void usage ()
     printf ("   ==> Writes bands 1-11 as TOA reflectance and brightness "
             "temperature.  Surface reflectance corrections are not applied.\n");
 }
-
-
-/******************************************************************************
-MODULE:  btest
-
-PURPOSE:  Tests to see if bit n is set in the byte_val variable.
-
-RETURN VALUE:
-Type = bool
-Value      Description
------      -----------
-false      bit n is not set in byte_val
-true       bit n is set in byte_val
-
-NOTES:
-******************************************************************************/
-bool btest
-(
-    uint8 byte_val,   /* I: byte value to be tested with the bit n */
-    byte n            /* I: bit number to be tested (0 is rightmost bit) */
-)
-{
-    /* Take 2 ** n, then AND that result with the byte value */
-    return (byte_val & (1 << n));
-}
-

@@ -575,38 +575,3 @@ int put_output_lines
     
     return (SUCCESS);
 }
-
-
-/******************************************************************************
-MODULE:  upper_case_str
-
-PURPOSE:  Returns the upper case version of the input string.
-
-RETURN VALUE:
-Type = char *
-Value      Description
------      -----------
-up_str     Upper case version of the input string
-
-NOTES:
-******************************************************************************/
-char *upper_case_str
-(
-    char *str    /* I: string to be converted to upper case */
-)
-{
-    char *up_str = NULL;    /* upper case version of the input string */
-    char *ptr = NULL;       /* pointer to the upper case string */
-
-    up_str = strdup (str);
-    ptr = up_str;
-    while (*ptr != '\0')
-    {
-        if (islower (*ptr))
-            *ptr = toupper (*ptr);
-        ptr++;
-    }
-
-    return up_str;
-}
-

@@ -410,7 +410,7 @@ Param_t *GetParam(int argc, char *argv[])
 }
 
 
-bool FreeParam(Param_t *this)
+void FreeParam(Param_t *this)
 /* 
 !C******************************************************************************
 
@@ -418,10 +418,6 @@ bool FreeParam(Param_t *this)
  
 !Input Parameters:
  this           'param' data structure
-
-!Output Parameters:
- (returns)      status:
-                  'true' = okay (always returned)
 
 !Team Unique Header:
 
@@ -435,6 +431,6 @@ bool FreeParam(Param_t *this)
     free(this->param_file_name);
     free(this->input_xml_file_name);
     free(this);
+    this = NULL;
   }
-  return true;
 }

@@ -85,6 +85,6 @@ typedef struct {
 /* Prototypes */
 
 Param_t *GetParam(int argc, char *argv[]);
-bool FreeParam(Param_t *this);
+void FreeParam(Param_t *this);
 
 #endif

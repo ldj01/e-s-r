@@ -153,11 +153,19 @@ int main (int argc, char *argv[])
         return (ERROR);
     }
 
-    /* Find and prepare auxiliary files */
+    /* Find and prepare auxiliary files.  First look in the expected location.
+       If not there, then traverse the auxiliary directory structure. */
     /* DEM file */
     strcpy (dem, "CMGDEM.hdf");
     strcpy (path_buf, aux_path);
-    if (find_file (path_buf, dem))
+    char full_path[DIR_BUF_SIZE];
+    sprintf(full_path, "%s/%s", aux_path, dem);
+    if (find_file(full_path, dem))
+    {
+        strcpy (dem, full_path);
+        printf ("using DEM : %s\n", dem);
+    }
+    else if (find_file (path_buf, dem))
     {
         strcpy (dem, path_buf);
         printf ("using DEM : %s\n", dem);
@@ -173,7 +181,13 @@ int main (int argc, char *argv[])
     /* TOMS ozone file */
     sprintf (ozone, "TOMS_%d%03d.hdf", year, day);
     strcpy (path_buf, aux_path);
-    if (find_file (path_buf, ozone))
+    sprintf(full_path, "%s/EP_TOMS/ozone_%d/%s", aux_path, year, ozone);
+    if (find_file(full_path, ozone))
+    {
+        strcpy (ozone, full_path);
+        printf ("using DEM : %s\n", ozone);
+    }
+    else if (find_file (path_buf, ozone))
     {
         strcpy (ozone, path_buf);
         printf ("using TOMS : %s\n", ozone);
@@ -189,7 +203,13 @@ int main (int argc, char *argv[])
     /* NCEP file */
     sprintf (reanalysis, "REANALYSIS_%d%03d.hdf", year, day);
     strcpy (path_buf, aux_path);
-    if (find_file (path_buf, reanalysis))
+    sprintf(full_path, "%s/REANALYSIS/RE_%d/%s", aux_path, year, reanalysis);
+    if (find_file(full_path, reanalysis))
+    {
+        strcpy (reanalysis, full_path);
+        printf ("using DEM : %s\n", reanalysis);
+    }
+    else if (find_file (path_buf, reanalysis))
     {
         strcpy (reanalysis, path_buf);
         printf ("using REANALYSIS : %s\n", reanalysis);
@@ -425,32 +445,32 @@ int find_file
     char FUNC_NAME[] = "find_file";    /* function name */
     char errmsg[STR_SIZE];             /* error message */
     struct stat stbuf;                 /* buffer for file/directory stat */
-    char pbuf[DIR_BUF_SIZE] = {0};     /* path buffer */
-    int found = 0;                     /* was the file found? */
+    char pbuf[DIR_BUF_SIZE];           /* path buffer */
+    int found;                         /* was the file found? */
     
-    /* This is the path we are checking */
-    strcpy (pbuf, path);
-
     /* Make sure the path exists */
-    if (stat (pbuf, &stbuf) != 0)
+    if (stat (path, &stbuf) != 0)
     {
-        sprintf (errmsg, "Can't stat directory: %s", pbuf);
+        sprintf (errmsg, "Can't stat directory: %s", path);
         error_handler (true, FUNC_NAME, errmsg);
-        return (found);
+        return 0;
     }
 
     /* If this is a directory, then search it.  Otherwise it's a file so
        check it for our filename. */
     if ((stbuf.st_mode & S_IFMT) == S_IFDIR)
+    {
+        strcpy(pbuf, path);
         found = scan_dir (pbuf, name);
+
+        /* If the file was found return the location. */
+        if (found)
+            strcpy(path, pbuf);
+    }
     else
-        found = (strcmp(pbuf + strlen(pbuf) - strlen(name), name) == 0);
+        found = (strcmp(path + strlen(path) - strlen(name), name) == 0);
 
-    /* If the file was found remember the location of that file */
-    if (found)
-        strcpy (path, pbuf);
-
-    return (found);
+    return found;
 }
 
 

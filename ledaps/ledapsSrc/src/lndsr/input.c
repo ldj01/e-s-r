@@ -178,7 +178,7 @@ bool CloseInput(Input_t *this)
 }
 
 
-bool FreeInput(Input_t *this)
+void FreeInput(Input_t *this)
 /* 
 !C******************************************************************************
 
@@ -186,10 +186,6 @@ bool FreeInput(Input_t *this)
  
 !Input Parameters:
  this           'input' data structure
-
-!Output Parameters:
- (returns)      status:
-                  'true' = okay (always returned)
 
 !Team Unique Header:
 
@@ -201,16 +197,12 @@ bool FreeInput(Input_t *this)
   if (this != (Input_t *)NULL) {
     for (ib = 0; ib < this->nband; ib++) {
       free(this->file_name[ib]);
-      this->file_name[ib] = NULL;
     }
     free(this->file_name_qa);
-    this->file_name_qa = NULL;
 
     free(this);
     this = NULL;
   }
-
-  return true;
 }
 
 
@@ -374,7 +366,8 @@ bool GetXMLInput(Input_t *this, Espa_internal_meta_t *metadata, bool thermal)
         this->meta.sat = SAT_LANDSAT_7;
     else
     {
-        sprintf (temp, "invalid satellite; value = %s", gmeta->satellite);
+        snprintf(temp, sizeof(temp), "invalid satellite; value = %s",
+                 gmeta->satellite);
         RETURN_ERROR (temp, "GetXMLInput", false);
     }
 
@@ -384,7 +377,8 @@ bool GetXMLInput(Input_t *this, Espa_internal_meta_t *metadata, bool thermal)
         this->meta.inst = INST_ETM;
     else
     {
-        sprintf (temp, "invalid instrument; value = %s", gmeta->instrument);
+        snprintf(temp, sizeof(temp), "invalid instrument; value = %s",
+                 gmeta->instrument);
         RETURN_ERROR (temp, "GetXMLInput", false);
     }
 
@@ -492,7 +486,7 @@ bool GetXMLInput(Input_t *this, Espa_internal_meta_t *metadata, bool thermal)
                 this->file_name_qa = strdup (metadata->band[i].file_name);
             }
         }  /* for i */
-    }  /* for i */
+    }  /* reflective bands */
     else
     {  /* thermal band */
         for (i = 0; i < metadata->nbands; i++)

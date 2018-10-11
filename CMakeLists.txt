@@ -105,6 +105,8 @@ if (DEFINED ENV{ENABLE_THREADING})
     set (OPENMP_LIBS "-lgomp")
 endif ()
 
+enable_testing()
+
 add_subdirectory(scripts)
 add_subdirectory(lasrc)
 add_subdirectory(ledaps)

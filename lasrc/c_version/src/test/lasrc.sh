@@ -12,9 +12,10 @@ fi
 bin_dir=$1
 
 data_files=(${LEVEL2_UNIT_TEST_DATA}/espa-surface-reflectance/lasrc_ref/*)
-input_dir=$LEVEL2_UNIT_TEST_DATA/espa-surface-reflectance/input/l8
+input_dir=$LEVEL2_UNIT_TEST_DATA/espa-surface-reflectance/input_l8
 
-mkdir -p lasrc && cd lasrc
+rm -rf lasrc
+mkdir lasrc && cd lasrc
 
 cp $input_dir/*.img .
 cp $input_dir/*.hdr .
@@ -68,7 +69,7 @@ if [ $status -ne 0 ]; then
 fi
 
 cd ..
-rm -r lasrc
+rm -rf lasrc
 
 echo "Test completed successfully."
 exit 0

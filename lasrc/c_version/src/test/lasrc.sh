@@ -11,15 +11,16 @@ if [ "$#" -ne 1 ]; then
 fi
 bin_dir=$1
 
-data_files=(${LEVEL2_UNIT_TEST_DATA}/espa-surface-reflectance/lasrc_ref/*)
-input_dir=$LEVEL2_UNIT_TEST_DATA/espa-surface-reflectance/input/l8
+data_files=(${ESPA_UNIT_TEST_DATA_DIR}/espa-surface-reflectance/lasrc_ref/*)
+input_dir=$ESPA_UNIT_TEST_DATA_DIR/espa-surface-reflectance/input_l8
 
-mkdir -p lasrc && cd lasrc
+rm -rf lasrc
+mkdir lasrc && cd lasrc
 
 cp $input_dir/*.img .
 cp $input_dir/*.hdr .
 
-sed -e s%LEVEL2_UNIT_TEST_DATA%${LEVEL2_UNIT_TEST_DATA}% \
+sed -e s%LEVEL2_UNIT_TEST_DATA%${ESPA_UNIT_TEST_DATA_DIR}% \
     ${input_dir}/${base_scene}.xml > ${base_scene}.xml
 $bin_dir/lasrc --xml=${base_scene}.xml --aux=${aux_file}
 if [ $? -ne 0 ]; then
@@ -68,7 +69,7 @@ if [ $status -ne 0 ]; then
 fi
 
 cd ..
-rm -r lasrc
+rm -rf lasrc
 
 echo "Test completed successfully."
 exit 0

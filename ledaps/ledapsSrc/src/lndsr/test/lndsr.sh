@@ -15,12 +15,15 @@ pfile_dir=$2
 data_files=(${LEVEL2_UNIT_TEST_DATA}/espa-surface-reflectance/lndsr_ref/*)
 input_dir=$LEVEL2_UNIT_TEST_DATA/espa-surface-reflectance
 
-mkdir -p lndsr && cd lndsr
+rm -rf lndsr
+mkdir lndsr && cd lndsr
 
+cp $input_dir/input_l7/* .
+chmod u+w *
 cp $input_dir/lndcal_ref/* .
+chmod u+w *
 
-sed -e s%LEVEL2_UNIT_TEST_DATA%${input_dir}/input% \
-    -e s%LEDAPS_AUX_DIR%${LEDAPS_AUX_DIR}% $pfile_dir/$pfile > pfile.local
+sed -e s%LEDAPS_AUX_DIR%${LEDAPS_AUX_DIR}% $pfile_dir/$pfile > pfile.local
 $bin_dir/lndsr --pfile pfile.local
 if [ $? -ne 0 ]; then
     echo "Error: lndsr processing failed."

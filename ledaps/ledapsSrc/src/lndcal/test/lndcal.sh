@@ -13,14 +13,15 @@ bin_dir=$1
 pfile_dir=$2
 
 data_files=(${LEVEL2_UNIT_TEST_DATA}/espa-surface-reflectance/lndcal_ref/*)
-input_dir=$LEVEL2_UNIT_TEST_DATA/espa-surface-reflectance/input
+input_dir=$LEVEL2_UNIT_TEST_DATA/espa-surface-reflectance/input_l7
 
-mkdir -p lndcal && cd lndcal
+rm -rf lndcal
+mkdir lndcal && cd lndcal
 
 cp $input_dir/* .
+chmod u+w *
 
-sed -e s%LEVEL2_UNIT_TEST_DATA%${input_dir}% \
-    -e s%LEDAPS_AUX_DIR%${LEDAPS_AUX_DIR}% $pfile_dir/$pfile > pfile.local
+sed -e s%LEDAPS_AUX_DIR%${LEDAPS_AUX_DIR}% $pfile_dir/$pfile > pfile.local
 $bin_dir/lndcal --pfile pfile.local
 if [ $? -ne 0 ]; then
     echo "Error: lndcal processing failed."
@@ -29,9 +30,18 @@ fi
 
 status=0
 for i in "${data_files[@]}"; do
-    diff $i `basename $i`
+    base_i=`basename $i`
+
+    # For the XML file, ignore the records that vary from one run to the next.
+    if [ "$base_i" = "${base_scene}.xml" ]; then
+        sed -e 's%<production_date>.*<%<production_date><%' $i > tmp1.xml
+        sed -e 's%<production_date>.*<%<production_date><%' $base_i > tmp2.xml
+        diff tmp1.xml tmp2.xml
+    else
+        diff $i $base_i
+    fi
     if [ $? -ne 0 ]; then
-        echo `basename $i` "differs from reference version."
+        echo $base_i "differs from reference version."
         status=1
     fi
 done

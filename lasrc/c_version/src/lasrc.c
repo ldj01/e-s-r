@@ -70,9 +70,6 @@ int main (int argc, char *argv[])
     struct stat statbuf;      /* buffer for the file stat function */
 
     int16 *sza = NULL;  /* per-pixel solar zenith angles, nlines x nsamps */
-    int16 *saa = NULL;  /* per-pixel solar azimuth angles, nlines x nsamps */
-    int16 *vza = NULL;  /* per-pixel view zenith angles, nlines x nsamps */
-    int16 *vaa = NULL;  /* per-pixel view azimuth angles, nlines x nsamps */
     uint16 **sband = NULL;    /* output surface reflectance and brightness
                                  temp bands, qa band is separate as a uint16 */
     uint16 *qaband = NULL;    /* QA band for the input image, nlines x nsamps */
@@ -220,8 +217,8 @@ int main (int argc, char *argv[])
     /* Allocate memory for all the data arrays */
     if (verbose)
         printf ("Allocating memory for the data arrays ...\n");
-    retval = memory_allocation_main (nlines, nsamps, &sza, &saa, &vza, &vaa,
-        &qaband, &radsat, &sband);
+    retval = memory_allocation_main(nlines, nsamps, &sza, &qaband, &radsat,
+                                    &sband);
     if (retval != SUCCESS)
     {   /* get_args already printed the error message */
         sprintf (errmsg, "Error allocating memory for the data arrays from "
@@ -240,7 +237,7 @@ int main (int argc, char *argv[])
 
     /* Read the scaled solar and view azimuth/zenith per pixel angle bands
        which are in degrees */
-    if (get_input_ppa_lines (input, 0, nlines, sza, saa, vza, vaa) != SUCCESS)
+    if (get_input_ppa_lines (input, 0, nlines, sza) != SUCCESS)
     {
         sprintf (errmsg, "Reading per-pixel solar and view angle bands");
         error_handler (true, FUNC_NAME, errmsg);
@@ -529,8 +526,8 @@ int main (int argc, char *argv[])
         printf ("Performing atmospheric corrections for each reflectance "
             "band ...\n");
         retval = compute_sr_refl (input, &xml_metadata, xml_infile, qaband,
-            nlines, nsamps, pixsize, sband, sza, saa, vza, vaa, xts, xmus,
-            anglehdf, intrefnm, transmnm, spheranm, cmgdemnm, rationm, auxnm);
+            nlines, nsamps, pixsize, sband, xts, xmus, anglehdf, intrefnm,
+            transmnm, spheranm, cmgdemnm, rationm, auxnm);
         if (retval != SUCCESS)
         {
             sprintf (errmsg, "Error computing surface reflectance");
@@ -554,9 +551,6 @@ int main (int argc, char *argv[])
 
     /* Free memory for band data */
     free (sza);
-    free (saa);
-    free (vza);
-    free (vaa);
     free (qaband);
     for (i = 0; i < NBAND_TTL_OUT-1; i++)
         free (sband[i]);

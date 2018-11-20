@@ -2023,9 +2023,6 @@ int memory_allocation_main
     int nlines,          /* I: number of lines in the scene */
     int nsamps,          /* I: number of samples in the scene */
     int16 **sza,         /* O: solar zenith angle, nlines x nsamps  */
-    int16 **saa,         /* O: solar azimuth angle table, nlines x nsamps */
-    int16 **vza,         /* O: view zenith angle, nlines x nsamps  */
-    int16 **vaa,         /* O: view azimuth angle table, nlines x nsamps */
     uint16 **qaband,     /* O: QA band for the input image, nlines x nsamps */
     uint16 **radsat,     /* O: radiometric saturation band for the input image,
                                nlines x nsamps */
@@ -2041,30 +2038,6 @@ int memory_allocation_main
     if (*sza == NULL)
     {
         sprintf (errmsg, "Error allocating memory for sza");
-        error_handler (true, FUNC_NAME, errmsg);
-        return (ERROR);
-    }
-
-    *saa = calloc (nlines*nsamps, sizeof (int16));
-    if (*saa == NULL)
-    {
-        sprintf (errmsg, "Error allocating memory for saa");
-        error_handler (true, FUNC_NAME, errmsg);
-        return (ERROR);
-    }
-
-    *vza = calloc (nlines*nsamps, sizeof (int16));
-    if (*vza == NULL)
-    {
-        sprintf (errmsg, "Error allocating memory for vza");
-        error_handler (true, FUNC_NAME, errmsg);
-        return (ERROR);
-    }
-
-    *vaa = calloc (nlines*nsamps, sizeof (int16));
-    if (*vaa == NULL)
-    {
-        sprintf (errmsg, "Error allocating memory for vaa");
         error_handler (true, FUNC_NAME, errmsg);
         return (ERROR);
     }

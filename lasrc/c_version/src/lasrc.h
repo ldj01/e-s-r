@@ -81,10 +81,6 @@ int compute_sr_refl
     int nsamps,         /* I: number of samps in reflectance, thermal bands */
     float pixsize,      /* I: pixel size for the reflectance bands */
     uint16 **sband,     /* I/O: input TOA and output surface reflectance */
-    int16 *sza,         /* I: per-pixel solar zenith angles, nlines x nsamps */
-    int16 *saa,         /* I: per-pixel solar azimuth angles, nlines x nsamps */
-    int16 *vza,         /* I: per-pixel view zenith angles, nlines x nsamps */
-    int16 *vaa,         /* I: per-pixel view azimuth angles, nlines x nsamps */
     float xts,          /* I: solar zenith angle (deg) */
     float xmus,         /* I: cosine of solar zenith angle */
     char *anglehdf,     /* I: angle HDF filename */

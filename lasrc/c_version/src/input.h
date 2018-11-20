@@ -66,9 +66,6 @@ typedef struct {
     char *file_name_pan[NBAND_PAN_MAX]; /* name of input pan files */
     char *file_name_qa[NBAND_QA_MAX];   /* name of input QA files */
     char *file_name_sza;                /* name of input solar zenith files */
-    char *file_name_saa;                /* name of input solar azimuth files */
-    char *file_name_vza;                /* name of input view zenith files */
-    char *file_name_vaa;                /* name of input view azimuth files */
 
     bool open[NBAND_REFL_MAX]; /* flag to indicate whether the specific input
                                   file is open for access; 'true' = open, 
@@ -83,9 +80,6 @@ typedef struct {
     FILE *fp_bin_pan[NBAND_PAN_MAX];/* pointer for pan binary files */
     FILE *fp_bin_qa[NBAND_QA_MAX];  /* pointer for QA binary files */
     FILE *fp_bin_sza;               /* pointer for solar zenith binary files */
-    FILE *fp_bin_saa;               /* pointer for solar azimuth binary files */
-    FILE *fp_bin_vza;               /* pointer for view zenith binary files */
-    FILE *fp_bin_vaa;               /* pointer for view azimuth binary files */
 } Input_t;
 
 /* Prototypes */
@@ -146,10 +140,7 @@ int get_input_ppa_lines
     Input_t *this,   /* I: pointer to input data structure */
     int iline,       /* I: current line to read (0-based) */
     int nlines,      /* I: number of lines to read */
-    int16 *sza_arr, /* O: output solar zenith array to populate */
-    int16 *saa_arr, /* O: output solar azimuth array to populate */
-    int16 *vza_arr, /* O: output view zenith array to populate */
-    int16 *vaa_arr  /* O: output view azimuth array to populate */
+    int16 *sza_arr   /* O: output solar zenith array to populate */
 );
 
 int get_xml_input

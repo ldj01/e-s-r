@@ -86,6 +86,10 @@ class SurfaceReflectance():
                 type="float", help="offset value for thermal bands")
             parser.add_option("--verbose", dest="verbose", default=False,
                 action="store_true", help="Turn verbose logging on")
+            parser.add_option("--use_l1_angle_bands", action="store_true",
+                              dest="use_l1_angle_bands", default=False,
+                              help=("flag to use level 1 angle bands rather"
+                                    " than create them"))
 
             (options, args) = parser.parse_args()
 
@@ -103,6 +107,7 @@ class SurfaceReflectance():
             scale_therm = options.scale_therm
             offset_therm = options.offset_therm
             verbose = options.verbose
+            use_l1_angle_bands = options.use_l1_angle_bands
 
         # get the logger
         logger = logging.getLogger(__name__)
@@ -163,28 +168,30 @@ class SurfaceReflectance():
             os.chdir (mydir)
             return ERROR
 
-        # generate per-pixel angle bands for band 4 (representative band)
-        cmdstr = 'create_l8_angle_bands --xml {}'.format(base_xmlfile)
-        logger.debug('per-pixel angles command: {0}'.format(cmdstr))
-        (status, output) = commands.getstatusoutput(cmdstr)
-        logger.info(output)
-        exit_code = status >> 8
-        if exit_code != 0:
-            logger.error('Error running create_l8_angle_bands. Processing '
-                         'will terminate.')
-            os.chdir(mydir)
-            return ERROR
+        # Generate per-pixel angle bands for band 4 (representative band)
+        # if not available with the level 1 data.
+        if not use_l1_angle_bands:
+            cmdstr = 'create_l8_angle_bands --xml {}'.format(base_xmlfile)
+            logger.debug('per-pixel angles command: {0}'.format(cmdstr))
+            (status, output) = commands.getstatusoutput(cmdstr)
+            logger.info(output)
+            exit_code = status >> 8
+            if exit_code != 0:
+                logger.error('Error running create_l8_angle_bands. Processing '
+                             'will terminate.')
+                os.chdir(mydir)
+                return ERROR
 
-        # Mask the angle bands to match the band quality band
-        cmdstr = ('mask_per_pixel_angles.py --xml {}'
-                  .format(base_xmlfile))
-        (status, output) = commands.getstatusoutput(cmdstr)
-        logger.info(output)
-        exit_code = status >> 8
-        if exit_code != 0:
-            logger.error('Error masking angle bands with the band '
-                         'quality band. Processing will terminate.')
-            return ERROR
+            # Mask the angle bands to match the band quality band
+            cmdstr = ('mask_per_pixel_angles.py --xml {}'
+                      .format(base_xmlfile))
+            (status, output) = commands.getstatusoutput(cmdstr)
+            logger.info(output)
+            exit_code = status >> 8
+            if exit_code != 0:
+                logger.error('Error masking angle bands with the band '
+                             'quality band. Processing will terminate.')
+                return ERROR
 
         # run surface reflectance algorithm, checking the return status.  exit
         # if any errors occur.

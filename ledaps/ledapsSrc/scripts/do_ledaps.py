@@ -175,6 +175,10 @@ class Ledaps():
                                     " complete. (Note: scenes with solar"
                                     " zenith angles above 76 degrees should"
                                     " use process_sr=False)"))
+            parser.add_option("--use_l1_angle_bands", action="store_true",
+                              dest="use_l1_angle_bands", default=False,
+                              help=("flag to use level 1 angle bands rather"
+                                    " than create them"))
             (options, args) = parser.parse_args()
 
             # Validate the command-line options
@@ -185,6 +189,7 @@ class Ledaps():
             process_sr = options.process_sr  # process SR or not
             if process_sr is None:
                 process_sr = "True"  # If not provided, default to True
+            use_l1_angle_bands = options.use_l1_angle_bands
 
         # Obtain logger from logging using the module's name
         logger = logging.getLogger(__name__)
@@ -235,27 +240,29 @@ class Ledaps():
 
             # Set up the command-line option for lndsr for processing
             # collections. The per-pixel angle bands need to be generated for
-            # band 4 (representative band) and the thermal band(s)
-            cmdstr = ('create_landsat_angle_bands --xml {}'
-                      .format(base_xmlfile))
-            (status, output) = commands.getstatusoutput(cmdstr)
-            logger.info(output)
-            exit_code = status >> 8
-            if exit_code != 0:
-                logger.error('Error running create_landsat_angle_bands. '
-                             'Processing will terminate.')
-                return ERROR
+            # band 4 (representative band) and the thermal band(s) if not
+            # available with the level 1 data.
+            if not use_l1_angle_bands:
+                cmdstr = ('create_landsat_angle_bands --xml {}'
+                          .format(base_xmlfile))
+                (status, output) = commands.getstatusoutput(cmdstr)
+                logger.info(output)
+                exit_code = status >> 8
+                if exit_code != 0:
+                    logger.error('Error running create_landsat_angle_bands. '
+                                 'Processing will terminate.')
+                    return ERROR
 
-            # Mask the angle bands to match the band quality band
-            cmdstr = ('mask_per_pixel_angles.py --xml {}'
-                      .format(base_xmlfile))
-            (status, output) = commands.getstatusoutput(cmdstr)
-            logger.info(output)
-            exit_code = status >> 8
-            if exit_code != 0:
-                logger.error('Error masking angle bands with the band '
-                             'quality band. Processing will terminate.')
-                return ERROR
+                # Mask the angle bands to match the band quality band
+                cmdstr = ('mask_per_pixel_angles.py --xml {}'
+                          .format(base_xmlfile))
+                (status, output) = commands.getstatusoutput(cmdstr)
+                logger.info(output)
+                exit_code = status >> 8
+                if exit_code != 0:
+                    logger.error('Error masking angle bands with the band '
+                                 'quality band. Processing will terminate.')
+                    return ERROR
 
             # Set up the command-line option for lndpm if processing surface
             # reflectance

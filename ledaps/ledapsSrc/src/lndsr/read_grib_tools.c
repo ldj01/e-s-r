@@ -14,7 +14,7 @@ int read_grib_anc
 {
     FILE *fd = NULL;
     char where[50],tag[50],date[50];
-    int i,grib_ret,ny,nx;
+    int i,ny,nx;
     short year,doy,month,day,hour,minute;
     float sec;
 
@@ -83,7 +83,7 @@ int read_grib_anc
             printf("date=%04d-%02d-%02dT%02d:%02d:%09.6f   %03d %09.6f\n",
                 year,month,day,hour,minute,sec,anc->doy,anc->time[i]);
             
-            grib_ret=read_grib_array(fd, tag, where, &ny, &nx, &(anc->data[i]));
+            read_grib_array(fd, tag, where, &ny, &nx, &(anc->data[i]));
             if (anc->nbrows == -1)
                 anc->nbrows = ny;
             else if (anc->nbrows != ny) {

@@ -46,7 +46,7 @@ The DDV flag in ddv_line (bit 0) is updated in this routine
   int collect_nbsamps;
   
   int nb_all_pixs,nb_water_pixs,nb_fill_pixs,nb_cld_pixs,nb_cldshadow_pixs,nb_snow_pixs;
-  float fraction_water,fraction_clouds,fraction_cldshadow,fraction_snow;
+  float fraction_water,fraction_clouds;
   bool is_fill;
   int n,water;
 
@@ -258,8 +258,6 @@ exclude clouds, cloud shadow & snow pixels flagged by the internal cloud mask
 		}
 	fraction_water=(float)nb_water_pixs/(nb_all_pixs-nb_fill_pixs);
 	fraction_clouds=(float)nb_cld_pixs/(nb_all_pixs-nb_fill_pixs);
-	fraction_cldshadow=(float)nb_cldshadow_pixs/(nb_all_pixs-nb_fill_pixs);
-	fraction_snow=(float)nb_snow_pixs/(nb_all_pixs-nb_fill_pixs);
 		
 /**
 	Compute AOT blue band

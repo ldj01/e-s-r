@@ -103,7 +103,6 @@ void BDS_unpack(float *flt, unsigned char *bits, unsigned char *bitmap,
                 int n_bits, int n, double ref, double scale);
 double int_power(double x, int y);
 char *levels(int, int);
-void PDStimes(int time_range, int p1, int p2, int time_unit);
 int missing_points(unsigned char *bitmap, int n);
 int GDS_grid(unsigned char *gds, int *nx, int *ny, long int *nxny);
 void GDS_prt_thin_lon(unsigned char *gds);
@@ -295,19 +294,6 @@ narray -- should be null when this routine is called, should be non-null and fil
 printf ("GRIB.C: levels is %s\n", level);
         if ((!strcmp(k5toa(pds),what))&&
 	    (!strcmp(level,where))) {
-/*
-	    printf("%ld:%ld:D=", count, pos);
-            PDS_date(pds, 1, v_time);
-	    printf(":%s:", k5toa(pds));
-
-	    printf("%s:",level); 
-            printf("kpds=%d,%d,%d:",
-	        PDS_PARAM(pds),PDS_KPDS6(pds),PDS_KPDS7(pds));
-	    PDStimes(PDS_TimeRange(pds),PDS_P1(pds),PDS_P2(pds),
-                PDS_ForecastTimeUnit(pds));
-            printf("\"%s", k5_comments(pds));
-            printf("\n");
-*/
             if ((*narray = (float *) malloc(sizeof(float) * nxny)) == NULL) {
                 return(-1);
             }
@@ -1196,154 +1182,6 @@ char *levels(int kpds6, int kpds7)
 printf ("GRIB.C: levels = %s\n", x);
 
     return(x);
-}
-
-static char *units[] = {
-	"min", "hr", "d", "mon", "yr",
-	"decade", "normal", "century"};
-
-
-void PDStimes(int time_range, int p1, int p2, int time_unit) 
-/*
-!C**********************************************************************
-!Description:
-  prints something readable for time code in grib file
-  
-!Input Parameters:
-  int time_range -- 
-  int p1         -- 
-  int p2         -- 
-  int time_unit  -- 
-  
-!Output Parameters:
-  none
-  
-!Return Value:
-  none; prints to stdio, no longer necessary or used.
-
-!Revision History:
- Original version, Wesley Ebisuzaki;
- *
- * PDStimes.c   v1.1b wesley ebisuzaki
- *
- * prints something readable for time code in grib file
- *
- * not all cases decoded
- * for NCEP/NCAR Reanalysis
- 
-  Derived from wgrib, a portable program to read grib files that were 
-  created by the NCEP/NCAR Reanalysis Project.  
-
-!Team-unique Header:
-
-!References and credits:
-
-!Design Notes:
-
-!END*************************************************************
-*/
-{
-
-	char *unit;
-	enum {anal, fcst, unknown} type;
-	int fcst_len = 0;
-
-	if (time_unit >= 0 && time_unit <= 7) unit = units[time_unit];
-	else unit = "";
-
-	/* figure out if analysis or forecast */
-	/* in GRIB, there is a difference between init and uninit analyses */
-	/* not case at NMC .. no longer run initialization */
-	/* ignore diff between init an uninit analyses */
-
-	switch (time_range) {
-
-	case 0:
-	case 1:
-	case 113:
-	case 114:
-	case 118:
-		if (p1 == 0) type = anal;
-		else {
-			type = fcst;
-			fcst_len = p1;
-		}
-		break;
-	case 10: /* way NMC uses it, should be unknown? */
-		type = fcst;
-		fcst_len = p1*256 + p2;
-		if (fcst_len == 0) type = anal;
-		break;
-
-	case 51:
-	case 123:
-	case 124:
-		type = anal;
-		break;
-
-	default: type = unknown;
-		break;
-	}
-
-        /* 14-JUL-99: will comment out much of the following,
-	   since output to stdout and stderr is forbidden.
-	/ * ----------------------------------------------- * /
-
-	if (type == anal) printf("anl:");
-	else if (type == fcst) printf("%d%s fcst:",fcst_len,unit);
-
-
-	if (time_range == 123 || time_range == 124) {
-		if (p1 != 0) printf("start@%d%s:",p1,unit);
-	}
-
-
-	/ * print time range * /
-
-
-	switch (time_range) {
-
-	case 0:
-	case 1:
-	case 10:
-		break;
-	case 2: printf("valid %d-%d%s:",p1,p2,unit);
-		break;
-	case 3: printf("%d-%d%s ave:",p1,p2,unit);
-		break;
-	case 4: printf("%d-%d%s acc:",p1,p2,unit);
-		break;
-	case 5: printf("%d-%d%s diff:",p1,p2,unit);
-		break;
-	case 51: if (p1 == 0) {
-		    printf("clim %d%s:",p2,unit);
-		}
-		else if (p1 == 1) {
-		    printf("clim (diurnal) %d%s:",p2,unit);
-		}
-		else {
-		    printf("clim? p1=%d? %d%s?:",p1,p2,unit);
-		}
-		break;
-	case 113:
-	case 123:
-		printf("ave@%d%s:",p2,unit);
-		break;
-	case 114:
-	case 124:
-		printf("acc@%d%s:",p2,unit);
-		break;
-	case 115:
-		printf("ave of fcst:%d to %d%s:",p1,p2,unit);
-		break;
-	case 116:
-		printf("acc of fcst:%d to %d%s:",p1,p2,unit);
-		break;
-	case 118: 
-		printf("var@%d%s:",p2,unit);
-		break;
-	default: printf("time?:");
-	} */
 }
 
 /*

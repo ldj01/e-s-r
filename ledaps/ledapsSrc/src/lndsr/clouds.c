@@ -500,7 +500,7 @@ void cast_cloud_shadow
 {
     int il,is,il_ar,is_ar,shd_buf_ind;
     float t6,temp_b6_clear,atemp_ancillary,tmpflt_arr[10];
-    float conv_factor,cld_height,ts,tv,fs,fv,dx,dy;
+    float conv_factor,cld_height,ts,fs,dx,dy;
     int shd_x,shd_y;
 
 /***
@@ -539,18 +539,7 @@ void cast_cloud_shadow
                             / DEG;
                         fs = (ar_gridcell->rel_az[il_ar*lut->ar_size.s+is_ar]
                             - adjust_north) / DEG;
-                        tv = ar_gridcell->view_zen[il_ar*lut->ar_size.s+is_ar]
-                            / DEG;
-                        fv = 0.;
 
-/*                        dy = sin(2.*M_PI - fv) * tan(tv) * cld_height;
-                        dx = cos(2.*M_PI - fv) * tan(tv) * cld_height;
-                        dy=0;
-                        dx=0;
-
-                        shd_x = is - dx * 1000. / pixel_size;
-                        shd_y = il + dy * 1000. / pixel_size;
-*/
                         dy = cos(fs) * tan(ts) * cld_height;
                         dx = sin(fs) * tan(ts) * cld_height;
                         shd_x = is - dx * 1000. / pixel_size;

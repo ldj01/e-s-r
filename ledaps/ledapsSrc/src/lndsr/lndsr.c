@@ -88,7 +88,7 @@ int main (int argc, char *argv[]) {
     InputOzon_t *ozon_input = NULL;
     Lut_t *lut = NULL;
     Output_t *output = NULL;
-    int i,j,il, is,ib,i_aot,j_aot,ifree;
+    int i,j,il, is,ib,ifree;
     int il_start, il_end, il_ar, il_region, is_ar;
     int16 *line_out[NBAND_SR_MAX];
     int16 *line_out_buf = NULL;
@@ -164,9 +164,6 @@ int main (int argc, char *argv[]) {
     Espa_internal_meta_t xml_metadata;  /* XML metadata structure */
     Espa_global_meta_t *gmeta = NULL;   /* pointer to global meta */
     Envi_header_t envi_hdr;             /* output ENVI header information */
-  
-    /* Vermote additional variable declaration for the cloud mask May 29 2007 */
-    float t6s_seuil;
   
     debug_flag= DEBUG_FLAG;
     no_ozone_file=0;
@@ -1172,12 +1169,9 @@ int main (int argc, char *argv[]) {
             EXIT_ERROR("reading line from dark target temporary file", "main");
 
         loc.l=il;
-        i_aot=il/lut->ar_region_size.l;
-        t6s_seuil=280.+(1000.*0.01);
 
         for (is=0;is<input->size.s;is++) {
             loc.s=is;
-            j_aot=is/lut->ar_region_size.s;
 
             /* Initialize QA band to off */
             line_out[lut->nband+CLOUD][is] = QA_OFF;

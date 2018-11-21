@@ -41,7 +41,6 @@
 #define LUT_H
 
 #include "lndcal.h"
-#include "lndcal.h"
 #include "input.h"
 #include "param.h"
 #include "bool.h"
@@ -65,6 +64,7 @@ typedef struct {
   char* units_ref;             /* ref units                                 */
   int valid_range_ref[2];      /* ref valid range                           */
   double scale_factor_ref;     /* ref scale factor                          */
+  double mult_factor_ref;      /* ref multiplication factor                 */
   double scale_factor_err_ref; /* ref scale factor error                    */
   double add_offset_ref;       /* ref add offset                            */
   double add_offset_err_ref;   /* ref add offset error                      */
@@ -72,6 +72,7 @@ typedef struct {
   char* units_th;              /* thermal units                             */
   int valid_range_th[2];       /* thermal valid range                       */
   double scale_factor_th;      /* thermal scale factor                      */
+  double mult_factor_th;       /* thermal multiplication factor             */
   double scale_factor_err_th;  /* thermal scale factor error                */
   double add_offset_th;        /* thermal add offset                        */
   double add_offset_err_th;    /* thermal add offset error                  */

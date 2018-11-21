@@ -44,6 +44,11 @@
 !END****************************************************************************
 */
 
+static double scale_refl;    /* scale for reflective bands */
+static double offset_refl;   /* add offset for reflective bands */
+static double scale_therm;   /* scale for thermal bands */
+static double offset_therm;  /* add offset for thermal bands */
+
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
@@ -73,7 +78,7 @@ Key_string_t Param_string[PARAM_MAX] = {
 
 /* Functions */
 
-Param_t *GetParam(int argc, char *argv[])
+Param_t *GetParam(int argc, char *argv[], int *odometer_flag)
 /* 
 !C******************************************************************************
 
@@ -103,14 +108,26 @@ Param_t *GetParam(int argc, char *argv[])
   char *param_file_name = NULL;
   bool got_start, got_end;
 
+  static int odometer=0;
   int c;                           /* current argument index */
   int option_index;                /* index for the command-line option */
   static struct option long_options[] =
   {
       {"pfile", required_argument, 0, 'p'},
       {"help", no_argument, 0, 'h'},
+      {"odometer", no_argument, &odometer, 1},
+      {"offset_refl", required_argument, 0, 'm'},
+      {"offset_therm", required_argument, 0, 'n'},
+      {"scale_refl", required_argument, 0, 'r'},
+      {"scale_therm", required_argument, 0, 't'},
       {0, 0, 0, 0}
   };
+
+  /* Assign defaults */
+  scale_refl = SCALE_FACTOR_REF;
+  offset_refl = ADD_OFFSET_REF;
+  scale_therm = SCALE_FACTOR_TH;
+  offset_therm = ADD_OFFSET_TH;
 
   /* Loop through all the cmd-line options */
   opterr = 0;   /* turn off getopt_long error msgs as we'll print our own */
@@ -132,12 +149,35 @@ Param_t *GetParam(int argc, char *argv[])
           break;
 
       case 'h':  /* help */
-        RETURN_ERROR("Runs the top-of-atmosphere corrections for the input "
-          "Landsat scene", "GetParam", NULL);
+        printf ("Runs the top-of-atmosphere corrections for the input "
+                "Landsat scene\n");
+        printf ("Usage: lndcal "
+                "--pfile=input_parm_file \n"
+                "[--scale_refl=<X.X>] [--offset_refl=<X.X>] \n"
+                "[--scale_therm=<X.X>] [--offset_therm=<X.X>] \n"
+                "[--odometer] \n\n");
+
+        return this;
         break;
 
       case 'p':  /* input parameter file */
         param_file_name = strdup (optarg);
+        break;
+
+      case 'm':
+        offset_refl = atof(optarg);
+        break;
+
+      case 'n':
+        offset_therm = atof(optarg);
+        break;
+
+      case 'r':
+        scale_refl = atof(optarg);
+        break;
+
+      case 't':
+        scale_therm = atof(optarg);
         break;
 
       case '?':
@@ -147,6 +187,9 @@ Param_t *GetParam(int argc, char *argv[])
         break;
     }
   }
+
+  if (odometer)
+    *odometer_flag = 1;
 
   /* Make sure the parameter file was specified */
   if (param_file_name == NULL)
@@ -433,4 +476,25 @@ constants were set as well.
   }
 
   return true;
+}
+
+/* Value retrieval functions. */
+double get_scale_refl(void)
+{
+    return scale_refl;
+}
+
+double get_scale_therm(void)
+{
+    return scale_therm;
+}
+
+double get_offset_refl(void)
+{
+    return offset_refl;
+}
+
+double get_offset_therm(void)
+{
+    return offset_therm;
 }

@@ -170,7 +170,7 @@ Output_t *OpenOutput(Espa_internal_meta_t *in_meta, Input_t *input,
 
     if (ib < nband)  /* image band */
     {
-      bmeta[ib].data_type = ESPA_INT16;
+      bmeta[ib].data_type = ESPA_UINT16;
       bmeta[ib].fill_value = lut->out_fill;
       bmeta[ib].saturate_value = lut->out_satu;
       strcpy (bmeta[ib].category, "image");
@@ -347,6 +347,8 @@ bool PutOutputLine(Output_t *this, int iband, int iline, void *line)
   /* Write the data, only the current line (i.e. one line at a time) */
   if (bmeta[iband].data_type == ESPA_INT16)
     nbytes = sizeof (int16);
+  else if (bmeta[iband].data_type == ESPA_UINT16)
+    nbytes = sizeof (uint16_t);
   else
     nbytes = sizeof (unsigned char);
   if (write_raw_binary (this->fp_bin[iband], 1, this->size.s, nbytes, line)

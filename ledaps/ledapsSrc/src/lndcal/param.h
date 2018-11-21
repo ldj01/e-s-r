@@ -75,7 +75,7 @@ typedef struct {
 
 /* Prototypes */
 
-Param_t *GetParam(int argc, char *argv[]);
+Param_t *GetParam(int argc, char *argv[], int *odometer_flag);
 bool FreeParam(Param_t *this);
 bool existRadGB(Espa_internal_meta_t *metadata);
 bool existReflGB(Espa_internal_meta_t *metadata);

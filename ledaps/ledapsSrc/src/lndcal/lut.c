@@ -5,22 +5,18 @@
 #include "error.h"
 #include "const.h"
 
-#define OUTPUT_FILL (-9999)
-#define OUTPUT_SATU (20000)
+#define OUTPUT_FILL (0)
+#define OUTPUT_SATU (USHRT_MAX)
 #define QA_FILL     (1)
 #define QA_SATU     (2)
 #define LONG_NAME_PREFIX_REF ("band %d reflectance")
 #define UNITS_REF            ("reflectance")
 #define LONG_NAME_PREFIX_TH  ("band %d temperature")
 #define UNITS_TH             ("temperature (kelvin)")
-#define VALID_MIN_REF        (-100)
-#define VALID_MAX_REF        (16000)
-#define VALID_MIN_TH         (1500)
-#define VALID_MAX_TH         (3500)
-#define SCALE_FACTOR_REF     (0.0001)
-#define SCALE_FACTOR_TH      (0.1)
-#define ADD_OFFSET_REF       (0.0)
-#define ADD_OFFSET_TH        (0.0)
+#define VALID_MIN_REF        (-0.2)  /* Unscaled */
+#define VALID_MAX_REF        (1.6)   /* Unscaled */
+#define VALID_MIN_TH         (150)   /* Unscaled */
+#define VALID_MAX_TH         (350)   /* Unscaled */
 #define SCALE_FACTOR_ERR_REF (0.0)
 #define SCALE_FACTOR_ERR_TH  (0.0)
 #define ADD_OFFSET_ERR_REF   (0.0)
@@ -294,11 +290,13 @@ Lut_t *GetLut(Param_t *param, int nband, Input_t *input) {
     RETURN_ERROR("duplicating ref units", "GetLut", NULL);
   }
 
-  this->valid_range_ref[0]=     VALID_MIN_REF;
-  this->valid_range_ref[1]=     VALID_MAX_REF;
-  this->scale_factor_ref=       SCALE_FACTOR_REF;
+
+  this->valid_range_ref[0]=     (VALID_MIN_REF - get_offset_refl()) * (1 / get_scale_refl());
+  this->valid_range_ref[1]=     (VALID_MAX_REF - get_offset_refl()) * (1 / get_scale_refl());
+  this->scale_factor_ref=       get_scale_refl();
+  this->mult_factor_ref=        1 / get_scale_refl();
+  this->add_offset_ref=         get_offset_refl();
   this->scale_factor_err_ref=   SCALE_FACTOR_ERR_REF;
-  this->add_offset_ref=         ADD_OFFSET_REF;
   this->add_offset_err_ref=     ADD_OFFSET_ERR_REF;
 
   this->long_name_prefix_th = DupString(LONG_NAME_PREFIX_TH);
@@ -313,11 +311,12 @@ Lut_t *GetLut(Param_t *param, int nband, Input_t *input) {
     RETURN_ERROR("duplicating th units", "GetLut", NULL);
   }
 
-  this->valid_range_th[0]=     VALID_MIN_TH;
-  this->valid_range_th[1]=     VALID_MAX_TH;
-  this->scale_factor_th=       SCALE_FACTOR_TH;
+  this->valid_range_th[0]=     (VALID_MIN_TH - get_offset_therm()) * (1 / get_scale_therm());
+  this->valid_range_th[1]=     (VALID_MAX_TH  - get_offset_therm()) * (1 / get_scale_therm());
+  this->scale_factor_th=       get_scale_therm();
+  this->mult_factor_th=        1 / get_scale_therm();
+  this->add_offset_th=         get_offset_therm();
   this->scale_factor_err_th=   SCALE_FACTOR_ERR_TH;
-  this->add_offset_th=         ADD_OFFSET_TH;
   this->add_offset_err_th=     ADD_OFFSET_ERR_TH;
 
   return this;

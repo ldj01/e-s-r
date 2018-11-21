@@ -16,7 +16,7 @@
  */
 
 bool Cal(Param_t *param, Lut_t *lut, int iband, Input_t *input,
-         unsigned char *line_in, int16 *line_in_sun_zen, int16 *line_out,
+         unsigned char *line_in, int16 *line_in_sun_zen, uint16_t *line_out,
          unsigned char *line_out_qa, Cal_stats_t *cal_stats, int iy) {
   int is,val;
   float rad_gain, rad_bias;           /* TOA radiance gain/bias */
@@ -90,20 +90,17 @@ bool Cal(Param_t *param, Lut_t *lut, int iband, Input_t *input,
       ref = rad * ref_conv;
     }
 
-    /* Apply a scaling of 10000 (tied to the lut->scale_factor). Valid ranges
-       are set up in lut.c as well. */
-    line_out[is] = (int16)(ref * 10000.0 + 0.5);
+    /* Apply scaling. Values are set up in lut.c */
+    line_out[is] = (uint16_t)((ref - lut->add_offset_ref) * lut->mult_factor_ref + 0.5);
 
-    /* Cap the output using the min/max values.  Then reset the toa reflectance
-       value so that it's correctly reported in the stats and the min/max
-       range matches that of the image data. */
+    /* Cap the output using the min/max values. "ref" already has the unscaled
+       value, so no need to unscale it from line_out before using it to collect
+       the stats */
     if (line_out[is] < lut->valid_range_ref[0]) {
       line_out[is] = lut->valid_range_ref[0];
-      ref = line_out[is] * 0.0001;
     }
     else if (line_out[is] > lut->valid_range_ref[1]) {
       line_out[is] = lut->valid_range_ref[1];
-      ref = line_out[is] * 0.0001;
     }
 
 #ifdef DO_STATS
@@ -144,7 +141,7 @@ bool Cal(Param_t *param, Lut_t *lut, int iband, Input_t *input,
   return true;
 }
 
-bool Cal6(Lut_t *lut, Input_t *input, unsigned char *line_in, int16 *line_out,
+bool Cal6(Lut_t *lut, Input_t *input, unsigned char *line_in, uint16_t *line_out,
           unsigned char *line_out_qa, Cal_stats6_t *cal_stats, int iy) {
   int is, val;
   float rad_gain, rad_bias, rad, temp;
@@ -171,23 +168,21 @@ bool Cal6(Lut_t *lut, Input_t *input, unsigned char *line_in, int16 *line_out,
       continue;
     }
 
-    /* compute the TOA brightness temperature in Kelvin and apply scaling of
-       10.0 (tied to lut->scale_factor_th). valid ranges are set up in lut.c
+    /* compute the TOA brightness temperature in Kelvin and apply scaling.
+       Values are set up in lut.c
        as well. */
     rad = (rad_gain * (float)val) + rad_bias;
     temp = lut->K2 / log(1.0 + (lut->K1/rad));
-    line_out[is] = (int16)(temp * 10.0 + 0.5);
+    line_out[is] = (uint16_t)((temp - lut->add_offset_th) * lut->mult_factor_th + 0.5);
 
-    /* Cap the output using the min/max values.  Then reset the temperature
-       value so that it's correctly reported in the stats and the min/max
-       range matches that of the image data. */
+    /* Cap the output using the min/max values. "temp" already has the unscaled
+       value, so no need to unscale it from line_out before using it to collect
+       the stats */
     if (line_out[is] < lut->valid_range_th[0]) {
       line_out[is] = lut->valid_range_th[0];
-      temp = line_out[is] * 0.1;
     }
     else if (line_out[is] > lut->valid_range_th[1]) {
       line_out[is] = lut->valid_range_th[1];
-      temp = line_out[is] * 0.1;
     }
 
 #ifdef DO_STATS

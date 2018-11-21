@@ -33,10 +33,10 @@ typedef struct {
 } Cal_stats6_t;
 
 bool Cal(Param_t *param, Lut_t *lut, int iband, Input_t *input,
-         unsigned char *line_in, int16 *line_in_sun_zen, int16 *line_out,
+         unsigned char *line_in, int16 *line_in_sun_zen, uint16_t *line_out,
          unsigned char *line_out_qa, Cal_stats_t *cal_stats, int iy);
 
-bool Cal6(Lut_t *lut, Input_t *input, unsigned char *line_in, 
-  int16 *line_out, unsigned char *line_out_qa, Cal_stats6_t *cal_stats, int iy);
+bool Cal6(Lut_t *lut, Input_t *input, unsigned char *line_in,
+  uint16_t *line_out, unsigned char *line_out_qa, Cal_stats6_t *cal_stats, int iy);
 
 #endif

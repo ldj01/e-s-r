@@ -83,7 +83,8 @@ bool Cal(Param_t *param, Lut_t *lut, int iband, Input_t *input,
     if (input->meta.use_toa_refl_consts) {
       /* use per-pixel angles - convert the degree values to radians and then
          unscale */
-      sun_zen = line_in_sun_zen[is] * 0.01 * RAD;
+      sun_zen = (line_in_sun_zen[is]*lut->meta.szen_scale
+                 + lut->meta.szen_offset)*RAD;
       ref = ((refl_gain * fval) + refl_bias) / cos (sun_zen);
     }
     else {

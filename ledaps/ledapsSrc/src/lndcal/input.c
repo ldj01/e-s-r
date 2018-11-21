@@ -322,6 +322,8 @@ bool InputMetaCopy(Input_meta_t *this, int nband, Input_meta_t *copy)
   copy->time_fill = this->time_fill;
   copy->sun_zen = this->sun_zen;
   copy->sun_az = this->sun_az;
+  copy->szen_scale = this->szen_scale;
+  copy->szen_offset = this->szen_offset;
   copy->earth_sun_dist = this->earth_sun_dist;
   copy->wrs_sys = this->wrs_sys;
   copy->ipath = this->ipath;
@@ -395,6 +397,8 @@ bool GetXMLInput(Input_t *this, Espa_internal_meta_t *metadata)
     this->meta.prod_date.fill = true;
     this->meta.sun_zen = ANGLE_FILL;
     this->meta.sun_az = ANGLE_FILL;
+    this->meta.szen_scale = 1;
+    this->meta.szen_offset = 0;
     this->meta.wrs_sys = (Wrs_t)WRS_FILL;
     this->meta.ipath = -1;
     this->meta.irow = -1;
@@ -650,6 +654,10 @@ bool GetXMLInput(Input_t *this, Espa_internal_meta_t *metadata)
         {
             /* get the solar zenith representative band info */
             this->file_name_sun_zen = strdup (metadata->band[i].file_name);
+            if (metadata->band[i].scale_factor != ESPA_FLOAT_META_FILL)
+                this->meta.szen_scale = metadata->band[i].scale_factor;
+            if (metadata->band[i].add_offset != ESPA_FLOAT_META_FILL)
+                this->meta.szen_offset = metadata->band[i].add_offset;
         }
     }  /* for i */
 

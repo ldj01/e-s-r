@@ -70,6 +70,8 @@ typedef struct {
   Date_t prod_date;        /* Production date (must be available for ETM) */
   float sun_zen;           /* Solar zenith angle (radians; scene center) */
   float sun_az;            /* Solar azimuth angle (radians; scene center) */
+  double szen_scale;       /* solar zenith angle scale factor */
+  double szen_offset;      /* solar zenith angle offset */
   float earth_sun_dist;    /* Earth-sun distance */
   Wrs_t wrs_sys;           /* WRS system */
   int ipath;               /* WRS path number */

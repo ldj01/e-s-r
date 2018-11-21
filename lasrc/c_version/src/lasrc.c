@@ -235,8 +235,7 @@ int main (int argc, char *argv[])
         exit (ERROR);
     }
 
-    /* Read the scaled solar and view azimuth/zenith per pixel angle bands
-       which are in degrees */
+    /* Read the scaled solar zenith per-pixel angle band (in degrees). */
     if (get_input_ppa_lines (input, 0, nlines, sza) != SUCCESS)
     {
         sprintf (errmsg, "Reading per-pixel solar and view angle bands");

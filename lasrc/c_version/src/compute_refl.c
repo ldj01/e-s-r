@@ -73,6 +73,8 @@ int compute_toa_refl
            max_refl;            /* Maximum scaled reflective value */
     double min_therm,           /* Minimum scaled thermal value */
            max_therm;           /* Maximum scaled thermal value */
+    double angband_scale = 1, angband_offset = 0; /* solar angle band scale
+                                                     factor and offset */
 
     /* Start the processing */
     mytime = time(NULL);
@@ -106,6 +108,26 @@ int compute_toa_refl
         min_therm = 0;
     if (max_therm > USHRT_MAX)
         max_therm = USHRT_MAX;
+
+    /* Get the solar angle band scale and offset factors. */
+    for (iband = 0; iband < xml_metadata->nbands; iband++)
+    {
+        Espa_band_meta_t *b = &xml_metadata->band[iband];
+        if (strcmp(b->name, "solar_zenith_band4") == 0)
+        {
+            if (b->scale_factor != ESPA_FLOAT_META_FILL)
+                angband_scale = b->scale_factor;
+            if (b->add_offset != ESPA_FLOAT_META_FILL)
+                angband_offset = b->add_offset;
+            break;
+        }
+    }
+    if (iband == xml_metadata->nbands)
+    {
+        error_handler(true, FUNC_NAME,
+                      "Error: Unable to locate solar angle band in metadata.");
+        return ERROR;
+    }
 
     /* Loop through all the bands (except the pan band) and compute the TOA
        reflectance and TOA brightness temp */
@@ -159,7 +181,8 @@ int compute_toa_refl
                         /* Compute the TOA reflectance based on the per-pixel
                            sun angle (need to unscale). Scale the TOA value for
                            output. */
-                        xmus = cos(sza[i] * 0.01 * DEG2RAD);
+                        xmus = cos((sza[i]*angband_scale+angband_offset)
+                                   * DEG2RAD);
                         rotoa = (uband[i] * refl_mult) + refl_add;
                         rotoa = rotoa / xmus;
                         rotoa = (rotoa - offset_refl) * output_mult_refl;

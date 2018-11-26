@@ -126,7 +126,6 @@ bool GetInputLineTh(Input_t *this, int iline, unsigned char *line);
 bool GetInputLineSunZen(Input_t *this, int iline, int16 *line);
 bool CloseInput(Input_t *this);
 bool FreeInput(Input_t *this);
-bool InputMetaCopy(Input_meta_t *this, int nband, Input_meta_t *copy);
 bool GetXMLInput(Input_t *this, Espa_internal_meta_t *metadata);
 
 #endif

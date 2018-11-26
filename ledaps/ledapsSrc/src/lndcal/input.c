@@ -306,46 +306,6 @@ bool FreeInput(Input_t *this)
   return true;
 }
 
-bool InputMetaCopy(Input_meta_t *this, int nband, Input_meta_t *copy) 
-{
-  int ib;
-
-  if (this == NULL) 
-    RETURN_ERROR("invalid input structure", "InputMetaCopy", false);
-
-  copy->sat = this->sat;
-  copy->inst = this->inst;
-  if (!DateCopy(&this->acq_date, &copy->acq_date)) 
-    RETURN_ERROR("copying acquisition date/time", "InputMetaCopy", false);
-  if (!DateCopy(&this->prod_date, &copy->prod_date)) 
-    RETURN_ERROR("copying production date/time", "InputMetaCopy", false);
-  copy->time_fill = this->time_fill;
-  copy->sun_zen = this->sun_zen;
-  copy->sun_az = this->sun_az;
-  copy->szen_scale = this->szen_scale;
-  copy->szen_offset = this->szen_offset;
-  copy->earth_sun_dist = this->earth_sun_dist;
-  copy->wrs_sys = this->wrs_sys;
-  copy->ipath = this->ipath;
-  copy->irow = this->irow;
-  copy->fill = this->fill;
-
-  copy->iband_th = this->iband_th;
-  for (ib = 0; ib < nband; ib++) {
-    copy->iband[ib] = this->iband[ib];
-    copy->rad_gain[ib] = this->rad_gain[ib];
-    copy->rad_bias[ib] = this->rad_bias[ib];
-    copy->refl_gain[ib] = this->refl_gain[ib];
-    copy->refl_bias[ib] = this->refl_bias[ib];
-  }
-  copy->rad_gain_th = this->rad_gain_th;
-  copy->rad_bias_th = this->rad_bias_th;
-  copy->k1_const = this->k1_const;
-  copy->k2_const = this->k2_const;
-  copy->use_toa_refl_consts = this->use_toa_refl_consts;
-  return true;
-}
-
 
 #define DATE_STRING_LEN (50)
 #define TIME_STRING_LEN (50)

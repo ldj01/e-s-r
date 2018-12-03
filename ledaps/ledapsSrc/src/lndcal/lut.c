@@ -293,6 +293,11 @@ Lut_t *GetLut(Param_t *param, int nband, Input_t *input) {
 
   this->valid_range_ref[0]=     (VALID_MIN_REF - get_offset_refl()) * (1 / get_scale_refl());
   this->valid_range_ref[1]=     (VALID_MAX_REF - get_offset_refl()) * (1 / get_scale_refl());
+  if (this->valid_range_ref[0] < 0)
+    this->valid_range_ref[0] = 0;
+  if (this->valid_range_ref[1] > USHRT_MAX)
+    this->valid_range_ref[0] = USHRT_MAX;
+
   this->scale_factor_ref=       get_scale_refl();
   this->mult_factor_ref=        1 / get_scale_refl();
   this->add_offset_ref=         get_offset_refl();

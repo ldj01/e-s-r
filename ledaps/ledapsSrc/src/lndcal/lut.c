@@ -13,7 +13,7 @@
 #define UNITS_REF            ("reflectance")
 #define LONG_NAME_PREFIX_TH  ("band %d temperature")
 #define UNITS_TH             ("temperature (kelvin)")
-#define VALID_MIN_REF        (-0.2)  /* Unscaled */
+#define VALID_MIN_REF        (-0.01) /* Unscaled */
 #define VALID_MAX_REF        (1.6)   /* Unscaled */
 #define VALID_MIN_TH         (150)   /* Unscaled */
 #define VALID_MAX_TH         (350)   /* Unscaled */

@@ -73,7 +73,6 @@ The DDV flag in ddv_line (bit 0) is updated in this routine
     int start_i;
 
     float T_h2o_b7,T_g_b7,rho7,rho4,MP;
-    float rho6,rho1;
     float a_h2o_b7=-3.7338, b_h2o_b7=0.76348,c_h2o_b7=-.030233;
     float a_CO2_b7=0.0071958, b_CO2_b7=0.55665;
     float a_NO2_b7=0.0013383, b_NO2_b7=0.95109;
@@ -160,11 +159,10 @@ The DDV flag in ddv_line (bit 0) is updated in this routine
                 if (is_fill)
                     continue;
 
-                /* band 7 water vapor correction */  
+                /* band 7 water vapor correction */
                 rho7=line_in[il][5][is] * 0.0001;
                 rho4=line_in[il][3][is] * 0.0001;
-                rho7 /= T_g_b7;  /* correct for water vapor and other
-                                    gases*/
+                rho7 /= T_g_b7;  /* correct for water vapor and other gases*/
 
                 /* update sums if dark target, dark target if not water
                    and 0.015 < rho7 < 0.05 */
@@ -278,9 +276,6 @@ The DDV flag in ddv_line (bit 0) is updated in this routine
                             if (!(ddv_line[il][is]&0x08)) {
                                 rho=(float)line_in[il][ib][is]*0.0001;
                                 rho7=(float)line_in[il][5][is]*0.0001;
-                                rho4=(float)line_in[il][3][is]*0.0001;
-                                rho6=(float)line_in[il][4][is]*0.0001;
-                                rho1=(float)line_in[il][0][is]*0.0001;
                                 rho7 /= T_g_b7;  /* correct for water vapor
                                                     and other gases*/
                                 rho = rho/atmos_coef_ar->tgOG[ib][ipt]
@@ -289,24 +284,6 @@ The DDV flag in ddv_line (bit 0) is updated in this routine
                                      * atmos_coef_ar->td_ra[ib][ipt]
                                      * atmos_coef_ar->tu_ra[ib][ipt];
                                 rho /= 1 + atmos_coef_ar->S_ra[ib][ipt]*rho;
-                                rho4 = rho/atmos_coef_ar->tgOG[3][ipt]
-                                     - atmos_coef_ar->rho_ra[3][ipt];
-                                rho4 /= atmos_coef_ar->tgH2O[3][ipt]
-                                      * atmos_coef_ar->td_ra[3][ipt]
-                                      * atmos_coef_ar->tu_ra[3][ipt];
-                                rho4 /= 1 + atmos_coef_ar->S_ra[3][ipt]*rho4;
-                                rho6 = rho/atmos_coef_ar->tgOG[4][ipt]
-                                     - atmos_coef_ar->rho_ra[4][ipt];
-                                rho6 /= atmos_coef_ar->tgH2O[4][ipt]
-                                      * atmos_coef_ar->td_ra[4][ipt]
-                                      * atmos_coef_ar->tu_ra[4][ipt];
-                                rho6 /= 1 + atmos_coef_ar->S_ra[4][ipt]*rho6;
-                                rho1 = rho/atmos_coef_ar->tgOG[0][ipt]
-                                     - atmos_coef_ar->rho_ra[0][ipt];
-                                rho1 /= atmos_coef_ar->tgH2O[0][ipt]
-                                      * atmos_coef_ar->td_ra[0][ipt]
-                                      * atmos_coef_ar->tu_ra[0][ipt];
-                                rho1 /= 1 + atmos_coef_ar->S_ra[0][ipt]*rho1;
                                 nb_red_obs++;
             
                                 if (rho < 0. || rho > rho7)
@@ -392,9 +369,6 @@ int compute_aot(int band, float toarhoblue, float toarhored, float ts,
     
     /* correct the red band */  
     band=2;
-    mus=cos(ts*RAD);
-    muv=cos(tv*RAD);
-    ratio=spres/1013.;
     tau_ray=tau_ray_sealevel[band]*ratio;
     
     chand(&phi,&muv,&mus,&tau_ray,&actual_rho_ray);

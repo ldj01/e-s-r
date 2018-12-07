@@ -157,17 +157,11 @@ int main (int argc, char *argv[])
        If not there, then traverse the auxiliary directory structure. */
     /* DEM file */
     strcpy (dem, "CMGDEM.hdf");
-    strcpy (path_buf, aux_path);
     char full_path[DIR_BUF_SIZE];
     sprintf(full_path, "%s/%s", aux_path, dem);
-    if (find_file(full_path, dem))
+    if (find_file(full_path, NULL))
     {
         strcpy (dem, full_path);
-        printf ("using DEM : %s\n", dem);
-    }
-    else if (find_file (path_buf, dem))
-    {
-        strcpy (dem, path_buf);
         printf ("using DEM : %s\n", dem);
     }
     else
@@ -182,7 +176,7 @@ int main (int argc, char *argv[])
     sprintf (ozone, "TOMS_%d%03d.hdf", year, day);
     strcpy (path_buf, aux_path);
     sprintf(full_path, "%s/EP_TOMS/ozone_%d/%s", aux_path, year, ozone);
-    if (find_file(full_path, ozone))
+    if (find_file(full_path, NULL))
     {
         strcpy (ozone, full_path);
         printf ("using DEM : %s\n", ozone);
@@ -204,7 +198,7 @@ int main (int argc, char *argv[])
     sprintf (reanalysis, "REANALYSIS_%d%03d.hdf", year, day);
     strcpy (path_buf, aux_path);
     sprintf(full_path, "%s/REANALYSIS/RE_%d/%s", aux_path, year, reanalysis);
-    if (find_file(full_path, reanalysis))
+    if (find_file(full_path, NULL))
     {
         strcpy (reanalysis, full_path);
         printf ("using DEM : %s\n", reanalysis);
@@ -439,7 +433,9 @@ int find_file
 (
     char *path,   /* I: directory/path to search; upon successfully finding
                         the file, path contains the location of the file */
-    char *name    /* I: filename for which to search */
+    char *name    /* I: filename for which to search
+                        If the value is NULL, then path is assumed to be a
+                        directory and filename. */
 )
 {
     char FUNC_NAME[] = "find_file";    /* function name */
@@ -451,15 +447,23 @@ int find_file
     /* Make sure the path exists */
     if (stat (path, &stbuf) != 0)
     {
-        sprintf (errmsg, "Can't stat directory: %s", path);
+        if (name != NULL)
+            sprintf(errmsg, "Can't stat directory: %s", path);
+        else
+            sprintf(errmsg, "Can't stat file: %s", path);
         error_handler (true, FUNC_NAME, errmsg);
         return 0;
     }
 
-    /* If this is a directory, then search it.  Otherwise it's a file so
-       check it for our filename. */
+    /* If this is a directory, then search it.  Otherwise it's a file. */
     if ((stbuf.st_mode & S_IFMT) == S_IFDIR)
     {
+        if (name == NULL)
+        {
+            error_handler(true, FUNC_NAME, "Filename not specified.");
+            return 0;
+        }
+
         strcpy(pbuf, path);
         found = scan_dir (pbuf, name);
 
@@ -467,8 +471,15 @@ int find_file
         if (found)
             strcpy(path, pbuf);
     }
+    else if (name != NULL)
+    {
+        sprintf(errmsg, "Search filename (%s) specified when path (%s) "
+                "includes filename.", name, path);
+        error_handler(true, FUNC_NAME, errmsg);
+        return 0;
+    }
     else
-        found = (strcmp(path + strlen(path) - strlen(name), name) == 0);
+        found = 1;
 
     return found;
 }

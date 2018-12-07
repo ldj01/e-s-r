@@ -27,10 +27,8 @@ c  of factor
       real phw
       real cs,cv,ss,sv,zx,zy,tantilt,tilt,proba,xe,xn,xe2,xn2
       real coef
-c      real cos2chi, coschi, sinchi
       real sigmaC,sigmaU,C21,C03,C40,C04,C22
       real mus,muv,sinv,cksi,ksi
-c      real r1f
       real nr,ni
 
         m=1.33
@@ -55,9 +53,6 @@ C
         r3=0.0
 
 
-C       rpsur=sqrt(r2*r2+r3*r3)
-C       chi=atan2(r3,r2)     
-
 C adjust with agitated surface 
       phw=azw*dtr
       cs=cos(xts*dtr)
@@ -69,7 +64,6 @@ C adjust with agitated surface
       tantilt=sqrt(zx*zx+zy*zy)
       tilt=atan(tantilt)
 c  Anisotropic Gaussian distribution
-c    phw=phi_sun-phi_wind
       sigmaC=0.003+0.00192*wspd
       sigmaU=0.00316*wspd
       C21=0.01-0.0086*wspd
@@ -86,22 +80,7 @@ c    phw=phi_sun-phi_wind
       coef=coef+C04/24.*(xn2*xn2-6*xn2+3)
       coef=coef+C22/4.*(xe2-1)*(xn2-1)
       proba=coef/2./pi/sqrt(sigmaU)/sqrt(sigmaC)*exp(-(xe2+xn2)/2.)
-C      write(6,*) "probapol:",proba
-C      write(6,*) "coefpol:",coef
-C      write(6,*) "tiltpol:",tilt
-C      write(6,*) "phiw pol:",phw
-c Compute Fresnel's coefficient R1
-C      cos2chi=cv*cs+sv*ss*cos(phi*dtr)
-C      if (cos2chi.gt.1.0)cos2chi=0.99999999999
-C      if (cos2chi.lt.-1.0)cos2chi=-0.99999999999
-C      coschi=sqrt(0.5*(1+cos2chi))
-C      sinchi=sqrt(0.5*(1-cos2chi))
-C      Call Fresnel(nr,ni,coschi,sinchi,R1f)
-C      Call pfresnel(nr,ni,coschi,sinchi,r1f,r2f)
-C      write(6,*) "R1 fresnel:",R1f," r1 actual:",r1
-C      write(6,*) "R2 fresnel:",R2f," r2 actual:",r2
 C Compute Reflectance of the sun glint
-C      Rog=pi*R1*proba/4./cs/cv/(cos(tilt)**4)
         factor=pi*proba/4./cs/cv/(cos(tilt)**4)
 
 C compute rotation angle for Q and U
@@ -120,7 +99,6 @@ C compute rotation angle for Q and U
         if (cksi.gt.1.) cksi=1.
         if (cksi.lt.-1.) cksi=-1.
         ksi=acos(cksi)/dtr
-C        write(6,*) "KSI=",ksi	
 
 C apply rotation mattrix
         ropq=r2*(2.*cksi*cksi-1.)*factor

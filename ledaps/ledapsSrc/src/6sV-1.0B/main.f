@@ -210,7 +210,6 @@ c****************************************************************************c
         real albbrdf,par1,par2,par3,par4,robar1,xnorm1,rob,xnor,rodir
         real rdown,rdir,robar2,xnorm2,ro,roc,roe,rapp,rocave,roeave
         real seb,sbor,swl,sb,refet,refet1,refet2,refet3,alumet
-c        real refeti,pinst,ksiinst,ksirad
         real rpfet,rpfet1,rpfet2,rpfet3,plumet
         real tgasm,rog,dgasm,ugasm,sdwava,sdozon,sddica,sdoxyg
         real sdniox,sdmoca,sdmeth,suwava,suozon,sudica,suoxyg
@@ -231,7 +230,6 @@ c        real refeti,pinst,ksiinst,ksirad
         real ugtot,edifr,edifa,tdird,tdiru,tdifd,tdifu,fra
         real fae,avr,romeas1,romeas2,romeas3,alumeas,sodrayp
         real sdppray,sdppaer,sdpptot,sdpray,sdpaer,sdptot
-c        real rop
         real spdpray,spdpaer,spdptot
         real ratm1,ratm2,ratm3,rsurf
         real sodaerp,sodtotp,tdir,tdif,etn,esn,es,ea0n,ea0,ee0n
@@ -469,8 +467,6 @@ c***********************************************************************
 c constantes values
       sigma=0.056032
       delta=0.0279
-CCC     pinst=0.02
-CCC     ksiinst=0.
       xacc=1.e-06
       iread=5
       step=0.0025
@@ -701,7 +697,6 @@ c                  -------------------------------------------         c
 c                                                                      c
 c**********************************************************************c
 
-c      read(iread,*) ipol
        ipol=1
 
 c**********************************************************************c
@@ -896,7 +891,6 @@ c  the user-defined aerosol profile
    46 read(5,*)irsunph
       do i=1,irsunph
        read(5,*)rsunph(i),nrsunph(i)
-C       nrsunph(i)=nrsunph(i)/(rsunph(i)**4.)/(4*3.1415/3)
       enddo
       rmin=rsunph(1)
       rmax=rsunph(irsunph)+1e-07
@@ -2083,12 +2077,6 @@ c**********************************************************************c
    85 continue
 
 c  robard is assumed equal to albbrdf
-c       print 301,brdfints(mu,1),robar1,xnorm1,
-c    s       robar2,xnorm2,albbrdf
-c       print 301,robar1/xnorm1,robar2/xnorm2
-c       print 301,betal(0)/3,pizmoy
-c301  format(6(f10.4,2x))
-c501  format(5(i10,2x))
       do 335 l=iinf,isup
         rocl(l)=sbrdf(l)
         roel(l)=sbrdf(l)
@@ -2215,9 +2203,6 @@ c                                                                      c
 c                                                                      c
 c**********************************************************************c
  
-C       ilut=0
-C       read(iread,*,end=37) ilut
-
        irop=0
 
        read(iread,*,end=37) irop
@@ -2260,8 +2245,6 @@ c questionable.
        endif
        endif  
        endif
-C      write(6,*) "Surface polarization reflectance, Q,U,rop ",
-C    s            ropq,ropu,sqrt(ropq*ropq+ropu*ropu)
  
  
 
@@ -2540,7 +2523,6 @@ c --- ground reflectance (type and spectral variation) ----
          goto 2009
  2009   endif
       endif
-c  50  continue
 
 c --- pressure at ground level (174) and altitude (175) ----
   999 write(iwr, 173)
@@ -3047,8 +3029,6 @@ c      and we compute the direction of the plane of polarization
         call dirpopol(srqray*xmus,sruray*xmus,sdppray)
         call dirpopol(srqaer*xmus,sruaer*xmus,sdppaer)
         call dirpopol(srqtot*xmus,srutot*xmus,sdpptot)
-CC      ksirad=sdpptot*3.1415927/180.
-CC      refeti=refet+pinst*rpfet*cos(2*(ksiinst*3.1415925/180.+ksirad))
       endif
 
       do 57 j=1,3
@@ -3130,8 +3110,6 @@ C LUT FOR Look up table data
       iscami=acos(cscaa)*180./pi
       write(10,333) its,avis,nfilut(mu),iscama,iscami
       write(10,'(41(F8.5,1X))')(roluti(mu,j)/seb,j=1,nfilut(mu))
-C      write(10,'(41(F8.5,1X))')(rolutiq(mu,j)/seb,j=1,nfilut(mu))
-C      write(10,'(41(F8.5,1X))')(rolutiu(mu,j)/seb,j=1,nfilut(mu))
       do i=1,mu-1
       lutmuv=rm(i)
       luttv=acos(lutmuv)*180./pi
@@ -3144,8 +3122,6 @@ C      write(10,'(41(F8.5,1X))')(rolutiu(mu,j)/seb,j=1,nfilut(mu))
       write(10,333) its,luttv,nfilut(i),iscama,iscami
  333  Format(F10.5,1X,F10.5,1X,I3,F10.5,F10.5)    
       write(10,'(41(F8.5,1X))')(roluti(i,j)/seb,j=1,nfilut(i))
-C      write(10,'(41(F8.5,1X))')(rolutiq(i,j)/seb,j=1,nfilut(i))
-C      write(10,'(41(F8.5,1X))')(rolutiu(i,j)/seb,j=1,nfilut(i))
       enddo
       close(10)
       endif
@@ -3223,7 +3199,6 @@ C Case a LUT output is desired
         plumet=sqrt(qlumet*qlumet+ulumet*ulumet)
         xpol=atan2(rufet,rqfet)*180.0/3.14159/2.
         write(iwr, 429 )rpfet,plumet,xpol,rpfet/refet
-C       write(iwr, 428 )rpfet1,rpfet2,rpfet3
       endif
 
         if(inhomo.ne.0) then
@@ -3284,7 +3259,6 @@ c**********************************************************************c
         write(iwr, 931)'polarized reflect. :',srpray,srpaer,srptot
         write(iwr, 932)'degree of polar.   :',sdpray,sdpaer,sdptot
         write(iwr, 932)'dir. plane polar.  :',sdppray,sdppaer,sdpptot
-CCC     write(iwr, 931)'instrument app ref.:',zero,zero,refeti
         write(iwr, 931)'phase function I   :',fophsr,fophsa,fophst
         write(iwr, 931)'phase function Q   :',foqhsr,foqhsa,foqhst
         write(iwr, 931)'phase function U   :',fouhsr,fouhsa,fouhst
@@ -3361,12 +3335,7 @@ c second pass use update value for rog
          endif
  
          write(iwr, 944)xa,xb,xc
-C         write(iwr, *) "david roy ", xap,xb,xc
          y=xa*xrad-xb
-c        write(6,'(A5,F9.5)') 'rog=', rog
-c        write(6,'(A5,F9.5,A8,F9.5)') 'y=',y, '  acr=',y/(1.+xc*y)
-c        write(6,*) 'rogbrdf=',rogbrdf,' rodir=',brdfints(mu,1),
-c    s            ' diff=',rogbrdf-brdfints(mu,1)
       endif
       stop
 
@@ -3575,35 +3544,6 @@ c pressure at ground level (174) and altitude (175)
   183 format(1h*,15x,26h h2o   content            ,f6.3,1x,t79,1h*)
   184 format(1h*,15x,26haerosol opt. thick. 550nm ,f6.3,1x,t79,1h*)
 
-c  426 format(1h*,t79,1h*,/,
-c     s       1h*,24x,27h coupling aerosol -wv  :   ,t79,1h*,/,
-c     s       1h*,24x,27h --------------------      ,t79,1h*,/,
-c     s       1h*,10x,20h wv above aerosol : ,f5.3,4x,
-c     s               25h wv mixed with aerosol : ,f5.3,1x,t79,1h*,/,
-c     s       1h*,22x,20h wv under aerosol : ,f5.3,t79,1h*,/,1h*,t79,
-c     s 1h*,/,1h*,24x,34h coupling polarized aerosol -wv  :,t79,1h*,/,
-c     s       1h*,24x,34h ------------------------------   ,t79,1h*,/,
-c     s       1h*,10x,20h wv above aerosol : ,f5.3,4x,
-c     s               25h wv mixed with aerosol : ,f5.3,1x,t79,1h*,/,
-c     s       1h*,22x,20h wv under aerosol : ,f5.3,t79,1h*)
-c  427 format(79(1h*),/,1h*,t79,1h*,/,
-c     s       1h*,24x,27h integrated values of  :   ,t79,1h*,/,
-c     s       1h*,24x,27h --------------------      ,t79,1h*,/,
-c     s       1h*,t79,1h*,/,
-c     s       1h*,6x,22h apparent reflectance ,f9.2,1x,
-c     s                 26h appar. rad.(w/m2/sr/mic) ,f10.3,1x,t79,1h*,/,
-c     s       1h*,6x,22h app. polarized refl. ,f7.4,3x,
-c     s                 26h app. pol. rad. ( "  "  ) ,f10.3,1x,t79,1h*,/,
-c     s       1h*,12x,39h direction of the plane of polarization,
-c     s       f6.2,t79,1h*,/,
-c     s       1h*,18x,30h total gaseous transmittance  ,f5.3,t79,1h*,/,
-c     s       1h*,t79,1h*,/,79(1h*))
-c  428 format(1h*,t79,1h*,/,
-c     s 1h*,24x,34h coupling polarized aerosol -wv  :,t79,1h*,/,
-c     s       1h*,24x,34h ------------------------------   ,t79,1h*,/,
-c     s       1h*,10x,20h wv above aerosol : ,f5.3,4x,
-c     s               25h wv mixed with aerosol : ,f5.3,1x,t79,1h*,/,
-c     s       1h*,22x,20h wv under aerosol : ,f5.3,t79,1h*)
   429 format(79(1h*),/,1h*,t79,1h*,/,
      s       1h*,24x,27h integrated values of  :   ,t79,1h*,/,
      s       1h*,24x,27h --------------------      ,t79,1h*,/,

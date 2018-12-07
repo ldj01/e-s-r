@@ -254,7 +254,6 @@ The DDV flag in ddv_line (bit 0) is updated in this routine
                 if (std_srefl <= 1.015 && avg_srefl <= 0.15 &&
                     nb_snow_pixs < 5 && fraction_water < 0.3 &&
                     fraction_clouds < 1e-10) {
-/*      rho_surf=0.33*avg_srefl; */
                 
                     compute_aot(0, avg_band[0], avg_band[2], fts, ftv, phi,
                                 uoz, uwv, spres, sixs_tables, &avg_aot);

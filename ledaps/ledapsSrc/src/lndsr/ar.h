@@ -13,14 +13,14 @@ typedef struct {
   long nfill;
 } Ar_stats_t;
 
-struct collect_bands
+typedef struct
 {
     short b[3];   /* collect_band */
     short b7;     /* collect_band7 */
-};
+} collect_bands_t;
 
 bool Ar(int il_ar, Lut_t *lut, Img_coord_int_t *size_in, int16 ***line_in,
-        char **ddv_line, atmos_t *atmos_coef_ar, struct collect_bands *cbands,
+        char **ddv_line, atmos_t *atmos_coef_ar, collect_bands_t *cbands,
         int **line_ar, Ar_stats_t *ar_stats, Ar_gridcell_t *ar_gridcell,
         sixs_tables_t *sixs_tables);
 

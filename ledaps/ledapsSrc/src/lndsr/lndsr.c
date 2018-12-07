@@ -1101,7 +1101,7 @@ int main (int argc, char *argv[]) {
     if (allocate_mem_atmos_coeff(ar_gridcell.nbrows*ar_gridcell.nbcols,
                                  &atmos_coef_storage))
         EXIT_ERROR("Allocating memory for atmos_coef storage", "main");
-    struct collect_bands *cbands;
+    collect_bands_t *cbands;
     if ((cbands = malloc(lut->ar_region_size.s*lut->ar_region_size.l*
                          sizeof(*cbands))) == NULL)
         EXIT_ERROR("Allocating memory for collect bands", "main");

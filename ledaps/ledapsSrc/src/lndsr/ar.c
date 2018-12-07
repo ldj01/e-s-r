@@ -26,8 +26,8 @@ int compute_aot(int band, float rho_toa, float rho_surf_est, float ts,
 
 static int cmp_collects(const void *p1, const void *p2)
 {
-    const struct collect_bands *a = p1;
-    const struct collect_bands *b = p2;
+    const collect_bands_t *a = p1;
+    const collect_bands_t *b = p2;
     if (a->b[0] < b->b[0])
         return -1;
     if (a->b[0] > b->b[0])
@@ -37,7 +37,7 @@ static int cmp_collects(const void *p1, const void *p2)
 
 
 bool Ar(int il_ar, Lut_t *lut, Img_coord_int_t *size_in, int16 ***line_in,
-        char **ddv_line, atmos_t *atmos_coef_ar, struct collect_bands *cbands,
+        char **ddv_line, atmos_t *atmos_coef_ar, collect_bands_t *cbands,
         int **line_ar, Ar_stats_t *ar_stats, Ar_gridcell_t *ar_gridcell,
         sixs_tables_t *sixs_tables)
 {

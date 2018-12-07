@@ -13,6 +13,8 @@
 #include "write_metadata.h"
 #include "envi_header.h"
 #include "espa_geoloc.h"
+#include "lut.h"
+#include "sixs_runs.h"
 
 /* Extra bands - atmos_opacity, cloud_QA */
 #define NBAND_SR_EXTRA (2)
@@ -76,9 +78,6 @@ int *computed;
 float *tgOG[7],*tgH2O[7],*td_ra[7],*tu_ra[7],*rho_mol[7],*rho_ra[7],*td_da[7],*tu_da[7],*S_ra[7];
 float *td_r[7],*tu_r[7],*S_r[7],*rho_r[7];
 } atmos_t;
-
-#include "lut.h"
-#include "sixs_runs.h"
 
 void update_gridcell_atmos_coefs(int ipt, atmos_t *atmos_coef,
                                  Ar_gridcell_t *ar_gridcell,

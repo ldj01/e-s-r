@@ -1,8 +1,8 @@
 #ifndef CLOUDS_H
 #define CLOUDS_H
 
+#include <stdbool.h>
 #include "lndsr.h"
-#include "bool.h"
 #include "lut.h"
 #include "sixs_runs.h"
 

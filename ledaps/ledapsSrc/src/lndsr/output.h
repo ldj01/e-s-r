@@ -41,8 +41,8 @@
 #define OUTPUT_H
 
 #include <time.h>
+#include <stdbool.h>
 #include "lndsr.h"
-#include "bool.h"
 #include "input.h"
 #include "param.h"
 #include "lut.h"

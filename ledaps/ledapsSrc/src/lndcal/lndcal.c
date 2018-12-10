@@ -1,6 +1,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
+#include <stdbool.h>
 
 #include "lndcal.h"
 #include "keyvalue.h"
@@ -10,7 +11,6 @@
 #include "lut.h"
 #include "output.h"
 #include "cal.h"
-#include "bool.h"
 #include "error.h"
 
 #include <time.h>

@@ -43,9 +43,9 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <time.h>
+#include <stdbool.h>
 #include "lndcal.h"
 #include "input.h"
-#include "bool.h"
 #include "lut.h"
 #include "param.h"
 #include "espa_metadata.h"

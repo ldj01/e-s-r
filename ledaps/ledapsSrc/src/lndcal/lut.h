@@ -40,11 +40,11 @@
 #ifndef LUT_H
 #define LUT_H
 
+#include <stdbool.h>
 #include "lndcal.h"
 #include "lndcal.h"
 #include "input.h"
 #include "param.h"
-#include "bool.h"
 
 /* Structure for the 'lut' data type */
 

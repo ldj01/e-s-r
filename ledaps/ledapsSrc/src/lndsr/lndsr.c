@@ -4,6 +4,7 @@
 #include <string.h>
 #include <unistd.h>
 #include <math.h>
+#include <stdbool.h>
 
 #include "lndsr.h"
 #include "keyvalue.h"
@@ -15,7 +16,6 @@
 #include "output.h"
 #include "sr.h"
 #include "ar.h"
-#include "bool.h"
 #include "error.h"
 #include "clouds.h"
 

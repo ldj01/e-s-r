@@ -47,7 +47,7 @@
 
 #include <espa_geoloc.h>
 #include "input.h"
-#include "bool.h"
+#include <stdbool.h>
 
 #define NBAND_SR_LUT (3)
 

@@ -1,8 +1,8 @@
 #ifndef AR_H
 #define AR_H
 
+#include <stdbool.h>
 #include "lndsr.h"
-#include "bool.h"
 #include "lut.h"
 #include "sixs_runs.h"
 

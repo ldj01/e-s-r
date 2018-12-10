@@ -1,8 +1,8 @@
 #ifndef SR_H
 #define SR_H
 
+#include <stdbool.h>
 #include "lndsr.h"
-#include "bool.h"
 #include "lut.h"
 #include "error.h"
 

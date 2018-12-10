@@ -62,7 +62,7 @@
 #ifndef PARAM_H
 #define PARAM_H
 
-#include "bool.h"
+#include <stdbool.h>
 #include "espa_metadata.h"
 
 /* Parameter data structure type definition */

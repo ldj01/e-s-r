@@ -61,6 +61,9 @@ typedef struct {
   int fill;                /* Fill value */
   int iband[NBAND_REFL_MAX]; /* Reflectance band numbers */
   int iband_qa;            /* QA band number */
+  float scale_factor;     
+  float add_offset;        
+  int saturate_value;
 } Input_meta_t;
 
 /* Structure for the 'input' data type */
@@ -84,7 +87,7 @@ typedef struct {
 /* Prototypes */
 
 Input_t *OpenInput(Espa_internal_meta_t *metadata, bool thermal);
-bool GetInputLine(Input_t *this, int iband, int iline, int16 *line);
+bool GetInputLine(Input_t *this, int iband, int iline, uint16_t *line);
 bool CloseInput(Input_t *this);
 bool FreeInput(Input_t *this);
 bool InputMetaCopy(Input_meta_t *this, int nband, Input_meta_t *copy);

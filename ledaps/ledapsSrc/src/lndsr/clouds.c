@@ -19,9 +19,9 @@ bool cloud_detection_pass1
     Lut_t *lut,              /* I: lookup table informat */
     int nsamp,               /* I: number of samples to be processed */
     int il,                  /* I: current line being processed */
-    int16 **line_in,         /* I: array of input lines, one for each band */
+    uint16_t **line_in,      /* I: array of input lines, one for each band */
     uint8 *qa_line,          /* I: array of QA data for the current line */
-    int16 *b6_line,          /* I: array of thermal data for the current line */
+    uint16_t *b6_line,       /* I: array of thermal data for the current line */
     float *atemp_line,       /* I: auxiliary temperature for the line */
     cld_diags_t *cld_diags   /* I/O: cloud diagnostics (stats are updated) */
 )
@@ -45,6 +45,11 @@ bool cloud_detection_pass1
     loc.l = il;
     cld_row = il / cld_diags->cellheight;
 
+    int thresh_TM;
+    /* Calculate a threshold that was a hardcoded magic number before.
+       This was set to 5000 with the original scaling factor. */
+    thresh_TM = 0.5 * lut->mult_factor + lut->add_offset;
+
     /* Loop through the samples in this line */
     for (is = 0; is < nsamp; is++) {
         loc.s = is;
@@ -57,7 +62,7 @@ bool cloud_detection_pass1
 
         if (!is_fill) {
             if (((qa_line[is] & 0x08) == 0x00) ||
-              ((lut->meta.inst == INST_TM) && (line_in[2][is] < 5000)))
+              ((lut->meta.inst == INST_TM) && (line_in[2][is] < thresh_TM)))
             { /* no saturation in band 3 */
                 /* Interpolate the atmospheric coefficients for the current
                    pixel */
@@ -65,8 +70,8 @@ bool cloud_detection_pass1
 
                 /* Compute the reflectance for each band using the interpolated
                    atmospheric coefficients */
-                rho1=line_in[0][is] * 0.0001;
-                rho1= (rho1/interpol_atmos_coef.tgOG[0][0] -
+                rho1 = line_in[0][is] * lut->scale_factor + lut->add_offset;
+                rho1 = (rho1/interpol_atmos_coef.tgOG[0][0] -
                     interpol_atmos_coef.rho_ra[0][0]);
                 tmpflt = (interpol_atmos_coef.tgH2O[0][0] *
                     interpol_atmos_coef.td_ra[0][0] *
@@ -74,7 +79,7 @@ bool cloud_detection_pass1
                 rho1 /= tmpflt;
                 rho1 /= (1. + interpol_atmos_coef.S_ra[0][0] * rho1);
 
-                rho3 = line_in[2][is] * 0.0001;
+                rho3 = line_in[2][is] * lut->scale_factor + lut->add_offset;
                 rho3 = (rho3 / interpol_atmos_coef.tgOG[2][0] -
                     interpol_atmos_coef.rho_ra[2][0]);
                 tmpflt = (interpol_atmos_coef.tgH2O[2][0] *
@@ -83,7 +88,7 @@ bool cloud_detection_pass1
                 rho3 /= tmpflt;
                 rho3 /= (1. + interpol_atmos_coef.S_ra[2][0] * rho3);
 
-                rho4 = line_in[3][is] * 0.0001;
+                rho4 = line_in[3][is] * lut->scale_factor + lut->add_offset;
                 rho4 = (rho4 / interpol_atmos_coef.tgOG[3][0] -
                     interpol_atmos_coef.rho_ra[3][0]);
                 tmpflt = (interpol_atmos_coef.tgH2O[3][0] *
@@ -92,7 +97,7 @@ bool cloud_detection_pass1
                 rho4 /= tmpflt;
                 rho4 /= (1. + interpol_atmos_coef.S_ra[3][0] * rho4);
 
-                rho5 = line_in[4][is] * 0.0001;
+                rho5 = line_in[4][is] * lut->scale_factor + lut->add_offset;
                 rho5 = (rho5 / interpol_atmos_coef.tgOG[4][0] -
                     interpol_atmos_coef.rho_ra[4][0]);
                 tmpflt = (interpol_atmos_coef.tgH2O[4][0] *
@@ -101,7 +106,7 @@ bool cloud_detection_pass1
                 rho5 /= tmpflt;
                 rho5 /= (1. + interpol_atmos_coef.S_ra[4][0] * rho5);
 
-                rho7 = line_in[5][is] * 0.0001;
+                rho7 = line_in[5][is] * lut->scale_factor + lut->add_offset;
                 rho7 = (rho7 / interpol_atmos_coef.tgOG[5][0] -
                     interpol_atmos_coef.rho_ra[5][0]);
                 tmpflt = (interpol_atmos_coef.tgH2O[5][0] *
@@ -111,7 +116,7 @@ bool cloud_detection_pass1
                 rho7 /= (1. + interpol_atmos_coef.S_ra[5][0] * rho7);
 
                 /* Get the temperature */
-                t6 = b6_line[is] * 0.1;
+                t6 = b6_line[is] * lut->b6_scale_factor + lut->b6_add_offset;
 
                 /* Compute cloud coefficients */
                 vra = rho1 - rho3 * 0.5;
@@ -136,7 +141,7 @@ bool cloud_detection_pass1
                     ndvi = 0.01;
                 water = (ndvi < 0) || ((((ndvi > 0) && (ndvi < 0.1)) ||
                     (rho4 < 0.05)) && (rho5 < 0.02));
-
+                
                 if (!water) { /* if not water */
                     if ((t6 > (atemp_line[is] - 20.)) && (!C5)) { 
                         if (!((C1||C3)&&C2&&C4)) { /* clear */
@@ -164,9 +169,9 @@ bool cloud_detection_pass2
     Lut_t *lut,              /* I: lookup table informat */
     int nsamp,               /* I: number of samples to be processed */
     int il,                  /* I: current line being processed */
-    int16 **line_in,         /* I: array of input lines, one for each band */
+    uint16_t **line_in,      /* I: array of input lines, one for each band */
     uint8 *qa_line,          /* I: array of QA data for the current line */
-    int16 *b6_line,          /* I: array of thermal data for the current line */
+    uint16_t *b6_line,       /* I: array of thermal data for the current line */
     cld_diags_t *cld_diags,  /* I: cloud diagnostics */
     char *ddv_line           /* O: dark dense vegetation line */
             /**
@@ -196,12 +201,25 @@ bool cloud_detection_pass2
     atmos_t interpol_atmos_coef; /* interpolated atmospheric coefficients,
                                     based on the current line/sample location
                                     in the aerosol data grid */
+    int band5_thresh;
+    int thresh_TM;
 
     /* Initialize the thermal band information and snow threshold */
     thermal_band = true;
     if (b6_line == NULL) 
         thermal_band = false;
+
+    /* This appears to be an unscaled value which is outside the
+       maximum value for this band - DLE */
     temp_snow_thshld = 380.;  /* now flag snow and possibly salt pan */
+
+    /* Calculate a threshold that was a hardcoded magic number before.
+       This was set to 2000 with the original scaling factor. */
+    band5_thresh = 0.2 * lut->mult_factor + lut->add_offset;
+
+    /* Calculate a threshold that was a hardcoded magic number before.
+       This was set to 5000 with the original scaling factor. */
+    thresh_TM = 0.5 * lut->mult_factor + lut->add_offset;
 
     /* Allocate memory for the interpolated atmospheric coefficients and
        start the location for the current line and current cloud row */
@@ -224,7 +242,7 @@ bool cloud_detection_pass2
 
         is_fill = false;
         if (thermal_band) {
-            if (b6_line[is] == lut->in_fill) {
+            if (b6_line[is] == lut->b6_in_fill) {
                 is_fill = true;
                 ddv_line[is] = 0x08;
             }
@@ -241,9 +259,9 @@ bool cloud_detection_pass2
 
             if (((qa_line[is] & 0x08) == 0x08) ||
                 ((lut->meta.inst == INST_TM) &&
-                (line_in[2][is] >= 5000))) {  /* saturated band 3 */
+                (line_in[2][is] >= thresh_TM))) {
                 if (thermal_band) {
-                    t6 = b6_line[is] * 0.1;
+                    t6 = b6_line[is] * lut->b6_scale_factor + lut->b6_add_offset;
 
                     /* Interpolate the cloud diagnostics for current pixel */
                     interpol_clddiags_1pixel (cld_diags, il, is, tmpflt_arr);
@@ -268,13 +286,13 @@ bool cloud_detection_pass2
 
                     if ((((qa_line[is] & 0x20) == 0x20) ||
                          ((lut->meta.inst == INST_TM) &&
-                          (line_in[4][is] >= 5000))) && (t6 < temp_thshld1)) {
+                          (line_in[4][is] >= thresh_TM))) && (t6 < temp_thshld1)) {
                         /* saturated band 5 and t6 < threshold => cloudy */
                         ddv_line[is] &= 0xbf; /* reset shadow bit */
                         ddv_line[is] &= 0xfb; /* reset adjacent cloud bit */
                         ddv_line[is] |= 0x20; /* set cloud bit */
                     }
-                    else if ((line_in[4][is] < 2000) &&
+                    else if ((line_in[4][is] < band5_thresh) &&
                              (t6 < temp_snow_thshld)) { /* snow */
                         ddv_line[is] |= 0x80;
                     }
@@ -291,7 +309,7 @@ bool cloud_detection_pass2
 
                 /* Compute the reflectance for each band using the interpolated
                    atmospheric coefficients */
-                rho1 = line_in[0][is] * 0.0001;
+                rho1 = line_in[0][is] * lut->scale_factor + lut->add_offset;
                 rho1 = (rho1/interpol_atmos_coef.tgOG[0][0] -
                     interpol_atmos_coef.rho_ra[0][0]);
                 tmpflt = (interpol_atmos_coef.tgH2O[0][0] *
@@ -300,7 +318,7 @@ bool cloud_detection_pass2
                 rho1 /= tmpflt;
                 rho1 /= (1. + interpol_atmos_coef.S_ra[0][0] * rho1);
 
-                rho2 = line_in[1][is] * 0.0001;
+                rho2 = line_in[1][is] * lut->scale_factor + lut->add_offset;
                 rho2 = (rho2/interpol_atmos_coef.tgOG[1][0] -
                     interpol_atmos_coef.rho_ra[1][0]);
                 tmpflt = (interpol_atmos_coef.tgH2O[1][0] *
@@ -309,7 +327,7 @@ bool cloud_detection_pass2
                 rho2 /= tmpflt;
                 rho2 /= (1. + interpol_atmos_coef.S_ra[1][0] * rho2);
 
-                rho3 = line_in[2][is] * 0.0001;
+                rho3 = line_in[2][is] * lut->scale_factor + lut->add_offset;
                 rho3 = (rho3 / interpol_atmos_coef.tgOG[2][0] -
                     interpol_atmos_coef.rho_ra[2][0]);
                 tmpflt = (interpol_atmos_coef.tgH2O[2][0] *
@@ -318,7 +336,7 @@ bool cloud_detection_pass2
                 rho3 /= tmpflt;
                 rho3 /= (1. + interpol_atmos_coef.S_ra[2][0] * rho3);
 
-                rho4 = line_in[3][is] * 0.0001;
+                rho4 = line_in[3][is] * lut->scale_factor + lut->add_offset;
                 rho4 = (rho4 / interpol_atmos_coef.tgOG[3][0] -
                     interpol_atmos_coef.rho_ra[3][0]);
                 tmpflt = (interpol_atmos_coef.tgH2O[3][0] *
@@ -327,7 +345,7 @@ bool cloud_detection_pass2
                 rho4 /= tmpflt;
                 rho4 /= (1. + interpol_atmos_coef.S_ra[3][0] * rho4);
 
-                rho5 = line_in[4][is] * 0.0001;
+                rho5 = line_in[4][is] * lut->scale_factor + lut->add_offset;
                 rho5 = (rho5 / interpol_atmos_coef.tgOG[4][0] -
                     interpol_atmos_coef.rho_ra[4][0]);
                 tmpflt = (interpol_atmos_coef.tgH2O[4][0] *
@@ -336,7 +354,7 @@ bool cloud_detection_pass2
                 rho5 /= tmpflt;
                 rho5 /= (1. + interpol_atmos_coef.S_ra[4][0] * rho5);
 
-                rho7 = line_in[5][is] * 0.0001;
+                rho7 = line_in[5][is] * lut->scale_factor + lut->add_offset;
                 rho7 = (rho7 / interpol_atmos_coef.tgOG[5][0] -
                     interpol_atmos_coef.rho_ra[5][0]);
                 tmpflt = (interpol_atmos_coef.tgH2O[5][0] *
@@ -347,7 +365,7 @@ bool cloud_detection_pass2
 
                 /* Get the temperature */
                 if (thermal_band)
-                    t6 = b6_line[is] * 0.1;
+                    t6 = b6_line[is] * lut->b6_scale_factor + lut->b6_add_offset;
 
                 /* Interpolate the cloud diagnostics for the current pixel */
                 interpol_clddiags_1pixel (cld_diags, il, is, tmpflt_arr);
@@ -489,8 +507,8 @@ void cast_cloud_shadow
     Lut_t *lut,
     int nsamp,
     int il_start,
-    int16 ***line_in,
-    int16 **b6_line,
+    uint16_t ***line_in,
+    uint16_t **b6_line,
     cld_diags_t *cld_diags,
     char ***cloud_buf,
     Ar_gridcell_t *ar_gridcell,
@@ -516,7 +534,7 @@ void cast_cloud_shadow
                 is_ar = lut->ar_size.s - 1;
 
             /* Get the thermal info */
-            t6 = b6_line[il][is]*0.1;
+            t6 = b6_line[il][is] * lut->b6_scale_factor + lut->b6_add_offset;
 
             /* Interpolate the cloud diagnostics for this pixel */
             interpol_clddiags_1pixel (cld_diags, il+il_start, is, tmpflt_arr);

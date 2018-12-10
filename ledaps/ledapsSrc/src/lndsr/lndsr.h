@@ -4,6 +4,7 @@
 #define bounded(A,B,C) (A>B?(A<C?A:C):B)
 #define nint(A)(A<0?(int)(A-0.5):(int)(A+0.5))
 
+#include <stdint.h>
 #include <stdio.h>
 #include "hdf.h"
 #include "mfhdf.h"
@@ -118,5 +119,13 @@ float *td_r[7],*tu_r[7],*S_r[7],*rho_r[7];
 
 int allocate_mem_atmos_coeff(int nbpts,atmos_t *atmos_coef);
 int free_mem_atmos_coeff(atmos_t *atmos_coef);
+
+/* default scaling values */
+#define SCALE_FACTOR     (0.0000275)
+#define ADD_OFFSET       (-0.2)
+
+/* data retreval functions*/
+double get_scale_refl();    /* scale for reflective bands */
+double get_offset_refl();   /* add offset for reflective bands */
 
 #endif

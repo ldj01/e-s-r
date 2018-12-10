@@ -44,11 +44,15 @@
 !END****************************************************************************
 */
 
+static double scale_refl;    /* scale for reflective bands */
+static double offset_refl;   /* add offset for reflective bands */
+
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
 #include <getopt.h>
 
+#include "lndsr.h"
 #include "param.h"
 #include "mystring.h"
 #include "error.h"
@@ -118,8 +122,14 @@ Param_t *GetParam(int argc, char *argv[])
       {"pfile", required_argument, 0, 'p'},
       {"help", no_argument, 0, 'h'},
       {"version", no_argument, &version_flag, 1},
+      {"offset_refl", required_argument, 0, 'm'},
+      {"scale_refl", required_argument, 0, 'n'},
       {0, 0, 0, 0}
   };
+
+  /* Assign defaults */
+  scale_refl = SCALE_FACTOR;
+  offset_refl = ADD_OFFSET;
 
   /* Loop through all the cmd-line options */
   opterr = 0;   /* turn off getopt_long error msgs as we'll print our own */
@@ -141,12 +151,24 @@ Param_t *GetParam(int argc, char *argv[])
           break;
 
       case 'h':  /* help */
-        RETURN_ERROR("Runs the surface reflectance corrections for the input "
-          "Landsat scene", "GetParam", NULL);
+        printf("Runs the surface reflectance corrections for the input "
+          "Landsat scene\n");
+        printf ("Usage: lndsr "
+                "--pfile=input_parm_file [--version] \n"
+                "[--scale_refl=<X.X>] [--offset_refl=<X.X>] \n\n");
+        return this;
         break;
 
       case 'p':  /* input parameter file */
         param_file_name = strdup (optarg);
+        break;
+
+      case 'm':
+        offset_refl = atof(optarg);
+        break;
+
+      case 'n':
+        scale_refl = atof(optarg);
         break;
 
       case '?':
@@ -437,4 +459,15 @@ bool FreeParam(Param_t *this)
     free(this);
   }
   return true;
+}
+
+/* Value retrieval functions. */
+double get_scale_refl(void)
+{
+    return scale_refl;
+}
+
+double get_offset_refl(void)
+{
+    return offset_refl;
 }

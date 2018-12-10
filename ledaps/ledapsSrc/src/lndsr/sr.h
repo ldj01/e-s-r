@@ -16,6 +16,6 @@ typedef struct {
 } Sr_stats_t;
 
 
-bool Sr(Lut_t *lut, int nsamp, int il, int16 **line_in, int16 **line_out,
+bool Sr(Lut_t *lut, int nsamp, int il, uint16_t **line_in, uint16_t **line_out,
         Sr_stats_t *sr_stats);
 #endif

@@ -105,8 +105,6 @@ double int_power(double x, int y);
 char *levels(int, int);
 int missing_points(unsigned char *bitmap, int n);
 int GDS_grid(unsigned char *gds, int *nx, int *ny, long int *nxny);
-void GDS_prt_thin_lon(unsigned char *gds);
-int PDS_date(unsigned char *pds, int option, int verf_time);
 int ASCII_TCA_PDS_date(unsigned char *pds, int v_time, char date[]);
 int add_time(int *year, int *month, int *day, int *hour, int dtime, int unit);
 int verf_time(unsigned char *pds, int *year, int *month, int *day, int *hour);
@@ -2645,58 +2643,6 @@ int GDS_grid(unsigned char *gds, int *nx, int *ny, long int *nxny)
     return 0;
 }
 
-#define NCOL 15
-void GDS_prt_thin_lon(unsigned char *gds) 
-/*
-!C**********************************************************************
-!Description:
-  
-  
-!Input Parameters:
-  unsigned char *gds -- 
-  
-!Output Parameters:
-  none
-  
-!Return Value:
-  none; probably no longer necessary.
-
-!Revision History:
-  Original version, Wesley Ebisuzaki.
-  Derived from wgrib, a portable program to read grib files that were 
-  created by the NCEP/NCAR Reanalysis Project.  
-
-!Team-unique Header:
-
-!References and credits:
-
-!Design Notes:
-
-!END*************************************************************
-*/
-{
-    int iy, i, col, pl;
-
-    iy = GDS_LatLon_ny(gds);
-    iy = (iy + 1) / 2;
-    iy = GDS_LatLon_ny(gds);
-
-    if ((pl = GDS_PL(gds)) == -1) {
-	/*fprintf(stderr,"\nprogram error: GDS_prt_thin\n");*/
-	return;
-    }
-    for (col = i = 0; i < iy; i++) {
-	/*if (col == 0) printf("   ");
-	printf("%5d", (gds[pl+i*2] << 8) + gds[pl+i*2+1]); */
-	col++;
-	if (col == NCOL) {
-	    col = 0;
-	    /*printf("\n");*/
-	}
-    }
-    /*if (col != 0) printf("\n");*/
-}
-
 #define START -1
 
 static int user_center = 0, user_subcenter = 0, user_ptable = 0;
@@ -2850,85 +2796,6 @@ int setup_user_table(int center, int subcenter, int ptable)
 
 /* static int msg_count = 0; */
 
-/* int PDS_date(unsigned char *pds, int option, int v_time) 
-/ *
-!C**********************************************************************
-!Description:
-  prints a string with a date code
-  
-!Input Parameters:
-  unsigned char *pds -- 
-  int option         --
-  int v_time         --
-
-!Output Parameters:
-  none
-  
-!Return Value:
-  -1 (failure)
-   0 (success)
-
-!Revision History:
- Original version, Wesley Ebisuzaki;
- *
- * prints a string with a date code
- *
- * PDS_date(pds,option, v_time)
- *   options=0  .. 2 digit year
- *   options=1  .. 4 digit year
- *
- *   v_time=0   .. initial time
- *   v_time=1   .. verification time
- *
- * assumption: P1 and P2 are unsigned integers (not clear from doc)
- *
- * v1.2 years that are multiple of 400 are leap years, not 500
- * v1.2.1  make the change to the source code for v1.2
- *
-  Derived from wgrib, a portable program to read grib files that were 
-  created by the NCEP/NCAR Reanalysis Project.  
-
-!Team-unique Header:
-
-!References and credits:
-
-!Design Notes:
-   No longer necessary; entire routine has been commented out.
-   See new version (below). 
-
-!END*************************************************************
-* /
-{
-
-    int year, month, day, hour;
-
-    if (v_time == 0) {
-        year = PDS_Year4(pds);
-        month = PDS_Month(pds);
-        day  = PDS_Day(pds);
-        hour = PDS_Hour(pds);
-    }
-    else {
-        if (verf_time(pds, &year, &month, &day, &hour) != 0) {
-	    if (msg_count++ < 5) fprintf(stderr, "PDS_date: problem\n");
-	}
-    }
-
-    switch(option) {
-	case 0:
-	    printf("%2.2d%2.2d%2.2d%2.2d", year % 100, month, day, hour);
-	    break;
-	case 1:
-	    printf("%4.4d%2.2d%2.2d%2.2d", year, month, day, hour);
-	    break;
-	default:
-	    fprintf(stderr,"missing code\n");
-	    return(-1);
-    }
-    return 0;
-}
-*/
-
 int ASCII_TCA_PDS_date(unsigned char *pds, int v_time, char date[]) 
 /*
 !C**********************************************************************
@@ -2972,7 +2839,7 @@ int ASCII_TCA_PDS_date(unsigned char *pds, int v_time, char date[])
 !References and credits:
 
 !Design Notes:
-   Adapted from PDS_date(), above (14-JUL-99, Jim Ray, SSAI).
+   Adapted from PDS_date() (14-JUL-99, Jim Ray, SSAI).
 
 !END*************************************************************
 */

@@ -19,7 +19,7 @@ bool Cal(Param_t *param, Lut_t *lut, int iband, Input_t *input,
          unsigned char *line_in, int16 *line_in_sun_zen, int16 *line_out,
          unsigned char *line_out_qa, Cal_stats_t *cal_stats, int iy) {
   int is,val;
-  float rad_gain, rad_bias;           /* TOA radiance gain/bias */
+  float rad_gain = 0, rad_bias = 0;   /* TOA radiance gain/bias */
   float refl_gain = 0.0,
         refl_bias = 0.0;              /* TOA reflectance gain/bias */
   float rad;                          /* TOA radiance value */

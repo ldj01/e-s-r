@@ -505,7 +505,7 @@ void cast_cloud_shadow
             /* Interpolate the cloud diagnostics for this pixel */
             interpol_clddiags_1pixel (cld_diags, il+il_start, is, tmpflt_arr);
             temp_b6_clear = tmpflt_arr[0];
-            atemp_ancillary = tmpflt_arr[2];
+            atemp_ancillary = tmpflt_arr[1];
 
             /* If not cloudy, continue with next sample. */
             if (!(cloud_buf[1][il][is] & 0x20))
@@ -907,8 +907,6 @@ void interpol_clddiags_1pixel
     int cell_half_height, cell_half_width;
 
     inter_value[0] = inter_value[1] = 0;
-    inter_value[2] = -9999.;     /* Not sure why this value is set, since it
-                                    isn't used. */
 
     cell_half_height = (cld_diags->cellheight + 1) >> 1;  /* divide by 2 */
     cell_half_width = (cld_diags->cellwidth + 1) >> 1;  /* divide by 2 */

@@ -185,12 +185,10 @@ exclude clouds, cloud shadow & snow pixels flagged by the internal cloud mask
       if (temp > lut->max_valid_sr)
       {
 	     collect_band7[collect_nbsamps]= lut->max_valid_sr;
-         printf("high value \n");
       }
       else if (temp < lut->min_valid_sr)
       {
 	     collect_band7[collect_nbsamps]= lut->min_valid_sr;
-         printf("low value \n");
       }
       else 
 	     collect_band7[collect_nbsamps]=(unsigned short) temp;

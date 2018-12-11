@@ -190,7 +190,7 @@ bool cloud_detection_pass2
     int cld_row, cld_col;     /* cloud line, sample location */
     float vra, ndvi, ndsi, temp_snow_thshld; /* NDVI, NDSI, snow threshold */
     float temp_b6_clear,temp_thshld1,temp_thshld2,atemp_ancillary;
-    float tmpflt, tmpflt_arr[10];  /* temporary floats */
+    float tmpflt, tmpflt_arr[2];   /* temporary floats */
     double grid_line, grid_sample; /* interpolation grid line and sample */
 
     /* Initialize the thermal band information and snow threshold */
@@ -477,7 +477,7 @@ void cast_cloud_shadow
 )
 {
     int il,is,il_ar,is_ar,shd_buf_ind;
-    float t6,temp_b6_clear,atemp_ancillary,tmpflt_arr[10];
+    float t6,temp_b6_clear,atemp_ancillary,tmpflt_arr[2];
     float conv_factor,cld_height,ts,fs,dx,dy;
     int shd_x,shd_y;
     float shadow_factor = 1000/pixel_size;

@@ -11,6 +11,8 @@ struct etm_spectral_function_t {
 	float response[SIXS_NB_BANDS][155];
 } etm_spectral_function_t;
 
+#define SIXS_STR_LENGTH 27  /* length of 6s report strings */
+
 int create_6S_tables(sixs_tables_t *sixs_tables, Input_meta_t *meta) {
 	char cmd[128],sixs_cmd_filename[1024],sixs_out_filename[1024],line_in[256];
     /* char tmp_file[1024], cmd_string[1024]; */
@@ -206,48 +208,49 @@ int create_6S_tables(sixs_tables_t *sixs_tables, Input_meta_t *meta) {
 			}
 
             while (fgets(line_in,256,fd)) {
-				line_in[strlen(line_in)-1]='\0';
-				if (j==0) {
-					if (!strncmp(line_in,"*      rayl.  sca. trans. :",27)) {
-						sscanf(&line_in[27], "%f %f %f",
+                line_in[strlen(line_in)-1]='\0';
+                if (j==0) {
+                    if (!strncmp(line_in,"*      rayl.  sca. trans. :",
+                                 SIXS_STR_LENGTH)) {
+                        sscanf(&line_in[SIXS_STR_LENGTH], "%f %f %f",
                                &sixs_tables->T_r_down[i],
                                &sixs_tables->T_r_up[i], &sixs_tables->T_r[i]);
-					}
-					else if (!strncmp(line_in,"*      water   \"     \"    :",
-                                      27)) {
-						sscanf(&line_in[27], "%*f %*f %f",
+                    }
+                    else if (!strncmp(line_in,"*      water   \"     \"    :",
+                                      SIXS_STR_LENGTH)) {
+                        sscanf(&line_in[SIXS_STR_LENGTH], "%*f %*f %f",
                                &sixs_tables->T_g_wv[i]);
-					}
-					else if (!strncmp(line_in,"*      ozone   \"     \"    :",
-                                      27)) {
-						sscanf(&line_in[27], "%*f %*f %f", &tgoz);
+                    }
+                    else if (!strncmp(line_in,"*      ozone   \"     \"    :",
+                                      SIXS_STR_LENGTH)) {
+                        sscanf(&line_in[SIXS_STR_LENGTH], "%*f %*f %f", &tgoz);
                         tg_read++;
-					}
-					else if (!strncmp(line_in,"*      co2     \"     \"    :",
-                                      27)) {
-						sscanf(&line_in[27], "%*f %*f %f", &tgco2);
+                    }
+                    else if (!strncmp(line_in,"*      co2     \"     \"    :",
+                                      SIXS_STR_LENGTH)) {
+                        sscanf(&line_in[SIXS_STR_LENGTH], "%*f %*f %f", &tgco2);
                         tg_read++;
-					}
-					else if (!strncmp(line_in,"*      oxyg    \"     \"    :",
-                                      27)) {
-						sscanf(&line_in[27], "%*f %*f %f", &tgo2);
+                    }
+                    else if (!strncmp(line_in,"*      oxyg    \"     \"    :",
+                                      SIXS_STR_LENGTH)) {
+                        sscanf(&line_in[SIXS_STR_LENGTH], "%*f %*f %f", &tgo2);
                         tg_read++;
-					}
-					else if (!strncmp(line_in,"*      no2     \"     \"    :",
-                                      27)) {
-						sscanf(&line_in[27], "%*f %*f %f", &tgno2);
+                    }
+                    else if (!strncmp(line_in,"*      no2     \"     \"    :",
+                                      SIXS_STR_LENGTH)) {
+                        sscanf(&line_in[SIXS_STR_LENGTH], "%*f %*f %f", &tgno2);
                         tg_read++;
-					}
-					else if (!strncmp(line_in,"*      ch4     \"     \"    :",
-                                      27)) {
-						sscanf(&line_in[27], "%*f %*f %f", &tgch4);
+                    }
+                    else if (!strncmp(line_in,"*      ch4     \"     \"    :",
+                                      SIXS_STR_LENGTH)) {
+                        sscanf(&line_in[SIXS_STR_LENGTH], "%*f %*f %f", &tgch4);
                         tg_read++;
-					}
-					else if (!strncmp(line_in,"*      co      \"     \"    :",
-                                      27)) {
-						sscanf(&line_in[27], "%*f %*f %f", &tgco);
+                    }
+                    else if (!strncmp(line_in,"*      co      \"     \"    :",
+                                      SIXS_STR_LENGTH)) {
+                        sscanf(&line_in[SIXS_STR_LENGTH], "%*f %*f %f", &tgco);
                         tg_read++;
-					}
+                    }
                     if (tg_read == 6)
                     {
                         sixs_tables->T_g_og[i] = tgoz*tgco2*tgo2*tgno2*tgno2
@@ -255,47 +258,48 @@ int create_6S_tables(sixs_tables_t *sixs_tables, Input_meta_t *meta) {
                         tg_read++; /* Increment so this computation isn't
                                       repeated. */
                     }
-				} /* j = 0 */
-				if (!strncmp(line_in,"*      spherical albedo   :",27)) {
-					if (j==0)
-						sscanf(&line_in[27], "%f %*f %f", &sixs_tables->S_r[i],
-                               &sixs_tables->S_ra[i][j]);
+                } /* j = 0 */
+                if (!strncmp(line_in,"*      spherical albedo   :",
+                             SIXS_STR_LENGTH)) {
+                    if (j==0)
+                        sscanf(&line_in[SIXS_STR_LENGTH], "%f %*f %f",
+                               &sixs_tables->S_r[i], &sixs_tables->S_ra[i][j]);
                     else
-						sscanf(&line_in[27], "%*f %*f %f",
+                        sscanf(&line_in[SIXS_STR_LENGTH], "%*f %*f %f",
                                &sixs_tables->S_ra[i][j]);
-				}
-				else if (!strncmp(line_in,"*      optical depth total:",
-                                  27)) {
-					sscanf(&line_in[27], "%*f %f",
+                }
+                else if (!strncmp(line_in,"*      optical depth total:",
+                                  SIXS_STR_LENGTH)) {
+                    sscanf(&line_in[SIXS_STR_LENGTH], "%*f %f",
                            &sixs_tables->aot_wavelength[i][j]);
-				}
-				else if (!strncmp(line_in,"*      aeros. sca.   \"    :",
-                                  27)) {
-					sscanf(&line_in[27], "%f %f %f",
+                }
+                else if (!strncmp(line_in,"*      aeros. sca.   \"    :",
+                                  SIXS_STR_LENGTH)) {
+                    sscanf(&line_in[SIXS_STR_LENGTH], "%f %f %f",
                            &sixs_tables->T_a_down[i][j],
                            &sixs_tables->T_a_up[i][j],
                            &sixs_tables->T_a[i][j]);
-				}
-				else if (!strncmp(line_in,"*      total  sca.   \"    :",
-                                  27)) {
-					sscanf(&line_in[27], "%f %f %f",
+                }
+                else if (!strncmp(line_in,"*      total  sca.   \"    :",
+                                  SIXS_STR_LENGTH)) {
+                    sscanf(&line_in[SIXS_STR_LENGTH], "%f %f %f",
                            &sixs_tables->T_ra_down[i][j],
                            &sixs_tables->T_ra_up[i][j],
                            &sixs_tables->T_ra[i][j]);
-				}
-				else if (!strncmp(line_in,"*      reflectance I      :",
-                                  27)) {
-					if (j==0)
-						sscanf(&line_in[27], "%f %f %f",
+                }
+                else if (!strncmp(line_in,"*      reflectance I      :",
+                                  SIXS_STR_LENGTH)) {
+                    if (j==0)
+                        sscanf(&line_in[SIXS_STR_LENGTH], "%f %f %f",
                                &sixs_tables->rho_r[i],
                                &sixs_tables->rho_a[i][j],
                                &sixs_tables->rho_ra[i][j]);
                     else
-						sscanf(&line_in[27], "%*f %f %f",
+                        sscanf(&line_in[SIXS_STR_LENGTH], "%*f %f %f",
                                &sixs_tables->rho_a[i][j],
                                &sixs_tables->rho_ra[i][j]);
-				}
-			} /* fgets() loop */
+                }
+            } /* fgets() loop */
 			fclose(fd);
 /* For OZONE debugging:
 	        sprintf (tmp_file, "%s_b%d_aot%02d", sixs_cmd_filename, i, j);

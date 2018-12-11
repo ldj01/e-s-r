@@ -27,4 +27,17 @@ bool Ar(int il_ar, Lut_t *lut, Img_coord_int_t *size_in, int16 ***line_in,
 int ArInterp(Lut_t *lut, Img_coord_int_t *loc, int ***line_ar, int *inter_aot);
 int Fill_Ar_Gaps(Lut_t *lut, int ***line_ar, int ib);
 
+/* Compute the surface reflectance for a given point and atmospheric
+   coefficients. */
+static inline float compute_rho(int16 val, float tgOG, float tgH2O,
+                                float td_ra, float tu_ra, float rho_ra,
+                                float S_ra)
+{
+    float tmp = 10000*tgOG;
+    float rho = val - tmp*rho_ra;
+    rho /= tmp*tgH2O*td_ra*tu_ra + S_ra*rho;
+
+    return rho;
+}
+
 #endif

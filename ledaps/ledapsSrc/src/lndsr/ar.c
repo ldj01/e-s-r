@@ -274,16 +274,16 @@ The DDV flag in ddv_line (bit 0) is updated in this routine
                     for (il = 0; il < lut->ar_region_size.l; il++) {
                         for (is = is_start; is < (is_end + 1); is++) {
                             if (!(ddv_line[il][is]&0x08)) {
-                                rho=(float)line_in[il][ib][is]*0.0001;
                                 rho7=(float)line_in[il][5][is]*0.0001;
                                 rho7 /= T_g_b7;  /* correct for water vapor
                                                     and other gases*/
-                                rho = rho/atmos_coef_ar->tgOG[ib][ipt]
-                                    - atmos_coef_ar->rho_ra[ib][ipt];
-                                rho /= atmos_coef_ar->tgH2O[ib][ipt]
-                                     * atmos_coef_ar->td_ra[ib][ipt]
-                                     * atmos_coef_ar->tu_ra[ib][ipt];
-                                rho /= 1 + atmos_coef_ar->S_ra[ib][ipt]*rho;
+                                rho = compute_rho(line_in[il][ib][is],
+                                               atmos_coef_ar->tgOG[ib][ipt],
+                                               atmos_coef_ar->tgH2O[ib][ipt],
+                                               atmos_coef_ar->td_ra[ib][ipt],
+                                               atmos_coef_ar->tu_ra[ib][ipt],
+                                               atmos_coef_ar->rho_ra[ib][ipt],
+                                               atmos_coef_ar->S_ra[ib][ipt]);
                                 nb_red_obs++;
             
                                 if (rho < 0. || rho > rho7)

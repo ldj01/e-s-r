@@ -103,12 +103,8 @@ bool cloud_detection_pass1
                              *interpol_atmos_coef->S_ra[5]};
             int i;
             for (i=0; i<5; i++)
-            {
-                tmpflt = 10000*tgog[i];
-                *rho[i] = lin[i][is] - tmpflt*rho_ra[i];
-                *rho[i] /= tmpflt*tgh2o[i]*td_ra[i]*tu_ra[i]
-                         + s_ra[i] * *rho[i];
-            }
+                *rho[i] = compute_rho(lin[i][is], tgog[i], tgh2o[i],
+                                      td_ra[i], tu_ra[i], rho_ra[i], s_ra[i]);
 
             /* Get the temperature */
             t6 = b6_line[is] * 0.1;

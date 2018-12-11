@@ -33,7 +33,6 @@ bool Sr
     int ib;                   /* current band for this pixel */
     double grid_line, grid_sample; /* interpolation grid line and sample */
     float rho;                /* surface reflectance value */
-    float tmpflt;             /* temporary float value for corrections */
 
     /* loop through the samples in this line */
     grid_line = (double)il/lut->ar_region_size.l - 0.5;
@@ -63,12 +62,12 @@ bool Sr
                 continue;
             }
 
-            tmpflt = 10000 * *interpol_atmos_coef->tgOG[ib];
-            rho = line_in[ib][is] - tmpflt * *interpol_atmos_coef->rho_ra[ib];
-            rho /= tmpflt * *interpol_atmos_coef->tgH2O[ib]
-                          * *interpol_atmos_coef->td_ra[ib]
-                          * *interpol_atmos_coef->tu_ra[ib]
-                 + *interpol_atmos_coef->S_ra[ib] * rho;
+            rho = compute_rho(line_in[ib][is], *interpol_atmos_coef->tgOG[ib],
+                              *interpol_atmos_coef->tgH2O[ib],
+                              *interpol_atmos_coef->td_ra[ib],
+                              *interpol_atmos_coef->tu_ra[ib],
+                              *interpol_atmos_coef->rho_ra[ib],
+                              *interpol_atmos_coef->S_ra[ib]);
 
             /* Scale the reflectance value and store it as an int16 */
             line_out[ib][is] = (short)(rho*10000.);  /* scale for output */

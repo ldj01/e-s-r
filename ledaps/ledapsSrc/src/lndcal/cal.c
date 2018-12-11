@@ -28,6 +28,8 @@ bool Cal(Param_t *param, Lut_t *lut, int iband, Input_t *input,
   float fval;                         /* temporary float value */
   float sun_zen;                      /* solar zenith angle for the current
                                          pixel (radians) */
+  float temp;
+
   int nsamp= input->size.s;
   int ifill= (int)lut->in_fill;
 
@@ -91,17 +93,19 @@ bool Cal(Param_t *param, Lut_t *lut, int iband, Input_t *input,
     }
 
     /* Apply scaling. Values are set up in lut.c */
-    line_out[is] = (uint16_t)((ref - lut->add_offset_ref) * lut->mult_factor_ref + 0.5);
+    temp = ((ref - lut->add_offset_ref) * lut->mult_factor_ref + 0.5);
 
     /* Cap the output using the min/max values. "ref" already has the unscaled
        value, so no need to unscale it from line_out before using it to collect
        the stats */
-    if (line_out[is] < lut->valid_range_ref[0]) {
+    if (temp < lut->valid_range_ref[0]) {
       line_out[is] = lut->valid_range_ref[0];
     }
-    else if (line_out[is] > lut->valid_range_ref[1]) {
+    else if (temp > lut->valid_range_ref[1]) {
       line_out[is] = lut->valid_range_ref[1];
     }
+    else
+      line_out[is] = temp;
 
 #ifdef DO_STATS
     if (cal_stats->first[iband]) {
@@ -144,7 +148,7 @@ bool Cal(Param_t *param, Lut_t *lut, int iband, Input_t *input,
 bool Cal6(Lut_t *lut, Input_t *input, unsigned char *line_in, uint16_t *line_out,
           unsigned char *line_out_qa, Cal_stats6_t *cal_stats, int iy) {
   int is, val;
-  float rad_gain, rad_bias, rad, temp;
+  float rad_gain, rad_bias, rad, temp, temp2;
   int nsamp= input->size_th.s;
   int ifill= (int)lut->in_fill;
 
@@ -173,17 +177,19 @@ bool Cal6(Lut_t *lut, Input_t *input, unsigned char *line_in, uint16_t *line_out
        as well. */
     rad = (rad_gain * (float)val) + rad_bias;
     temp = lut->K2 / log(1.0 + (lut->K1/rad));
-    line_out[is] = (uint16_t)((temp - lut->add_offset_th) * lut->mult_factor_th + 0.5);
+    temp2  = (temp - lut->add_offset_th) * lut->mult_factor_th + 0.5;
 
     /* Cap the output using the min/max values. "temp" already has the unscaled
        value, so no need to unscale it from line_out before using it to collect
        the stats */
-    if (line_out[is] < lut->valid_range_th[0]) {
+    if (temp2 < lut->valid_range_th[0]) {
       line_out[is] = lut->valid_range_th[0];
     }
-    else if (line_out[is] > lut->valid_range_th[1]) {
+    else if (temp2 > lut->valid_range_th[1]) {
       line_out[is] = lut->valid_range_th[1];
     }
+    else
+        line_out[is] = (uint16_t) temp2;
 
 #ifdef DO_STATS
     if (cal_stats->first) {

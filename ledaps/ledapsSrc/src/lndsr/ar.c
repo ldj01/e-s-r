@@ -63,7 +63,7 @@ The DDV flag in ddv_line (bit 0) is updated in this routine
 	float a_CO2_b7=0.0071958, b_CO2_b7=0.55665;
 	float a_NO2_b7=0.0013383, b_NO2_b7=0.95109;
 	float a_CH4_b7=0.030172, b_CH4_b7=0.79652;
-
+    float temp;
 
 	atmos_t atmos_coef_ar;
 	float rho;
@@ -180,7 +180,21 @@ exclude clouds, cloud shadow & snow pixels flagged by the internal cloud mask
 	 }
 	  sum_srefl += rho7; 
 	  sum_srefl_sq += (rho7*rho7); 
-	 collect_band7[collect_nbsamps]=(unsigned short)((rho7 - lut->add_offset) * lut->mult_factor);
+
+      temp = (rho7 - lut->add_offset) * lut->mult_factor;
+      if (temp > lut->max_valid_sr)
+      {
+	     collect_band7[collect_nbsamps]= lut->max_valid_sr;
+         printf("high value \n");
+      }
+      else if (temp < lut->min_valid_sr)
+      {
+	     collect_band7[collect_nbsamps]= lut->min_valid_sr;
+         printf("low value \n");
+      }
+      else 
+	     collect_band7[collect_nbsamps]=(unsigned short) temp;
+
 	 collect_nbsamps++;
 	  if (rho7<0.05)
 	  	ddv_line[il][is] |= 0x01; /* set bit 0 to 1 */

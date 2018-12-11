@@ -1365,9 +1365,9 @@ int main (int argc, char *argv[]) {
     free(ar_gridcell.ozone);
 
     for (ifree=0; ifree<(param->num_ncep_files>0?4:1); ifree++) {
-        if (anc_O3.data[ifree]!=NULL) free(anc_O3.data[ifree]);
-        if (anc_WV.data[ifree]!=NULL) free(anc_WV.data[ifree]);
-        if (anc_SP.data[ifree]!=NULL) free(anc_SP.data[ifree]);
+        free(anc_O3.data[ifree]);
+        free(anc_WV.data[ifree]);
+        free(anc_SP.data[ifree]);
     }
     if (dem_available)
         free(dem_array);

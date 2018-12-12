@@ -12,8 +12,8 @@ fi
 bin_dir=$1
 pfile_dir=$2
 
-data_files=(${LEVEL2_UNIT_TEST_DATA}/espa-surface-reflectance/lndcal_ref/*)
-input_dir=$LEVEL2_UNIT_TEST_DATA/espa-surface-reflectance/input_l7
+data_files=(${ESPA_UNIT_TEST_DATA_DIR}/espa-surface-reflectance/lndcal_ref/*)
+input_dir=$ESPA_UNIT_TEST_DATA_DIR/espa-surface-reflectance/input_l7
 
 rm -rf lndcal
 mkdir lndcal && cd lndcal

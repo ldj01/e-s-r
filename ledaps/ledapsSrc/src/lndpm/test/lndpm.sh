@@ -12,7 +12,7 @@ bin_dir=$1
 data_dir=$2
 
 data_files=(${data_dir}/*)
-input_dir=$LEVEL2_UNIT_TEST_DATA/espa-surface-reflectance/input_l7
+input_dir=$ESPA_UNIT_TEST_DATA_DIR/espa-surface-reflectance/input_l7
 
 rm -rf lndpm
 mkdir -p lndpm && cd lndpm

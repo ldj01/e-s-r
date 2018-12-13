@@ -18,10 +18,6 @@ input_dir=$ESPA_UNIT_TEST_DATA_DIR/espa-surface-reflectance
 rm -rf lndsr
 mkdir lndsr && cd lndsr
 
-#cp $input_dir/input_l7/* .
-#chmod u+w *
-#cp $input_dir/lndcal_ref/* .
-#chmod u+w *
 ln -s $input_dir/input_l7/*.hdr .
 ln -s $input_dir/input_l7/*.img .
 ln -s $input_dir/lndcal_ref/*.hdr .

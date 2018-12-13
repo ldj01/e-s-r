@@ -442,7 +442,7 @@ int find_file
     char errmsg[STR_SIZE];             /* error message */
     struct stat stbuf;                 /* buffer for file/directory stat */
     char pbuf[DIR_BUF_SIZE];           /* path buffer */
-    int found;                         /* was the file found? */
+    int found = 0;                     /* was the file found? */
     
     /* Make sure the path exists */
     if (stat (path, &stbuf) != 0)

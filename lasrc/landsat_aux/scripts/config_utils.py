@@ -2,7 +2,7 @@
 ## the LAADS processing.
 
 import os
-from ConfigParser import ConfigParser
+import configparser
 
 def get_cfg_file_path(filename):
     """Build the full path to the config file
@@ -39,7 +39,7 @@ def retrieve_cfg(cfg_filename):
         raise Exception('Missing configuration file [{}]'.format(config_path))
 
     # Create the object and load the configuration
-    cfg = ConfigParser()
+    cfg = configparser.ConfigParser()
     cfg.read(config_path)
 
     return cfg

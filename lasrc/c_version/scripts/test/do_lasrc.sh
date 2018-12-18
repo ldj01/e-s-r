@@ -1,6 +1,6 @@
 #!/bin/bash
 #
-# Test lasrc.
+# Test the lasrc Python script.
 
 base_scene="LC08_L1TP_040036_20141219_20160822_01_T1"
 aux_file="L8ANC2014353.hdf_fused"
@@ -19,10 +19,11 @@ mkdir lasrc && cd lasrc
 
 ln -s $input_dir/*.img .
 ln -s $input_dir/*.hdr .
+ln -s $input_dir/*_ANG.txt .
 
 sed -e s%LEVEL2_UNIT_TEST_DATA%${ESPA_UNIT_TEST_DATA_DIR}% \
     ${input_dir}/${base_scene}.xml > ${base_scene}.xml
-$bin_dir/lasrc --xml=${base_scene}.xml --aux=${aux_file}
+$bin_dir/do_lasrc.py --xml=${base_scene}.xml --use_l1_angle_bands
 if [ $? -ne 0 ]; then
     echo "Error: lasrc processing failed."
     exit 1

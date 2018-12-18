@@ -1,30 +1,30 @@
 #!/bin/bash
 #
-# Test lasrc.
+# Test the ledaps Python script.
 
-base_scene="LC08_L1TP_040036_20141219_20160822_01_T1"
-aux_file="L8ANC2014353.hdf_fused"
+base_scene="LE07_L1TP_043028_20020419_20180206_01_T1"
+pfile="lndsr.${base_scene}.txt"
 
 if [ "$#" -ne 1 ]; then
-    echo "Usage:  $0 <path_to_lasrc>"
+    echo "Usage:  $0 <path_to_ledaps>"
     exit 1
 fi
 bin_dir=$1
 
-data_files=(${ESPA_UNIT_TEST_DATA_DIR}/espa-surface-reflectance/lasrc_ref/*)
-input_dir=$ESPA_UNIT_TEST_DATA_DIR/espa-surface-reflectance/input_l8
+data_files=(${ESPA_UNIT_TEST_DATA_DIR}/espa-surface-reflectance/lndsr_ref/*)
+input_dir=$ESPA_UNIT_TEST_DATA_DIR/espa-surface-reflectance/input_l7
 
-rm -rf lasrc
-mkdir lasrc && cd lasrc
+rm -rf ledaps
+mkdir ledaps && cd ledaps
 
 ln -s $input_dir/*.img .
 ln -s $input_dir/*.hdr .
+cp $input_dir/${base_scene}.xml .
+chmod u+w ${base_scene}.xml
 
-sed -e s%LEVEL2_UNIT_TEST_DATA%${ESPA_UNIT_TEST_DATA_DIR}% \
-    ${input_dir}/${base_scene}.xml > ${base_scene}.xml
-$bin_dir/lasrc --xml=${base_scene}.xml --aux=${aux_file}
+$bin_dir/do_ledaps.py --xml=${base_scene}.xml --use_l1_angle_bands
 if [ $? -ne 0 ]; then
-    echo "Error: lasrc processing failed."
+    echo "Error: ledaps processing failed."
     exit 1
 fi
 
@@ -69,7 +69,7 @@ if [ $status -ne 0 ]; then
 fi
 
 cd ..
-rm -rf lasrc
+rm -r ledaps
 
 echo "Test completed successfully."
 exit 0

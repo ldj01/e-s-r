@@ -1,0 +1,23 @@
+0 (user defined)
+39.04 146.08 0.00 0.00 9 15 (geometrical conditions sza saz vza vaz month day)
+8 (option for water vapor and ozone)
+0.64 0.40 (water vapor and ozone)
+1 (continental model)
+0 (option for optical thickness at 550 nm)
+0.010 (value of aot550
+0.000000 (target level)
+-1000 (sensor level : -1000=satellite level)
+1 (user defined filter function)
+0.420 0.550 (wlinf wlsup)
+0.000 0.000 0.000 0.000 0.000 0.000 0.016 0.071 0.287 0.666 
+0.792 0.857 0.839 0.806 0.779 0.846 0.901 0.900 0.890 0.851 
+0.875 0.893 0.884 0.930 0.958 0.954 0.980 0.975 0.965 0.962 
+0.995 0.990 0.990 0.979 0.983 0.969 0.960 0.768 0.293 0.054 
+0.009 0.000 0.000 0.000 0.000 0.000 0.000 0.000 0.000 0.000 
+0.000 0.000 0.000 0.000 
+0 (homogeneous surface)
+0 (no directional effects)
+0 (constant value for rho)
+0.140 (value of rho)
+-1 (no atmospheric correction)
+0

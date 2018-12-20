@@ -19,3 +19,5 @@ add_executable(sixsV1.0B AATSR.f ABSTRA.f AEROSO.f AKTOOL.f ATMREF.f AVHRR.f
                WAVA1.f WAVA2.f WAVA3.f WAVA4.f WAVA5.f WAVA6.f AEROPROF.f
                main.f)
 install(TARGETS sixsV1.0B DESTINATION bin)
+
+add_subdirectory(test)

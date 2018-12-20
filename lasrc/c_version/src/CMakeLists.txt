@@ -12,3 +12,5 @@ target_link_libraries(lasrc -lespa_raw_binary -lespa_common
                       ${XML_LIBS} ${HDF4_LIBS} ${GCTP_LIBS} ${OPENMP_LIBS} m)
 
 install(TARGETS lasrc DESTINATION bin)
+
+add_subdirectory(test)

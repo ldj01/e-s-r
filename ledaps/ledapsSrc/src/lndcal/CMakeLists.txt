@@ -11,3 +11,5 @@ target_link_libraries(lndcal -lespa_raw_binary -lespa_common
                       -lespa_format_conversion
                       ${XML_LIBS} ${HDF4_LIBS} m)
 install(TARGETS lndcal DESTINATION bin)
+
+add_subdirectory(test)

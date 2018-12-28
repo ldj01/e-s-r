@@ -42,8 +42,8 @@
 
 #include <stdlib.h>
 #include <stdio.h>
+#include <stdbool.h>
 #include "lndcal.h"
-#include "bool.h"
 #include "const.h"
 #include "date.h"
 #include "param.h"

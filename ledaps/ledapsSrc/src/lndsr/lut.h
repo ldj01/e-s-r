@@ -45,9 +45,9 @@
 #ifndef LUT_H
 #define LUT_H
 
-#include "lndsr.h"
+#include <espa_geoloc.h>
 #include "input.h"
-#include "bool.h"
+#include <stdbool.h>
 
 #define NBAND_SR_LUT (3)
 
@@ -80,6 +80,6 @@ typedef struct {
 /* Prototypes */
 
 Lut_t *GetLut(int nband, Input_meta_t *input_meta, Img_coord_int_t *input_size);
-bool FreeLut(Lut_t *this);
+void FreeLut(Lut_t *this);
 
 #endif

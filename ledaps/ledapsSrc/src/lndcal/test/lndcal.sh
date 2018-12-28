@@ -18,8 +18,10 @@ input_dir=$ESPA_UNIT_TEST_DATA_DIR/espa-surface-reflectance/input_l7
 rm -rf lndcal
 mkdir lndcal && cd lndcal
 
-cp $input_dir/* .
-chmod u+w *
+ln -s $input_dir/*.hdr .
+ln -s $input_dir/*.img .
+cp $input_dir/*.xml .
+chmod u+w *.xml
 
 sed -e s%LEDAPS_AUX_DIR%${LEDAPS_AUX_DIR}% $pfile_dir/$pfile > pfile.local
 $bin_dir/lndcal --pfile pfile.local

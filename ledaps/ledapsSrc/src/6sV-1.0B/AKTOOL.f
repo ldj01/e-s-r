@@ -53,8 +53,6 @@ c
 c
       call difr92
 c
-10    continue
-c
       rrl = rrls
       bq  = bi + bd
 c
@@ -640,7 +638,6 @@ c
       g   = (2.653d0*difmy + 1.432d0*difsig)*(sg  - .5d0) + .50072d0
       g1  = (2.653d0*difmy + 1.432d0*difsig)*(sg1 - .5d0) + .50072d0
 c
-49    continue
       return
 c
 c  ******************************    tl1 = 0.,  tl2=pi/2 - th1

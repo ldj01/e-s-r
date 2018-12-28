@@ -70,11 +70,7 @@ Lut_t *GetLut(int nband, Input_meta_t *meta, Img_coord_int_t *input_size) {
   return this;
 }
 
-bool FreeLut(Lut_t *this) {
-
-  if (this != NULL) {
+void FreeLut(Lut_t *this) {
     free(this);
-  }
-
-  return true;
+    this = NULL;
 }

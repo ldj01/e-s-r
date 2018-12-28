@@ -1,6 +1,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
+#include <stdbool.h>
 
 #include "lndcal.h"
 #include "keyvalue.h"
@@ -10,7 +11,6 @@
 #include "lut.h"
 #include "output.h"
 #include "cal.h"
-#include "bool.h"
 #include "error.h"
 
 #include <time.h>
@@ -205,10 +205,11 @@ int main (int argc, char *argv[]) {
   /* Do for each THERMAL line */
   if (input->nband_th > 0) {
     ifill= (int)lut->in_fill;
-    for (iline = 0; iline < nls6; iline++) {
-      curr_line = iline * nps6;  /* start of the line in the QA band */
-      if ( odometer_flag && ( iline==0 || iline ==(nls-1) || iline%100==0  ) )
-        printf("--- main loop BAND6 Line %d --- \r",iline); fflush(stdout); 
+    for (iline = 0, curr_line = 0; iline < nls6; iline++, curr_line += nps6) {
+      if (odometer_flag && (iline == 0 || iline == nls-1 || iline%100 == 0)) {
+          printf("--- main loop BAND6 Line %d --- \r", iline);
+          fflush(stdout);
+      }
 
       /* Read the input thermal data */
       if (!GetInputLineTh(input, iline, line_in))
@@ -235,10 +236,11 @@ int main (int argc, char *argv[]) {
 
   /* Do for each REFLECTIVE line */
   ifill= (int)lut->in_fill;
-  for (iline = 0; iline < nls; iline++){
-    curr_line = iline * nps;  /* start of the line in the QA band */
-    if ( odometer_flag && ( iline==0 || iline ==(nls-1) || iline%100==0  ) )
-     {printf("--- main reflective loop Line %d ---\r",iline); fflush(stdout);}
+  for (iline = 0, curr_line = 0; iline < nls; iline++, curr_line+=nps) {
+    if (odometer_flag && (iline == 0 || iline == nls-1 || iline%100 == 0)) {
+        printf("--- main reflective loop Line %d ---\r", iline);
+        fflush(stdout);
+    }
 
     /* Read the input reflectance data */
     for (ib = 0; ib < input->nband; ib++) {

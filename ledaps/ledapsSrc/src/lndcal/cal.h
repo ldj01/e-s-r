@@ -1,8 +1,8 @@
 #ifndef CAL_H
 #define CAL_H
 
+#include <stdbool.h>
 #include "lndcal.h"
-#include "bool.h"
 #include "lut.h"
 #include "input.h"
 static const int SATU_VAL[7]={255,255,255,255,255,255,255};

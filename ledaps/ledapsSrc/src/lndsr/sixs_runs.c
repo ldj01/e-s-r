@@ -128,9 +128,9 @@ int create_6S_tables(sixs_tables_t *sixs_tables, Input_meta_t *meta) {
 	
 	/* Run 6s */
 #ifdef _OPENMP
-        #pragma omp parallel for private (i, j, k, sixs_cmd_filename,
-                                          sixs_out_filename, fd, cmd, line_in,
-                                          tgoz, tgco2, tgo2, tgno2, tgch4,
+        #pragma omp parallel for private (i, j, k, sixs_cmd_filename, \
+                                          sixs_out_filename, fd, cmd, line_in, \
+                                          tgoz, tgco2, tgo2, tgno2, tgch4, \
                                           tgco)
 #endif
 	for (i=0;i<SIXS_NB_BANDS;i++) {

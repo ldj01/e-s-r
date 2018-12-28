@@ -63,7 +63,7 @@ int compute_toa_refl
     char *instrument,   /* I: instrument to be processed (OLI, TIRS) */
     int16 *sza,         /* I: scaled per-pixel solar zenith angles (degrees),
                               nlines x nsamps */
-    uint16 **sband,     /* O: output TOA reflectance and brightness temp
+    float **sband,      /* O: output TOA reflectance and brightness temp
                               values (scaled) */
     uint16 *radsat      /* O: radiometric saturation QA band, nlines x nsamps;
                               array should be all zeros on input to this
@@ -80,7 +80,7 @@ int compute_sr_refl
     int nlines,         /* I: number of lines in reflectance, thermal bands */
     int nsamps,         /* I: number of samps in reflectance, thermal bands */
     float pixsize,      /* I: pixel size for the reflectance bands */
-    uint16 **sband,     /* I/O: input TOA and output surface reflectance */
+    float **sband,      /* I/O: input TOA and output surface reflectance */
     int16 *sza,         /* I: per-pixel solar zenith angles, nlines x nsamps */
     int16 *saa,         /* I: per-pixel solar azimuth angles, nlines x nsamps */
     int16 *vza,         /* I: per-pixel view zenith angles, nlines x nsamps */
@@ -179,8 +179,8 @@ bool is_shadow
 
 bool is_water
 (
-    uint16 band4_pix,     /* I: Band 4 reflectance for current pixel */
-    uint16 band5_pix      /* I: Band 5 reflectance for current pixel */
+    float band4_pix,     /* I: Band 4 reflectance for current pixel */
+    float band5_pix      /* I: Band 5 reflectance for current pixel */
 );
 
 bool find_closest_non_fill
@@ -197,7 +197,7 @@ bool find_closest_non_fill
 bool find_closest_non_cloud_shadow_water
 (
     uint16 *qaband,    /* I: QA band for the input image, nlines x nsamps */
-    uint16 **sband,    /* I: input surface reflectance, nlines x nsamps */
+    float **sband,     /* I: input surface reflectance, nlines x nsamps */
     int nlines,        /* I: number of lines in QA band */
     int nsamps,        /* I: number of samps in QA band */
     int center_line,   /* I: line for the center of the aerosol window */
@@ -209,7 +209,7 @@ bool find_closest_non_cloud_shadow_water
 bool find_closest_non_water
 (
     uint16 *qaband,    /* I: QA band for the input image, nlines x nsamps */
-    uint16 **sband,    /* I: input surface reflectance */
+    float **sband,     /* I: input surface reflectance */
     int nlines,        /* I: number of lines in QA band */
     int nsamps,        /* I: number of samps in QA band */
     int center_line,   /* I: line for the center of the aerosol window */
@@ -221,7 +221,7 @@ bool find_closest_non_water
 void mask_aero_window
 (
     uint16 *qaband,    /* I: QA band for the input image, nlines x nsamps */
-    uint16 **sband,    /* I: input surface reflectance */
+    float **sband,     /* I: input surface reflectance */
     int nlines,        /* I: number of lines in QA band */
     int nsamps,        /* I: number of samps in QA band */
     int center_line,   /* I: line for the center of the aerosol window */

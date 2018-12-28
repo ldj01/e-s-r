@@ -315,9 +315,9 @@ Output_t *open_output
             {
                 bmeta[ib].scale_factor = scale_refl;
                 bmeta[ib].valid_range[0] = 
-                    roundf ((MIN_VALID - offset_refl) * mult_refl);
+                    roundf ((MIN_VALID_REFL - offset_refl) * mult_refl);
                 bmeta[ib].valid_range[1] = 
-                    roundf ((MAX_VALID - offset_refl) * mult_refl);
+                    roundf ((MAX_VALID_REFL - offset_refl) * mult_refl);
                 bmeta[ib].add_offset = offset_refl;
             }
 
@@ -610,3 +610,69 @@ char *upper_case_str
     return up_str;
 }
 
+/******************************************************************************
+MODULE:  convert_output
+
+PURPOSE: Applies a scale and offset to the input data and assigns the output
+         to an unsigned short array
+
+RETURN VALUE: none
+
+NOTES:
+******************************************************************************/
+void convert_output
+(
+    float **sband,      /* I: unscaled SR or TOA bands */
+    int band,           /* I: Band number to convert */
+    uint16 *out_band,   /* O: scaled output for the processed band */
+    int nlines,         /* I: number of lines */
+    int nsamps,         /* I: number of samples */
+    bool thermal        /* I: flag to specifiy if processing a thermal band */
+)
+{
+    int curr_pix;           /* pixel loop counter */
+    float tmpf;             /* scaled output value */
+    double min_value,       /* Minimum scaled value */
+           max_value;       /* Maximum scaled value */
+    float offset_value,     /* Offset to apply */
+          mult_value;       /* Scale value to apply */
+
+    /* Set valid ranges for thermal or reflective bands as appropriate */
+    if (thermal)
+    {
+        offset_value = get_offset_therm();
+        mult_value = get_mult_therm();
+        min_value = (MIN_VALID_TH - offset_value) * mult_value;
+        max_value = (MAX_VALID_TH - offset_value) * mult_value;
+    }
+    else
+    {
+        offset_value = get_offset_refl();
+        mult_value = get_mult_refl();
+        min_value = (MIN_VALID_REFL - offset_value) * mult_value;
+        max_value = (MAX_VALID_REFL- offset_value) * mult_value;
+    }
+    if (min_value < 0)
+        min_value = 0;
+    if (max_value > USHRT_MAX)
+       max_value = USHRT_MAX;
+
+    /* Scale and validate the output */
+    for (curr_pix = 0; curr_pix < (nlines * nsamps); curr_pix++)
+    {
+        if (sband[band][curr_pix] != FILL_VALUE)
+        {
+            tmpf = (sband[band][curr_pix] - offset_value) * mult_value;
+
+            /* Verify the value falls within the specified range */
+            if (tmpf < min_value)
+                out_band[curr_pix] = min_value;
+            else if (tmpf > max_value)
+                out_band[curr_pix] = max_value;
+            else
+                out_band[curr_pix] = roundf (tmpf);
+        }
+        else
+            out_band[curr_pix] = FILL_VALUE;
+    }
+}

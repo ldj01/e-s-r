@@ -331,23 +331,24 @@ int memory_allocation_main
     uint16 **qaband,     /* O: QA band for the input image, nlines x nsamps */
     uint16 **radsat,     /* O: radiometric saturation band for the input image,
                                nlines x nsamps */
-    uint16 ***sband      /* O: output surface reflectance and brightness temp
+    float ***sband,      /* O: output surface reflectance and brightness temp
                                bands */
+    uint16 **out_band    /* O: scaled output, nlines x nsamps */
 );
 
 int memory_allocation_sr
 (
     int nlines,          /* I: number of lines in the scene */
     int nsamps,          /* I: number of samples in the scene */
-    uint16 **aerob1,     /* O: atmospherically corrected band 1 data
+    float **aerob1,      /* O: atmospherically corrected band 1 data
                                (TOA refl), nlines x nsamps */
-    uint16 **aerob2,     /* O: atmospherically corrected band 2 data
+    float **aerob2,      /* O: atmospherically corrected band 2 data
                                (TOA refl), nlines x nsamps */
-    uint16 **aerob4,     /* O: atmospherically corrected band 4 data
+    float **aerob4,      /* O: atmospherically corrected band 4 data
                                (TOA refl), nlines x nsamps */
-    uint16 **aerob5,     /* O: atmospherically corrected band 5 data
+    float **aerob5,      /* O: atmospherically corrected band 5 data
                                (TOA refl), nlines x nsamps */
-    uint16 **aerob7,     /* O: atmospherically corrected band 7 data
+    float **aerob7,      /* O: atmospherically corrected band 7 data
                                (TOA refl), nlines x nsamps */
     uint8 **ipflag,      /* O: QA flag to assist with aerosol interpolation,
                                nlines x nsamps */
@@ -391,8 +392,9 @@ int memory_allocation_sr
                                [NVIEW_ZEN_VALS x NSOLAR_ZEN_VALS] */
     float **nbfi,        /* O: number of azimuth angles
                                [NVIEW_ZEN_VALS x NSOLAR_ZEN_VALS] */
-    float **ttv          /* O: view angle table
+    float **ttv,          /* O: view angle table
                                [NVIEW_ZEN_VALS x NSOLAR_ZEN_VALS] */
+    uint16 **out_band    /* O: scaled output, nlines x nsamps */
 );
 
 int read_auxiliary_files

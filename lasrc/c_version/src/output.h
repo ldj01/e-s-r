@@ -8,15 +8,15 @@
 #define FILL_VALUE 0
 #define RADSAT_FILL_VALUE 1
 #define CLOUD_FILL_VALUE 0
-#define SCALE_FACTOR 0.000275
+#define SCALE_FACTOR 0.0000275
 #define SCALE_FACTOR_TH 0.0034
 #define OFFSET_REFL -0.20
 #define OFFSET_THERM 150
-#define MIN_VALID -0.20   /* unscaled */
-#define MAX_VALID 1.60    /* unscaled */
-#define MIN_VALID_TH 150  /* unscaled */
-#define MAX_VALID_TH 350  /* unscaled */
-#define L1_SATURATED 65535       /* saturation value of the Level-1 pixel */
+#define MIN_VALID_REFL -0.20   /* unscaled */
+#define MAX_VALID_REFL 1.60    /* unscaled */
+#define MIN_VALID_TH 150       /* unscaled */
+#define MAX_VALID_TH 350       /* unscaled */
+#define L1_SATURATED 65535     /* saturation value of the Level-1 pixel */
 
 /* Define the output product types */
 typedef enum {OUTPUT_TOA=0, OUTPUT_SR=1, OUTPUT_RADSAT=2} Myoutput_t;
@@ -83,4 +83,13 @@ char *upper_case_str
     char *str    /* I: string to be converted to upper case */
 );
 
+void convert_output
+(
+    float **sband,      /* I: unscaled SR or TOA bands */
+    int band,           /* I: Band number to convert */
+    uint16 *out_band,   /* O: scaled output for the processed band */
+    int nlines,         /* I: number of lines */
+    int nsamps,         /* I: number of samples */
+    bool thermal        /* I: flag to specifiy if processing a thermal band */
+);
 #endif

@@ -73,8 +73,9 @@ int main (int argc, char *argv[])
     int16 *saa = NULL;  /* per-pixel solar azimuth angles, nlines x nsamps */
     int16 *vza = NULL;  /* per-pixel view zenith angles, nlines x nsamps */
     int16 *vaa = NULL;  /* per-pixel view azimuth angles, nlines x nsamps */
-    uint16 **sband = NULL;    /* output surface reflectance and brightness
+    float **sband = NULL;     /* output surface reflectance and brightness
                                  temp bands, qa band is separate as a uint16 */
+    uint16 *out_band = NULL;  /* scaled output */
     uint16 *qaband = NULL;    /* QA band for the input image, nlines x nsamps */
     uint16 *radsat = NULL;    /* QA band for radiometric saturation of the
                                  Level-1 product, nlines x nsamps */
@@ -221,7 +222,7 @@ int main (int argc, char *argv[])
     if (verbose)
         printf ("Allocating memory for the data arrays ...\n");
     retval = memory_allocation_main (nlines, nsamps, &sza, &saa, &vza, &vaa,
-        &qaband, &radsat, &sband);
+        &qaband, &radsat, &sband, &out_band);
     if (retval != SUCCESS)
     {   /* get_args already printed the error message */
         sprintf (errmsg, "Error allocating memory for the data arrays from "
@@ -339,7 +340,7 @@ int main (int argc, char *argv[])
     }
 
     /* Compute the TOA reflectance and TOA brightness temp */
-    printf ("Calculating TOA reflectance and TOA brightness temps...");
+    printf ("Calculating TOA reflectance and TOA brightness temps...\n");
     retval = compute_toa_refl (input, &xml_metadata, qaband, nlines, nsamps,
         gmeta->instrument, sza, sband, radsat);
     if (retval != SUCCESS)
@@ -369,7 +370,8 @@ int main (int argc, char *argv[])
         {
             printf ("  Band %d: %s\n", ib+1,
                 toa_output->metadata.band[ib].file_name);
-            if (put_output_lines (toa_output, sband[ib], ib, 0, nlines,
+            convert_output (sband, ib, out_band, nlines, nsamps, false);
+            if (put_output_lines (toa_output, out_band, ib, 0, nlines,
                 sizeof (uint16)) != SUCCESS)
             {
                 sprintf (errmsg, "Writing output TOA data for band %d", ib+1);
@@ -419,7 +421,13 @@ int main (int argc, char *argv[])
         
         printf ("  Band %d: %s\n", ib+2,
             toa_output->metadata.band[ib].file_name);
-        if (put_output_lines (toa_output, sband[ib], ib, 0, nlines,
+
+        if (ib == SR_BAND9)
+            convert_output (sband, ib, out_band, nlines, nsamps, false);
+        else 
+            convert_output (sband, ib, out_band, nlines, nsamps, true); 
+
+        if (put_output_lines (toa_output, out_band, ib, 0, nlines,
             sizeof (uint16)) != SUCCESS)
         {
             sprintf (errmsg, "Writing output TOA data for band %d", ib+2);
@@ -558,6 +566,7 @@ int main (int argc, char *argv[])
     free (vza);
     free (vaa);
     free (qaband);
+    free (out_band);
     for (i = 0; i < NBAND_TTL_OUT-1; i++)
         free (sband[i]);
     free (sband);

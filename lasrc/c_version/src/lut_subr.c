@@ -2029,8 +2029,9 @@ int memory_allocation_main
     uint16 **qaband,     /* O: QA band for the input image, nlines x nsamps */
     uint16 **radsat,     /* O: radiometric saturation band for the input image,
                                nlines x nsamps */
-    uint16 ***sband      /* O: output surface reflectance and brightness temp
+    float ***sband,      /* O: output surface reflectance and brightness temp
                                bands */
+    uint16 **out_band    /* O: scaled output, nlines x nsamps */
 )
 {
     char FUNC_NAME[] = "memory_allocation_main"; /* function name */
@@ -2077,6 +2078,14 @@ int memory_allocation_main
         return (ERROR);
     }
 
+    *out_band = calloc (nlines*nsamps, sizeof (uint16));
+    if (*out_band == NULL)
+    {
+        sprintf (errmsg, "Error allocating memory for out_band");
+        error_handler (true, FUNC_NAME, errmsg);
+        return (ERROR);
+    }
+
     *radsat = calloc (nlines*nsamps, sizeof (uint16));
     if (*radsat == NULL)
     {
@@ -2087,7 +2096,7 @@ int memory_allocation_main
 
     /* Given that the QA band is its own separate array of uint16s, we need
        one less band for the signed image data */
-    *sband = calloc (NBAND_TTL_OUT-1, sizeof (uint16*));
+    *sband = calloc (NBAND_TTL_OUT-1, sizeof (float*));
     if (*sband == NULL)
     {
         sprintf (errmsg, "Error allocating memory for sband");
@@ -2096,7 +2105,7 @@ int memory_allocation_main
     }
     for (i = 0; i < NBAND_TTL_OUT-1; i++)
     {
-        (*sband)[i] = calloc (nlines*nsamps, sizeof (uint16));
+        (*sband)[i] = calloc (nlines*nsamps, sizeof (float));
         if ((*sband)[i] == NULL)
         {
             sprintf (errmsg, "Error allocating memory for sband");
@@ -2133,15 +2142,15 @@ int memory_allocation_sr
 (
     int nlines,          /* I: number of lines in the scene */
     int nsamps,          /* I: number of samples in the scene */
-    uint16 **aerob1,     /* O: atmospherically corrected band 1 data
+    float **aerob1,      /* O: atmospherically corrected band 1 data
                                (TOA refl), nlines x nsamps */
-    uint16 **aerob2,     /* O: atmospherically corrected band 2 data
+    float **aerob2,      /* O: atmospherically corrected band 2 data
                                (TOA refl), nlines x nsamps */
-    uint16 **aerob4,     /* O: atmospherically corrected band 4 data
+    float **aerob4,      /* O: atmospherically corrected band 4 data
                                (TOA refl), nlines x nsamps */
-    uint16 **aerob5,     /* O: atmospherically corrected band 5 data
+    float **aerob5,      /* O: atmospherically corrected band 5 data
                                (TOA refl), nlines x nsamps */
-    uint16 **aerob7,      /* O: atmospherically corrected band 7 data
+    float **aerob7,      /* O: atmospherically corrected band 7 data
                                (TOA refl), nlines x nsamps */
     uint8 **ipflag,      /* O: QA flag to assist with aerosol interpolation,
                                nlines x nsamps */
@@ -2183,14 +2192,15 @@ int memory_allocation_sr
                                [NVIEW_ZEN_VALS x NSOLAR_ZEN_VALS] */
     float **nbfi,        /* O: number of azimuth angles
                                [NVIEW_ZEN_VALS x NSOLAR_ZEN_VALS] */
-    float **ttv          /* O: view angle table
+    float **ttv,         /* O: view angle table
                                [NVIEW_ZEN_VALS x NSOLAR_ZEN_VALS] */
+    uint16 **out_band    /* O: scaled output, nlines x nsamps */
 )
 {
     char FUNC_NAME[] = "memory_allocation_sr"; /* function name */
     char errmsg[STR_SIZE];   /* error message */
 
-    *aerob1 = calloc (nlines*nsamps, sizeof (uint16));
+    *aerob1 = calloc (nlines*nsamps, sizeof (float));
     if (*aerob1 == NULL)
     {
         sprintf (errmsg, "Error allocating memory for aerob1");
@@ -2198,7 +2208,7 @@ int memory_allocation_sr
         return (ERROR);
     }
 
-    *aerob2 = calloc (nlines*nsamps, sizeof (uint16));
+    *aerob2 = calloc (nlines*nsamps, sizeof (float));
     if (*aerob2 == NULL)
     {
         sprintf (errmsg, "Error allocating memory for aerob2");
@@ -2206,7 +2216,7 @@ int memory_allocation_sr
         return (ERROR);
     }
 
-    *aerob4 = calloc (nlines*nsamps, sizeof (uint16));
+    *aerob4 = calloc (nlines*nsamps, sizeof (float));
     if (*aerob4 == NULL)
     {
         sprintf (errmsg, "Error allocating memory for aerob4");
@@ -2214,7 +2224,7 @@ int memory_allocation_sr
         return (ERROR);
     }
 
-    *aerob5 = calloc (nlines*nsamps, sizeof (uint16));
+    *aerob5 = calloc (nlines*nsamps, sizeof (float));
     if (*aerob5 == NULL)
     {
         sprintf (errmsg, "Error allocating memory for aerob5");
@@ -2222,7 +2232,7 @@ int memory_allocation_sr
         return (ERROR);
     }
 
-    *aerob7 = calloc (nlines*nsamps, sizeof (uint16));
+    *aerob7 = calloc (nlines*nsamps, sizeof (float));
     if (*aerob7 == NULL)
     {
         sprintf (errmsg, "Error allocating memory for aerob7");
@@ -2463,6 +2473,14 @@ int memory_allocation_sr
     if (*ttv == NULL)
     {
         sprintf (errmsg, "Error allocating memory for ttv");
+        error_handler (true, FUNC_NAME, errmsg);
+        return (ERROR);
+    }
+
+    *out_band = calloc (nlines*nsamps, sizeof (uint16));
+    if (*out_band == NULL)
+    {
+        sprintf (errmsg, "Error allocating memory for out_band");
         error_handler (true, FUNC_NAME, errmsg);
         return (ERROR);
     }

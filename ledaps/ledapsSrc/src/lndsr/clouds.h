@@ -15,7 +15,8 @@
 
 typedef struct cld_diags_t {
 	int nbrows,nbcols,cellheight,cellwidth;
-	float **avg_t6_clear,**std_t6_clear,**avg_b7_clear,**std_b7_clear,**airtemp_2m;
+	double **avg_t6_clear,**std_t6_clear,**avg_b7_clear,**std_b7_clear;
+	float **airtemp_2m;
 	int **nb_t6_clear;
 }cld_diags_t;
 

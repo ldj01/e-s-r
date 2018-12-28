@@ -43,7 +43,7 @@ bool cloud_detection_pass1
 
     /* Calculate a threshold that was a hardcoded magic number before.
        This was set to 5000 with the original scaling factor. */
-    int thresh_tm = 0.5 * lut->mult_factor + lut->add_offset;
+    int thresh_tm = (0.5 - lut->add_offset) * lut->mult_factor;
 
     /* Loop through the samples in this line */
     grid_line = (double)il/lut->ar_region_size.l - 0.5;
@@ -72,7 +72,7 @@ bool cloud_detection_pass1
 
             /* Compute the reflectance for each band using the interpolated
                atmospheric coefficients */
-            int16 *lin[5] = {line_in[0], line_in[2], line_in[3], line_in[4],
+            uint16 *lin[5] = {line_in[0], line_in[2], line_in[3], line_in[4],
                              line_in[5]};
             float *rho[5] = {&rho1, &rho3, &rho4, &rho5, &rho7};
             float tgog[5] = {*interpol_atmos_coef->tgOG[0],
@@ -137,7 +137,6 @@ bool cloud_detection_pass1
                 ndvi = 0.01;
             water = ndvi < 0 || (((ndvi > 0 && ndvi < 0.1) || rho4 < 0.05) &&
                                  rho5 < 0.02);
-
             if (!water &&
                 (t6 > atemp_line[is] - 20. && !C5) &&
                 !((C1 || C3) && C2 && C4))
@@ -191,7 +190,7 @@ bool cloud_detection_pass2
     int cld_row, cld_col;     /* cloud line, sample location */
     float vra, ndvi, ndsi, temp_snow_thshld; /* NDVI, NDSI, snow threshold */
     float temp_b6_clear,temp_thshld1,temp_thshld2,atemp_ancillary;
-    float tmpflt, tmpflt_arr[2];   /* temporary floats */
+    float tmpflt_arr[2];      /* temporary floats */
     double grid_line, grid_sample; /* interpolation grid line and sample */
 
     /* Initialize the thermal band information and snow threshold */
@@ -205,11 +204,11 @@ bool cloud_detection_pass2
 
     /* Calculate a threshold that was a hardcoded magic number before.
        This was set to 2000 with the original scaling factor. */
-    int band5_thresh = 0.2 * lut->mult_factor + lut->add_offset;
+    int band5_thresh = (0.2 - lut->add_offset) * lut->mult_factor;
 
     /* Calculate a threshold that was a hardcoded magic number before.
        This was set to 5000 with the original scaling factor. */
-    int thresh_tm = 0.5 * lut->mult_factor + lut->add_offset;
+    int thresh_tm = (0.5 - lut->add_offset) * lut->mult_factor;
 
     /* Start the location for the current line and current cloud row. */
     cld_row = il / cld_diags->cellheight;
@@ -318,15 +317,15 @@ bool cloud_detection_pass2
             int i;
             for (i=0; i<6; i++)
             {
-                tmpflt = 10000 * *tgog[i];
-                *rho[i] = line_in[i][is] - tmpflt * *rho_ra[i];
-                *rho[i] /= tmpflt * *tgh2o[i] * *td_ra[i] * *tu_ra[i]
-                         + *s_ra[i] * *rho[i];
+                *rho[i] = compute_rho(line_in[i][is] * lut->scale_factor
+                                      + lut->add_offset, *tgog[i], *tgh2o[i],
+                                      *td_ra[i], *tu_ra[i], *rho_ra[i],
+                                      *s_ra[i]);
             }
 
             /* Get the temperature */
             if (thermal_band)
-                    t6 = b6_line[is] * lut->b6_scale_factor + lut->b6_add_offset;
+                t6 = b6_line[is] * lut->b6_scale_factor + lut->b6_add_offset;
 
             /* Interpolate the cloud diagnostics for the current pixel */
             interpol_clddiags_1pixel (cld_diags, il, is, tmpflt_arr);
@@ -370,6 +369,8 @@ bool cloud_detection_pass2
                 ndvi = 0.01;
             water = ndvi < 0 || (((ndvi > 0 && ndvi < 0.1) || rho4 < 0.05) &&
                                  rho5 < 0.02);
+
+
 
             if (thermal_band) {
                 if (!water) { /* if not water */
@@ -651,36 +652,36 @@ int allocate_cld_diags
     cld_diags->nbrows = (scene_height - 1) / cell_height + 1;
     cld_diags->nbcols = (scene_width - 1) / cell_width + 1;
 
-    if ((cld_diags->avg_t6_clear = malloc (cld_diags->nbrows*sizeof(float *)))
+    if ((cld_diags->avg_t6_clear = malloc (cld_diags->nbrows*sizeof(double *)))
         ==NULL)
         return -1;
     for (i = 0; i < cld_diags->nbrows; i++)
         if ((cld_diags->avg_t6_clear[i] = calloc(cld_diags->nbcols,
-            sizeof(float)))==NULL)
+            sizeof(double)))==NULL)
             return -1;
 
-    if ((cld_diags->std_t6_clear = malloc (cld_diags->nbrows*sizeof(float *)))
+    if ((cld_diags->std_t6_clear = malloc (cld_diags->nbrows*sizeof(double *)))
         ==NULL)
         return -1;
     for (i = 0; i < cld_diags->nbrows; i++)
         if ((cld_diags->std_t6_clear[i] = calloc(cld_diags->nbcols,
-            sizeof(float)))==NULL)
+            sizeof(double)))==NULL)
             return -1;
 
-    if ((cld_diags->avg_b7_clear = malloc (cld_diags->nbrows*sizeof(float *)))
+    if ((cld_diags->avg_b7_clear = malloc (cld_diags->nbrows*sizeof(double *)))
         ==NULL)
         return -1;
     for (i = 0; i < cld_diags->nbrows; i++) 
         if ((cld_diags->avg_b7_clear[i] = calloc(cld_diags->nbcols,
-            sizeof(float)))==NULL)
+            sizeof(double)))==NULL)
             return -1;
 
-    if ((cld_diags->std_b7_clear = malloc (cld_diags->nbrows*sizeof(float *)))
+    if ((cld_diags->std_b7_clear = malloc (cld_diags->nbrows*sizeof(double *)))
         ==NULL)
         return -1;
     for (i = 0; i < cld_diags->nbrows; i++) 
         if ((cld_diags->std_b7_clear[i] = calloc(cld_diags->nbcols,
-            sizeof(float)))==NULL)
+            sizeof(double)))==NULL)
             return -1;
 
     if ((cld_diags->airtemp_2m = malloc (cld_diags->nbrows*sizeof(float *)))

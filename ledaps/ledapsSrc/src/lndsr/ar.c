@@ -65,7 +65,7 @@ bool Ar(int il_ar, Lut_t *lut, Img_coord_int_t *size_in, uint16_t ***line_in,
     bool is_fill;
     int n,water;
 
-    float avg_band[3],std_band[3];
+    double avg_band[3],std_band[3];
     float avg_srefl,std_srefl;
     float fts,ftv,phi;
     float uwv,uoz,spres;
@@ -77,7 +77,6 @@ bool Ar(int il_ar, Lut_t *lut, Img_coord_int_t *size_in, uint16_t ***line_in,
     float a_CO2_b7=0.0071958, b_CO2_b7=0.55665;
     float a_NO2_b7=0.0013383, b_NO2_b7=0.95109;
     float a_CH4_b7=0.030172, b_CH4_b7=0.79652;
-    float temp;
 
 
     float rho;
@@ -175,20 +174,11 @@ bool Ar(int il_ar, Lut_t *lut, Img_coord_int_t *size_in, uint16_t ***line_in,
                         cbands[collect_nbsamps].b[ib] = line_in[il][ib][is];
                     }
 
-                    /* Validate against min/max values for the array type. Some 
-                       scaling values could put the result outside the expected 
-                       range. */
-                    temp = (rho7 - lut->add_offset) * lut->mult_factor;
-                    if (temp > lut->max_valid_sr)
-                    {
-                        cbands[collect_nbsamps].b7 = lut->max_valid_sr;
-                    }
-                    else if (temp < lut->min_valid_sr)
-                    {
-                        cbands[collect_nbsamps].b7 = lut->min_valid_sr;
-                    }
-                    else
-                        cbands[collect_nbsamps].b7=(unsigned short) temp;
+                    /* Allow the result to go outside the expected
+                       range since it is only used for statistics, not an
+                       output pixel value. */
+                    cbands[collect_nbsamps].b7 = (unsigned short)
+                        ((rho7 - lut->add_offset) * lut->mult_factor);
 
                     collect_nbsamps++;
                     if (rho7<0.05)
@@ -238,17 +228,15 @@ bool Ar(int il_ar, Lut_t *lut, Img_coord_int_t *size_in, uint16_t ***line_in,
 			avg_band[ib]=sum_band[ib]/collect_nbsamps; 
             
                 if (collect_nbsamps>1) {
-        std_srefl=((sum_srefl_sq)+collect_nbsamps*avg_srefl*avg_srefl-2.*avg_srefl*(sum_srefl))/(collect_nbsamps-1);
-                    std_srefl = (sum_srefl_sq*1e-8 -
-                                      collect_nbsamps*avg_srefl*avg_srefl)
-                              / (collect_nbsamps - 1);
+                    std_srefl= (sum_srefl_sq -
+                                collect_nbsamps*avg_srefl*avg_srefl)
+                             / (collect_nbsamps - 1);
                     if (std_srefl>0)
                         std_srefl=sqrt(std_srefl);
                     else 
                         std_srefl=0;
                     for (ib=0;ib<3;ib++) {
-        		std_band[ib]=((sum_band_sq[ib])+collect_nbsamps*avg_band[ib]*avg_band[ib]-2.*avg_band[ib]*(sum_band[ib]))/(collect_nbsamps-1);
-                        std_band[ib] = (sum_band_sq[ib]*1e-8 -
+                        std_band[ib] = (sum_band_sq[ib] -
                                         collect_nbsamps*avg_band[ib]*
                                         avg_band[ib])
                                      / (collect_nbsamps - 1);
@@ -420,6 +408,7 @@ int compute_aot(int band, float toarhoblue, float toarhored, float ts,
     iaot=-1;
     for (i=0;i<SIXS_NB_AOT;i++) {
         if ( surrhoblue[i] > 0. ) {
+            /* Find index of the wavelength with temp nearest 0 */
             temp=surrhoblue[i]-eratio*surrhored[i];
             if (fabs(temp) < minimum ) {
                 minimum=temp;
@@ -436,12 +425,14 @@ int compute_aot(int band, float toarhoblue, float toarhored, float ts,
         if (iaot==0) iaot=1;
         temp1=surrhoblue[iaot-1]-eratio*surrhored[iaot-1];
         temp2=surrhoblue[iaot]-eratio*surrhored[iaot];
-        slope = (sixs_tables->aot_wavelength[1][iaot] -
-                 sixs_tables->aot_wavelength[1][iaot-1])
-              / (temp2 - temp1);
+        /* Calculate slope of line with temp as function of wavelength */
+        slope = (temp2 - temp1) /
+                (sixs_tables->aot_wavelength[1][iaot] -
+                 sixs_tables->aot_wavelength[1][iaot-1]);
 
         /* let's hope all the aot table are independent of wavelength but
            that need to be checked */        
+        /* Calculate wavelength where temp = 0 */
         *aot=sixs_tables->aot_wavelength[1][iaot-1]-temp1/slope;
     }
 /*        printf(" variables in compaot toarhored %f toarhoblue %f aot %f\n",
@@ -533,6 +524,7 @@ int ArInterp(Lut_t *lut, Img_coord_int_t *input_loc, int ***line_ar,
         else
             *inter_aot = rint(val);
     }
+
 
     return 0;
 }

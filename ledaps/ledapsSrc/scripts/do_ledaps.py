@@ -141,6 +141,10 @@ class Ledaps():
     #       should be completed.  True or False.  Default is True, otherwise
     #       the processing will halt after the TOA reflectance products are
     #       complete.
+    #   scale_refl = scale value for reflective bands
+    #   offset_refl = offset value for reflective bands
+    #   scale_therm = scale value for thermal bands
+    #   offset_therm = offset value for thermal bands
     #
     # Returns:
     #     ERROR - error running the LEDAPS applications
@@ -152,7 +156,8 @@ class Ledaps():
     #      xmlfile directory is not writable, then this script exits with
     #      an error.
     #######################################################################
-    def runLedaps(self, xmlfile=None, process_sr="True"):
+    def runLedaps(self, xmlfile=None, process_sr="True", scale_refl=None,
+                        offset_refl=None, scale_therm=None, offset_therm=None):
         # If no parameters were passed then get the info from the command line
         if xmlfile is None:
 
@@ -175,6 +180,15 @@ class Ledaps():
                                     " complete. (Note: scenes with solar"
                                     " zenith angles above 76 degrees should"
                                     " use process_sr=False)"))
+            parser.add_option ("--scale_refl", dest="scale_refl",
+                type="float", help="scaling value for reflective bands")
+            parser.add_option ("--offset_refl", dest="offset_refl",
+                type="float", help="offset value for reflective bands")
+            parser.add_option ("--scale_therm", dest="scale_therm",
+                type="float", help="scaling value for thermal bands")
+            parser.add_option ("--offset_therm", dest="offset_therm",
+                type="float", help="offset value for thermal bands")
+
             (options, args) = parser.parse_args()
 
             # Validate the command-line options
@@ -185,6 +199,11 @@ class Ledaps():
             process_sr = options.process_sr  # process SR or not
             if process_sr is None:
                 process_sr = "True"  # If not provided, default to True
+
+            scale_refl = options.scale_refl
+            offset_refl = options.offset_refl
+            scale_therm = options.scale_therm
+            offset_therm = options.offset_therm
 
         # Obtain logger from logging using the module's name
         logger = logging.getLogger(__name__)
@@ -275,7 +294,24 @@ class Ledaps():
                 logger.error('Error running lndpm.  Processing will terminate.')
                 return ERROR
 
-            cmdstr = 'lndcal --pfile lndcal.{}.txt'.format(xml)
+            scale_refl_opt_str = ''
+            scale_therm_opt_str = ''
+            offset_refl_opt_str = ''
+            offset_therm_opt_str = ''
+
+            if scale_refl is not None:
+                scale_refl_opt_str = '--scale_refl={} '.format(scale_refl)
+            if scale_therm is not None :
+                scale_therm_opt_str = '--scale_therm={} '.format(scale_therm)
+            if offset_refl is not None:
+                offset_refl_opt_str = '--offset_refl={} '.format(offset_refl)
+            if offset_therm is not None:
+                offset_therm_opt_str = '--offset_therm={} '.format(offset_therm)
+
+            cmdstr = ('lndcal --pfile lndcal.{}.txt {}{}{}{}'
+                      .format(xml, scale_refl_opt_str, scale_therm_opt_str,
+                      offset_refl_opt_str, offset_therm_opt_str))
+
             (status, output) = commands.getstatusoutput(cmdstr)
             logger.info(output)
             exit_code = status >> 8
@@ -284,7 +320,8 @@ class Ledaps():
                 return ERROR
 
             if process_sr == 'True':
-                cmdstr = 'lndsr --pfile lndsr.{}.txt'.format(xml)
+                cmdstr = ('lndsr --pfile lndsr.{}.txt {}{}'
+                          .format(xml, scale_refl_opt_str, offset_refl_opt_str))
                 (status, output) = commands.getstatusoutput(cmdstr)
                 logger.info(output)
                 exit_code = status >> 8

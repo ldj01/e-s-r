@@ -58,6 +58,7 @@ typedef struct {
   int nband;               /* Number of bands */
   int in_fill;             /* Input fill value */
   int output_fill;         /* Output fill value */
+  int output_fill_opacity; /* Output fill value for opacity band */
   int aerosol_fill;        /* Aerosol fill value */
   int in_satu;             /* Input saturated value */
   int output_satu;         /* Output saturation value (Feng, 3/23/09) */
@@ -67,19 +68,24 @@ typedef struct {
                            /* Size of the aerosol retreval image */
   int min_valid_sr;        /* Minimum valid surface reflectance */
   int max_valid_sr;        /* Maximum valid surface reflectance */
+  int min_valid_opacity;   /* Minimum valid surface reflectance for opacity band */
+  int max_valid_opacity;   /* Maximum valid surface reflectance for opacity band */
   Input_meta_t meta;       /* Input metadata */
   char* long_name_prefix;  /* long name prefix (append band num) */
   char* units;             /* units */
   double scale_factor;     /* scale factor */
-  double scale_factor_err; /* scale factor error */
+  double mult_factor;      /* multiplication factor */
   double atmos_opacity_scale_factor;  /* Atmospheric opacity scale factor */
   double add_offset;       /* add offset */
-  double add_offset_err;   /* add offset error */
+  double b6_scale_factor;
+  double b6_add_offset;
+  int b6_in_fill;          
 } Lut_t;
 
 /* Prototypes */
 
-Lut_t *GetLut(int nband, Input_meta_t *input_meta, Img_coord_int_t *input_size);
+Lut_t *GetLut(int nband, Input_meta_t *input_meta, Input_meta_t *b6_meta, 
+    Img_coord_int_t *input_size);
 void FreeLut(Lut_t *this);
 
 #endif

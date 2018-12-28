@@ -36,29 +36,29 @@ static int cmp_collects(const void *p1, const void *p2)
 }
 
 
-bool Ar(int il_ar, Lut_t *lut, Img_coord_int_t *size_in, int16 ***line_in,
+bool Ar(int il_ar, Lut_t *lut, Img_coord_int_t *size_in, uint16_t ***line_in,
         char **ddv_line, atmos_t *atmos_coef_ar, collect_bands_t *cbands,
         int **line_ar, Ar_stats_t *ar_stats, Ar_gridcell_t *ar_gridcell,
         sixs_tables_t *sixs_tables)
 {
-/***
-ddv_line contains results of cloud_screening when this routine is called
-bit 2 = adjacent clouds 1=yes 0=no
-bit 3 = fill value 1=fill 0=valid
-bit 4 = land/water mask 1=land 0=water
-bit 5 = cloud 0=clear 1=cloudy
-bit 6 = cloud shadow 
-bit 7 = snow
+    /***
+      ddv_line contains results of cloud_screening when this routine is called
+      bit 2 = adjacent clouds 1=yes 0=no
+      bit 3 = fill value 1=fill 0=valid
+      bit 4 = land/water mask 1=land 0=water
+      bit 5 = cloud 0=clear 1=cloudy
+      bit 6 = cloud shadow 
+      bit 7 = snow
 
-The DDV flag in ddv_line (bit 0) is updated in this routine
+      The DDV flag in ddv_line (bit 0) is updated in this routine
 
-***/
+     ***/
     int is, il,i;
     int is_ar;
     int is_start, is_end;
     int ib;
     int collect_nbsamps;
-  
+
     int nb_all_pixs,nb_water_pixs,nb_fill_pixs,nb_cld_pixs,nb_cldshadow_pixs,
         nb_snow_pixs;
     float fraction_water,fraction_clouds;
@@ -77,6 +77,7 @@ The DDV flag in ddv_line (bit 0) is updated in this routine
     float a_CO2_b7=0.0071958, b_CO2_b7=0.55665;
     float a_NO2_b7=0.0013383, b_NO2_b7=0.95109;
     float a_CH4_b7=0.030172, b_CH4_b7=0.79652;
+    float temp;
 
 
     float rho;
@@ -86,8 +87,8 @@ The DDV flag in ddv_line (bit 0) is updated in this routine
 
     int iipt = il_ar*ar_gridcell->nbcols;
     for (is_start = 0, is_ar = 0; 
-         is_start < size_in->s; 
-         is_start += lut->ar_region_size.s, is_ar++, iipt++) {
+        is_start < size_in->s; 
+        is_start += lut->ar_region_size.s, is_ar++, iipt++) {
 
         is_end = is_start + lut->ar_region_size.s - 1;
         if (is_end >= size_in->s) is_end = size_in->s - 1;
@@ -95,7 +96,7 @@ The DDV flag in ddv_line (bit 0) is updated in this routine
         n = 0;
 
         collect_nbsamps=0;
-     
+
         fts=ar_gridcell->line_sun_zen[is_ar];
         ftv=ar_gridcell->line_view_zen[is_ar];
         phi=ar_gridcell->line_rel_az[is_ar];
@@ -103,9 +104,9 @@ The DDV flag in ddv_line (bit 0) is updated in this routine
         uoz=ar_gridcell->line_ozone[is_ar];
         spres=ar_gridcell->line_spres[is_ar];
 
-/**
-   compute wv transmittance for band 7
-**/
+        /**
+          compute wv transmittance for band 7
+         **/
         MP=(1./cos(fts/DEG)+1./cos(ftv/DEG));
         T_h2o_b7=log(MP*uwv);
         T_h2o_b7=a_h2o_b7+b_h2o_b7*T_h2o_b7+c_h2o_b7*T_h2o_b7*T_h2o_b7;
@@ -139,9 +140,9 @@ The DDV flag in ddv_line (bit 0) is updated in this routine
                 }
 
                 /***
-                    Exclude clouds, cloud shadow & snow pixels flagged by
-                    the internal cloud mask.
-                ***/
+                  Exclude clouds, cloud shadow & snow pixels flagged by
+                  the internal cloud mask.
+                 ***/
                 if ((ddv_line[il][is] & 0x24) != 0) { /* clouds or
                                                          adjacent clouds */
                     is_fill=true;
@@ -160,8 +161,8 @@ The DDV flag in ddv_line (bit 0) is updated in this routine
                     continue;
 
                 /* band 7 water vapor correction */
-                rho7=line_in[il][5][is] * 0.0001;
-                rho4=line_in[il][3][is] * 0.0001;
+                rho7=line_in[il][5][is] * lut->scale_factor + lut->add_offset;
+                rho4=line_in[il][3][is] * lut->scale_factor + lut->add_offset;
                 rho7 /= T_g_b7;  /* correct for water vapor and other gases*/
 
                 /* update sums if dark target, dark target if not water
@@ -173,7 +174,22 @@ The DDV flag in ddv_line (bit 0) is updated in this routine
                     for (ib=0;ib<3;ib++) {
                         cbands[collect_nbsamps].b[ib] = line_in[il][ib][is];
                     }
-                    cbands[collect_nbsamps].b7 = (short)(rho7*10000.);
+
+                    /* Validate against min/max values for the array type. Some 
+                       scaling values could put the result outside the expected 
+                       range. */
+                    temp = (rho7 - lut->add_offset) * lut->mult_factor;
+                    if (temp > lut->max_valid_sr)
+                    {
+                        cbands[collect_nbsamps].b7 = lut->max_valid_sr;
+                    }
+                    else if (temp < lut->min_valid_sr)
+                    {
+                        cbands[collect_nbsamps].b7 = lut->min_valid_sr;
+                    }
+                    else
+                        cbands[collect_nbsamps].b7=(unsigned short) temp;
+
                     collect_nbsamps++;
                     if (rho7<0.05)
                         ddv_line[il][is] |= 0x01; /* set bit 0 to 1 */
@@ -202,23 +218,27 @@ The DDV flag in ddv_line (bit 0) is updated in this routine
                        sum_band_sq[3] = {0, 0, 0};
                 for (ib=0;ib<3;ib++) {
                     for (i=0;i<collect_nbsamps;i++) {
-                        sum_band[ib] += cbands[i+start_i].b[ib];
-                        sum_band_sq[ib] += cbands[i+start_i].b[ib]
-                                         * cbands[i+start_i].b[ib];
+                        double dtemp = cbands[i+start_i].b[ib] 
+                            * lut->scale_factor + lut->add_offset;
+                        sum_band[ib] += dtemp;
+                        sum_band_sq[ib] += (dtemp * dtemp);
                     }
                 }
                 double sum_srefl = 0, sum_srefl_sq = 0;
                 for (i=0;i<collect_nbsamps;i++) {
-                    sum_srefl += cbands[i+start_i].b7;
-                    sum_srefl_sq += cbands[i+start_i].b7*cbands[i+start_i].b7;
+                    double dtemp = cbands[i+start_i].b7 * lut->scale_factor
+                        + lut->add_offset;
+                    sum_srefl += dtemp;
+                    sum_srefl_sq += (dtemp * dtemp);
                 }
 
                 /* update stats line */
-                avg_srefl = sum_srefl*0.0001/collect_nbsamps;
+      avg_srefl = (sum_srefl) / collect_nbsamps; 
                 for (ib=0;ib<3;ib++)
-                    avg_band[ib]=sum_band[ib]*0.0001/collect_nbsamps;
+			avg_band[ib]=sum_band[ib]/collect_nbsamps; 
             
                 if (collect_nbsamps>1) {
+        std_srefl=((sum_srefl_sq)+collect_nbsamps*avg_srefl*avg_srefl-2.*avg_srefl*(sum_srefl))/(collect_nbsamps-1);
                     std_srefl = (sum_srefl_sq*1e-8 -
                                       collect_nbsamps*avg_srefl*avg_srefl)
                               / (collect_nbsamps - 1);
@@ -227,6 +247,7 @@ The DDV flag in ddv_line (bit 0) is updated in this routine
                     else 
                         std_srefl=0;
                     for (ib=0;ib<3;ib++) {
+        		std_band[ib]=((sum_band_sq[ib])+collect_nbsamps*avg_band[ib]*avg_band[ib]-2.*avg_band[ib]*(sum_band[ib]))/(collect_nbsamps-1);
                         std_band[ib] = (sum_band_sq[ib]*1e-8 -
                                         collect_nbsamps*avg_band[ib]*
                                         avg_band[ib])
@@ -274,10 +295,13 @@ The DDV flag in ddv_line (bit 0) is updated in this routine
                     for (il = 0; il < lut->ar_region_size.l; il++) {
                         for (is = is_start; is < (is_end + 1); is++) {
                             if (!(ddv_line[il][is]&0x08)) {
-                                rho7=(float)line_in[il][5][is]*0.0001;
+                                rho7 = (float)line_in[il][5][is] 
+                                    * lut->scale_factor + lut->add_offset;
                                 rho7 /= T_g_b7;  /* correct for water vapor
                                                     and other gases*/
-                                rho = compute_rho(line_in[il][ib][is],
+                                rho = compute_rho(line_in[il][ib][is] 
+                                               * lut->scale_factor 
+                                               + lut->add_offset,
                                                atmos_coef_ar->tgOG[ib][ipt],
                                                atmos_coef_ar->tgH2O[ib][ipt],
                                                atmos_coef_ar->td_ra[ib][ipt],

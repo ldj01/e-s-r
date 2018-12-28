@@ -4,6 +4,7 @@
 #define bounded(A,B,C) (A>B?(A<C?A:C):B)
 #define nint(A)(A<0?(int)(A-0.5):(int)(A+0.5))
 
+#include <stdint.h>
 #include <stdio.h>
 #include "hdf.h"
 #include "mfhdf.h"
@@ -86,5 +87,13 @@ void update_gridcell_atmos_coefs(int ipt, atmos_t *atmos_coef,
 
 int allocate_mem_atmos_coeff(int nbpts,atmos_t *atmos_coef);
 int free_mem_atmos_coeff(atmos_t *atmos_coef);
+
+/* default scaling values */
+#define SCALE_FACTOR     (0.0000275)
+#define ADD_OFFSET       (-0.2)
+
+/* data retrieval functions*/
+double get_scale_refl();    /* scale for reflective bands */
+double get_offset_refl();   /* add offset for reflective bands */
 
 #endif

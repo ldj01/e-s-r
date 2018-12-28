@@ -38,12 +38,12 @@ int main (int argc, char *argv[]) {
   unsigned char *line_in = NULL;
   int16 *line_in_sun_zen = NULL;     /* solar zenith representative band */
   unsigned char *line_out_qa = NULL;
-  int16 *line_out = NULL;
-  int16 *line_out_th = NULL;
+  uint16_t *line_out = NULL;
+  uint16_t *line_out_th = NULL;
   Cal_stats_t cal_stats;
   Cal_stats6_t cal_stats6;
   int nps,nls, nps6, nls6;
-  int i,odometer_flag=0;
+  int odometer_flag=0;
   char msgbuf[1024];
   char envi_file[STR_SIZE]; /* name of the output ENVI header file */
   char *cptr=NULL;          /* pointer to the file extension */
@@ -55,13 +55,12 @@ int main (int argc, char *argv[]) {
   Espa_internal_meta_t xml_metadata;  /* XML metadata structure */
   Envi_header_t envi_hdr;   /* output ENVI header information */
 
-  printf ("\nRunning lndcal ...\n");
-  for (i=1; i<argc; i++)if ( !strcmp(argv[i],"-o") )odometer_flag=1;
-
   /* Read the parameters from the input parameter file */
-  param = GetParam(argc, argv);
+  param = GetParam(argc, argv, &odometer_flag);
   if (param == (Param_t *)NULL) EXIT_ERROR("getting runtime parameters",
     "main");
+
+  printf ("\nRunning lndcal ...\n");
 
   /* Validate the input metadata file */
   if (validate_xml_file (param->input_xml_file_name) != SUCCESS)
@@ -132,7 +131,7 @@ int main (int argc, char *argv[]) {
 
     /* Allocate memory for the thermal input and output buffer, only holds
        one band */
-    line_out_th = calloc(nps6, sizeof(int16));
+    line_out_th = calloc(nps6, sizeof(uint16_t));
     if (line_out_th == NULL) 
       EXIT_ERROR("allocating thermal output line buffer", "main");
   } else {
@@ -140,7 +139,7 @@ int main (int argc, char *argv[]) {
   }
 
   /* Allocate memory for a single output line for the image data */
-  line_out = calloc (nps, sizeof (int16));
+  line_out = calloc (nps, sizeof (uint16_t));
   if (line_out == NULL) 
     EXIT_ERROR("allocating output line buffer", "main");
 

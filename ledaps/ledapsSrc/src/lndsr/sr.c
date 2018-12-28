@@ -24,8 +24,8 @@ bool Sr
     atmos_t *atmos_coef,  /* I: atmospheric coefficients */
     atmos_t *interpol_atmos_coef, /* I: storage space for interpolated
                                         atmospheric coefficients */
-    int16 **line_in,      /* I: array of input lines, one for each band */
-    int16 **line_out,     /* O: array of output lines, one for each band */
+    uint16_t **line_in,   /* I: array of input lines, one for each band */
+    uint16_t **line_out,  /* O: array of output lines, one for each band */
     Sr_stats_t *sr_stats  /* O: statistics for this line */
 )
 {
@@ -62,24 +62,31 @@ bool Sr
                 continue;
             }
 
-            rho = compute_rho(line_in[ib][is], *interpol_atmos_coef->tgOG[ib],
+            rho = compute_rho(line_in[ib][is] * lut->scale_factor 
+                              + lut->add_offset,
+                              *interpol_atmos_coef->tgOG[ib],
                               *interpol_atmos_coef->tgH2O[ib],
                               *interpol_atmos_coef->td_ra[ib],
                               *interpol_atmos_coef->tu_ra[ib],
                               *interpol_atmos_coef->rho_ra[ib],
                               *interpol_atmos_coef->S_ra[ib]);
 
-            /* Scale the reflectance value and store it as an int16 */
-            line_out[ib][is] = (short)(rho*10000.);  /* scale for output */
+            /* Scale the reflectance value for output and store it as 
+               an uint16 */
+            float temp;
+            temp = (rho - lut->add_offset) * lut->mult_factor;
     
             /* Verify the reflectance value is within the valid range */
-            if (line_out[ib][is] < lut->min_valid_sr) {
+                if (temp < lut->min_valid_sr) {
                 sr_stats->nout_range[ib]++;
                 line_out[ib][is] = lut->min_valid_sr;
             }
-            else if (line_out[ib][is] > lut->max_valid_sr) {
+                else if (temp > lut->max_valid_sr) {
                 sr_stats->nout_range[ib]++;
                 line_out[ib][is] = lut->max_valid_sr;
+            }
+                else {
+                    line_out[ib][is] = (unsigned short) temp;
             }
     
             /* Keep track of the min/max value for the stats */

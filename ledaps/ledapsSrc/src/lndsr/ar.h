@@ -15,11 +15,11 @@ typedef struct {
 
 typedef struct
 {
-    short b[3];   /* collect_band */
-    short b7;     /* collect_band7 */
+    unsigned short b[3];   /* collect_band */
+    unsigned short b7;     /* collect_band7 */
 } collect_bands_t;
 
-bool Ar(int il_ar, Lut_t *lut, Img_coord_int_t *size_in, int16 ***line_in,
+bool Ar(int il_ar, Lut_t *lut, Img_coord_int_t *size_in, uint16_t ***line_in,
         char **ddv_line, atmos_t *atmos_coef_ar, collect_bands_t *cbands,
         int **line_ar, Ar_stats_t *ar_stats, Ar_gridcell_t *ar_gridcell,
         sixs_tables_t *sixs_tables);
@@ -29,13 +29,12 @@ int Fill_Ar_Gaps(Lut_t *lut, int ***line_ar, int ib);
 
 /* Compute the surface reflectance for a given point and atmospheric
    coefficients. */
-static inline float compute_rho(int16 val, float tgOG, float tgH2O,
+static inline float compute_rho(float unscaled_val, float tgOG, float tgH2O,
                                 float td_ra, float tu_ra, float rho_ra,
                                 float S_ra)
 {
-    float tmp = 10000*tgOG;
-    float rho = val - tmp*rho_ra;
-    rho /= tmp*tgH2O*td_ra*tu_ra + S_ra*rho;
+    float rho = unscaled_val / tgOG - rho_ra;
+    rho /= tgH2O*td_ra*tu_ra + S_ra*rho;
 
     return rho;
 }

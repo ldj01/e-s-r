@@ -42,9 +42,13 @@
 
 #include <stdbool.h>
 #include "lndcal.h"
-#include "lndcal.h"
 #include "input.h"
 #include "param.h"
+
+#define VALID_MIN_REF        (-0.01) /* Unscaled */
+#define VALID_MAX_REF        (1.6)   /* Unscaled */
+#define VALID_MIN_TH         (150)   /* Unscaled */
+#define VALID_MAX_TH         (350)   /* Unscaled */
 
 /* Structure for the 'lut' data type */
 
@@ -65,16 +69,14 @@ typedef struct {
   char* units_ref;             /* ref units                                 */
   int valid_range_ref[2];      /* ref valid range                           */
   double scale_factor_ref;     /* ref scale factor                          */
-  double scale_factor_err_ref; /* ref scale factor error                    */
+  double mult_factor_ref;      /* ref multiplication factor                 */
   double add_offset_ref;       /* ref add offset                            */
-  double add_offset_err_ref;   /* ref add offset error                      */
   char* long_name_prefix_th;   /* thermal long name prefix (append band num)*/ 
   char* units_th;              /* thermal units                             */
   int valid_range_th[2];       /* thermal valid range                       */
   double scale_factor_th;      /* thermal scale factor                      */
-  double scale_factor_err_th;  /* thermal scale factor error                */
+  double mult_factor_th;       /* thermal multiplication factor             */
   double add_offset_th;        /* thermal add offset                        */
-  double add_offset_err_th;    /* thermal add offset error                  */
   double refl_conv[NBAND_REFL_MAX];
 } Lut_t;
 

@@ -18,9 +18,9 @@ bool cloud_detection_pass1
     Lut_t *lut,              /* I: lookup table informat */
     int nsamp,               /* I: number of samples to be processed */
     int il,                  /* I: current line being processed */
-    int16 **line_in,         /* I: array of input lines, one for each band */
+    uint16_t **line_in,      /* I: array of input lines, one for each band */
     uint8 *qa_line,          /* I: array of QA data for the current line */
-    int16 *b6_line,          /* I: array of thermal data for the current line */
+    uint16_t *b6_line,       /* I: array of thermal data for the current line */
     float *atemp_line,       /* I: auxiliary temperature for the line */
     atmos_t *atmos_coef,     /* I: atmospheric coefficients */
     atmos_t *interpol_atmos_coef, /* I: storage space for interpolated
@@ -41,6 +41,10 @@ bool cloud_detection_pass1
     /* Start the location for the current line and current cloud row. */
     cld_row = il / cld_diags->cellheight;
 
+    /* Calculate a threshold that was a hardcoded magic number before.
+       This was set to 5000 with the original scaling factor. */
+    int thresh_tm = 0.5 * lut->mult_factor + lut->add_offset;
+
     /* Loop through the samples in this line */
     grid_line = (double)il/lut->ar_region_size.l - 0.5;
     double sample_step = 1./lut->ar_region_size.s;
@@ -59,7 +63,7 @@ bool cloud_detection_pass1
 
         if (!is_fill &&
             ((qa_line[is] & 0x08) == 0x00 ||
-             (lut->meta.inst == INST_TM && line_in[2][is] < 5000)))
+             (lut->meta.inst == INST_TM && line_in[2][is] < thresh_tm)))
         { /* not fill and no saturation in band 3 */
             /* Interpolate the atmospheric coefficients for the current
                pixel */
@@ -103,11 +107,12 @@ bool cloud_detection_pass1
                              *interpol_atmos_coef->S_ra[5]};
             int i;
             for (i=0; i<5; i++)
-                *rho[i] = compute_rho(lin[i][is], tgog[i], tgh2o[i],
+                *rho[i] = compute_rho(lin[i][is] * lut->scale_factor 
+                                      + lut->add_offset, tgog[i], tgh2o[i],
                                       td_ra[i], tu_ra[i], rho_ra[i], s_ra[i]);
 
             /* Get the temperature */
-            t6 = b6_line[is] * 0.1;
+            t6 = b6_line[is] * lut->b6_scale_factor + lut->b6_add_offset;
 
             /* Compute cloud coefficients */
             vra = rho1 - rho3 * 0.5;
@@ -156,9 +161,9 @@ bool cloud_detection_pass2
     Lut_t *lut,              /* I: lookup table informat */
     int nsamp,               /* I: number of samples to be processed */
     int il,                  /* I: current line being processed */
-    int16 **line_in,         /* I: array of input lines, one for each band */
+    uint16_t **line_in,      /* I: array of input lines, one for each band */
     uint8 *qa_line,          /* I: array of QA data for the current line */
-    int16 *b6_line,          /* I: array of thermal data for the current line */
+    uint16_t *b6_line,       /* I: array of thermal data for the current line */
     atmos_t *atmos_coef,     /* I: atmospheric coefficients */
     atmos_t *interpol_atmos_coef, /* I: storage space for interpolated
                                         atmospheric coefficients */
@@ -193,7 +198,18 @@ bool cloud_detection_pass2
     thermal_band = true;
     if (b6_line == NULL) 
         thermal_band = false;
+
+    /* This appears to be an unscaled value which is outside the
+       maximum value for this band */
     temp_snow_thshld = 380.;  /* now flag snow and possibly salt pan */
+
+    /* Calculate a threshold that was a hardcoded magic number before.
+       This was set to 2000 with the original scaling factor. */
+    int band5_thresh = 0.2 * lut->mult_factor + lut->add_offset;
+
+    /* Calculate a threshold that was a hardcoded magic number before.
+       This was set to 5000 with the original scaling factor. */
+    int thresh_tm = 0.5 * lut->mult_factor + lut->add_offset;
 
     /* Start the location for the current line and current cloud row. */
     cld_row = il / cld_diags->cellheight;
@@ -223,7 +239,7 @@ bool cloud_detection_pass2
 
         is_fill = false;
         if (thermal_band) {
-            if (b6_line[is] == lut->in_fill) {
+            if (b6_line[is] == lut->b6_in_fill) {
                 is_fill = true;
                 ddv_line[is] = 0x08;
             }
@@ -241,11 +257,11 @@ bool cloud_detection_pass2
         ddv_line[is] &= 0x44; /* reset all bits except cloud shadow and
                                  adjacent cloud */ 
 
-        if ((qa_line[is] & 0x08) == 0x08 ||
-            (lut->meta.inst == INST_TM &&
-             line_in[2][is] >= 5000)) {  /* saturated band 3 */
+            if (((qa_line[is] & 0x08) == 0x08) ||
+                ((lut->meta.inst == INST_TM) &&
+                (line_in[2][is] >= thresh_tm))) {
             if (thermal_band) {
-                t6 = b6_line[is] * 0.1;
+                    t6 = b6_line[is] * lut->b6_scale_factor + lut->b6_add_offset;
 
                 /* Interpolate the cloud diagnostics for current pixel */
                 interpol_clddiags_1pixel (cld_diags, il, is, tmpflt_arr);
@@ -266,16 +282,16 @@ bool cloud_detection_pass2
                     temp_thshld2 = temp_b6_clear - 2.;
                 }
 
-                if (((qa_line[is] & 0x20) == 0x20 ||
-                     (lut->meta.inst == INST_TM &&
-                      line_in[4][is] >= 5000)) && t6 < temp_thshld1) {
+                    if ((((qa_line[is] & 0x20) == 0x20) ||
+                         ((lut->meta.inst == INST_TM) &&
+                          (line_in[4][is] >= thresh_tm))) && (t6 < temp_thshld1)) {
                     /* saturated band 5 and t6 < threshold => cloudy */
                     ddv_line[is] &= 0xbf; /* reset shadow bit */
                     ddv_line[is] &= 0xfb; /* reset adjacent cloud bit */
                     ddv_line[is] |= 0x20; /* set cloud bit */
                 }
-                else if (line_in[4][is] < 2000 &&
-                         t6 < temp_snow_thshld) { /* snow */
+                    else if ((line_in[4][is] < band5_thresh) &&
+                             (t6 < temp_snow_thshld)) { /* snow */
                     ddv_line[is] |= 0x80;
                 }
                 else { /* assume cloudy */
@@ -310,7 +326,7 @@ bool cloud_detection_pass2
 
             /* Get the temperature */
             if (thermal_band)
-                t6 = b6_line[is] * 0.1;
+                    t6 = b6_line[is] * lut->b6_scale_factor + lut->b6_add_offset;
 
             /* Interpolate the cloud diagnostics for the current pixel */
             interpol_clddiags_1pixel (cld_diags, il, is, tmpflt_arr);
@@ -463,8 +479,8 @@ void cast_cloud_shadow
     Lut_t *lut,
     int nsamp,
     int il_start,
-    int16 ***line_in,
-    int16 **b6_line,
+    uint16_t ***line_in,
+    uint16_t **b6_line,
     cld_diags_t *cld_diags,
     char ***cloud_buf,
     Ar_gridcell_t *ar_gridcell,
@@ -496,7 +512,7 @@ void cast_cloud_shadow
             }
 
             /* Get the thermal info */
-            t6 = b6_line[il][is]*0.1;
+            t6 = b6_line[il][is] * lut->b6_scale_factor + lut->b6_add_offset;
 
             /* Interpolate the cloud diagnostics for this pixel */
             interpol_clddiags_1pixel (cld_diags, il+il_start, is, tmpflt_arr);

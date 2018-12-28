@@ -116,7 +116,8 @@ Input_t *OpenInput(Espa_internal_meta_t *metadata, bool thermal)
     if (!thermal) {
       free(this->file_name_qa);
       this->file_name_qa = NULL;
-      fclose(this->fp_bin_qa);  
+      if (this->open_qa)
+          fclose(this->fp_bin_qa);  
       this->open_qa = false;
     }
 
@@ -206,7 +207,7 @@ void FreeInput(Input_t *this)
 }
 
 
-bool GetInputLine(Input_t *this, int iband, int iline, int16 *line)
+bool GetInputLine(Input_t *this, int iband, int iline, uint16_t *line)
 {
   long loc;
   void *buf_void = NULL;
@@ -223,10 +224,10 @@ bool GetInputLine(Input_t *this, int iband, int iline, int16 *line)
 
   /* Read the data */
   buf_void = (void *)line;
-  loc = (long) (iline * this->size.s * sizeof(int16));
+  loc = (long) (iline * this->size.s * sizeof(uint16_t));
   if (fseek(this->fp_bin[iband], loc, SEEK_SET))
     RETURN_ERROR("error seeking line (binary)", "GetInputLine", false);
-  if (fread(buf_void, sizeof(int16), (size_t)this->size.s, 
+  if (fread(buf_void, sizeof(uint16_t), (size_t)this->size.s, 
             this->fp_bin[iband]) != (size_t)this->size.s)
     RETURN_ERROR("error reading line (binary)", "GetInputLine", false);
 
@@ -509,9 +510,15 @@ bool GetXMLInput(Input_t *this, Espa_internal_meta_t *metadata, bool thermal)
         RETURN_ERROR (error_string, "GetXMLInput", false);
     }
 
-    /* Pull the reflectance info from band1 in the XML file */
+    /* Pull the info from indx band in the XML file */
     this->size.s = metadata->band[indx].nsamps;
     this->size.l = metadata->band[indx].nlines;
+
+    /* Save these values for populating lut structure */
+    this->meta.scale_factor = metadata->band[indx].scale_factor;
+    this->meta.add_offset = metadata->band[indx].add_offset;
+    this->meta.fill = metadata->band[indx].fill_value;
+    this->meta.saturate_value = metadata->band[indx].saturate_value;
 
     /* Check WRS path/rows */
     if (this->meta.wrs_sys == WRS_1)

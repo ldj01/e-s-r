@@ -16,7 +16,7 @@
  */
 
 bool Cal(Param_t *param, Lut_t *lut, int iband, Input_t *input,
-         unsigned char *line_in, int16 *line_in_sun_zen, int16 *line_out,
+         unsigned char *line_in, int16 *line_in_sun_zen, uint16_t *line_out,
          unsigned char *line_out_qa, Cal_stats_t *cal_stats, int iy) {
   int is,val;
   float rad_gain = 0, rad_bias = 0;   /* TOA radiance gain/bias */
@@ -28,6 +28,8 @@ bool Cal(Param_t *param, Lut_t *lut, int iband, Input_t *input,
   float fval;                         /* temporary float value */
   float sun_zen;                      /* solar zenith angle for the current
                                          pixel (radians) */
+  float temp;
+
   int nsamp= input->size.s;
   int ifill= (int)lut->in_fill;
 
@@ -95,21 +97,22 @@ bool Cal(Param_t *param, Lut_t *lut, int iband, Input_t *input,
       ref = rad * ref_conv;
     }
 
-    /* Apply a scaling of 10000 (tied to the lut->scale_factor). Valid ranges
-       are set up in lut.c as well. */
-    line_out[is] = (int16)(ref * 10000.0 + 0.5);
+    /* Apply scaling. Values are set up in lut.c */
+    temp = ((ref - lut->add_offset_ref) * lut->mult_factor_ref + 0.5);
 
-    /* Cap the output using the min/max values.  Then reset the toa reflectance
+    /* Cap the output using the min/max values. Then reset the toa reflectance
        value so that it's correctly reported in the stats and the min/max
        range matches that of the image data. */
-    if (line_out[is] < lut->valid_range_ref[0]) {
+    if (temp < lut->valid_range_ref[0]) {
       line_out[is] = lut->valid_range_ref[0];
-      ref = line_out[is] * 0.0001;
+      ref = VALID_MIN_REF;
     }
-    else if (line_out[is] > lut->valid_range_ref[1]) {
+    else if (temp > lut->valid_range_ref[1]) {
       line_out[is] = lut->valid_range_ref[1];
-      ref = line_out[is] * 0.0001;
+      ref = VALID_MAX_REF;
     }
+    else
+      line_out[is] = temp;
 
 #ifdef DO_STATS
     if (cal_stats->first[iband]) {
@@ -149,10 +152,10 @@ bool Cal(Param_t *param, Lut_t *lut, int iband, Input_t *input,
   return true;
 }
 
-bool Cal6(Lut_t *lut, Input_t *input, unsigned char *line_in, int16 *line_out,
+bool Cal6(Lut_t *lut, Input_t *input, unsigned char *line_in, uint16_t *line_out,
           unsigned char *line_out_qa, Cal_stats6_t *cal_stats, int iy) {
   int is, val;
-  float rad_gain, rad_bias, rad, temp;
+  float rad_gain, rad_bias, rad, temp, temp2;
   int nsamp= input->size_th.s;
   int ifill= (int)lut->in_fill;
 
@@ -176,24 +179,26 @@ bool Cal6(Lut_t *lut, Input_t *input, unsigned char *line_in, int16 *line_out,
       continue;
     }
 
-    /* compute the TOA brightness temperature in Kelvin and apply scaling of
-       10.0 (tied to lut->scale_factor_th). valid ranges are set up in lut.c
+    /* compute the TOA brightness temperature in Kelvin and apply scaling.
+       Values are set up in lut.c
        as well. */
     rad = (rad_gain * (float)val) + rad_bias;
     temp = lut->K2 / log(1.0 + (lut->K1/rad));
-    line_out[is] = (int16)(temp * 10.0 + 0.5);
+    temp2 = (temp - lut->add_offset_th) * lut->mult_factor_th + 0.5;
 
     /* Cap the output using the min/max values.  Then reset the temperature
        value so that it's correctly reported in the stats and the min/max
        range matches that of the image data. */
-    if (line_out[is] < lut->valid_range_th[0]) {
+    if (temp2 < lut->valid_range_th[0]) {
       line_out[is] = lut->valid_range_th[0];
-      temp = line_out[is] * 0.1;
+      temp = VALID_MIN_TH;
     }
-    else if (line_out[is] > lut->valid_range_th[1]) {
+    else if (temp2 > lut->valid_range_th[1]) {
       line_out[is] = lut->valid_range_th[1];
-      temp = line_out[is] * 0.1;
+      temp = VALID_MAX_TH;
     }
+    else
+        line_out[is] = (uint16_t) temp2;
 
 #ifdef DO_STATS
     if (cal_stats->first) {

@@ -28,7 +28,7 @@
 #define ATEMP_INDEX 2
 #define OZ_INDEX    0
 #define DEBUG_FLAG  0
-/* #define DEBUG_AR 0 */
+/* #define DEBUG_AR 1 */
 /* #define DEBUG_CLD 1 */
 
 /* DEM Definition: U_char format, 1 count = 100 meters */
@@ -90,16 +90,16 @@ int main (int argc, char *argv[]) {
     Output_t *output = NULL;
     int i,j,il, is,ib,ifree;
     int il_start, il_end, il_ar, il_region, is_ar;
-    int16 *line_out[NBAND_SR_MAX];
-    int16 *line_out_buf = NULL;
-    int16 ***line_in = NULL;
-    int16 **line_in_band_buf = NULL;
-    int16 *line_in_buf = NULL;
+    uint16_t *line_out[NBAND_SR_MAX];
+    uint16_t *line_out_buf = NULL;
+    uint16_t ***line_in = NULL;
+    uint16_t **line_in_band_buf = NULL;
+    uint16_t *line_in_buf = NULL;
     int ***line_ar = NULL;
     int **line_ar_band_buf = NULL;
     int *line_ar_buf = NULL;
-    int16** b6_line = NULL;
-    int16* b6_line_buf = NULL;
+    uint16_t** b6_line = NULL;
+    uint16_t* b6_line_buf = NULL;
     float *atemp_line = NULL;
     uint8** qa_line = NULL;
     uint8* qa_line_buf = NULL;
@@ -266,7 +266,7 @@ int main (int argc, char *argv[]) {
     }
 
     /* Get Lookup table, based on reflectance information */
-    lut = GetLut(input->nband, &input->meta, &input->size);
+    lut = GetLut(input->nband, &input->meta, &input_b6->meta, &input->size);
     if (lut == NULL) EXIT_ERROR("bad lut file", "main");
 
     /* Get geolocation space definition */
@@ -318,17 +318,17 @@ int main (int argc, char *argv[]) {
 #endif
 
     /* Allocate memory for input lines */
-    line_in = calloc(lut->ar_region_size.l, sizeof(int16 **));
+    line_in = calloc(lut->ar_region_size.l, sizeof(uint16_t **));
     if (line_in == NULL) 
         EXIT_ERROR("allocating input line buffer (a)", "main");
 
     line_in_band_buf = calloc(lut->ar_region_size.l * input->nband,
-        sizeof(int16 *));
+        sizeof(uint16_t *));
     if (line_in_band_buf == NULL) 
         EXIT_ERROR("allocating input line buffer (b)", "main");
 
     line_in_buf = calloc(input->size.s * lut->ar_region_size.l * input->nband,
-        sizeof(int16));
+        sizeof(uint16_t));
     if (line_in_buf == NULL) 
         EXIT_ERROR("allocating input line buffer (c)", "main");
 
@@ -354,10 +354,10 @@ int main (int argc, char *argv[]) {
 
     /* Allocate memory for one band 6 line */
     if (param->thermal_band) {
-        b6_line = calloc(lut->ar_region_size.l,sizeof(int16 *));
+        b6_line = calloc(lut->ar_region_size.l,sizeof(uint16_t *));
         if (b6_line == NULL) EXIT_ERROR("allocating b6 line", "main");
         b6_line_buf = calloc(input_b6->size.s * lut->ar_region_size.l,
-            sizeof(int16));
+            sizeof(uint16_t));
         if (b6_line_buf == NULL)
             EXIT_ERROR("allocating b6 line buffer", "main");
         for (il = 0; il < lut->ar_region_size.l; il++) {
@@ -429,7 +429,7 @@ int main (int argc, char *argv[]) {
         EXIT_ERROR("allocating ar_gridcell.spres_dem", "main");
 
     /* Allocate memory for output lines */
-    line_out_buf = calloc(output->size.s * output->nband_out, sizeof(int16));
+    line_out_buf = calloc(output->size.s * output->nband_out, sizeof(uint16_t));
     if (line_out_buf == NULL) 
         EXIT_ERROR("allocating output line buffer", "main");
     line_out[0] = line_out_buf;
@@ -1272,7 +1272,7 @@ int main (int argc, char *argv[]) {
                     line_out[lut->nband+CLOUD][is] |= (1 << SNOW_BIT);
             }
             else {
-                line_out[lut->nband][is]=lut->aerosol_fill;
+                line_out[lut->nband+ATMOS_OPACITY][is]=lut->output_fill_opacity;
             }
         } /* for is */
 

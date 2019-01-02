@@ -2621,6 +2621,8 @@ C End Update Look up table
       foqhsa=0.
       fouhsr=0.
       fouhsa=0.
+      rqfet=0.
+      rufet=0.
       sroray=0.
       sroaer=0.
       srotot=0.

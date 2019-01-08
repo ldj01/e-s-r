@@ -3,6 +3,7 @@ include_directories(${XML_INCLUDES})
 include_directories(${HDF4_INCLUDES})
 
 link_directories(${ESPA_LIBS})
+link_directories(${HDF4_LIBRARY_DIRS})
 
 file(GLOB SOURCES "*.c")
 

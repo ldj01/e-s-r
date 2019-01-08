@@ -3,6 +3,7 @@ include_directories(${XML_INCLUDES})
 include_directories(${HDFINC})
 
 link_directories(${ESPA_LIBS})
+link_directories(${HDF4_LIBRARY_DIRS})
 
 add_executable(lndpm lndpm.c)
 target_link_libraries(lndpm -lespa_raw_binary -lespa_common

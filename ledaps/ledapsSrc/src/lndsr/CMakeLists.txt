@@ -4,6 +4,7 @@ include_directories(${XML_INCLUDES})
 include_directories(${HDF4_INCLUDES})
 
 link_directories(${ESPA_LIBS})
+link_directories(${HDF4_LIBRARY_DIRS})
 
 add_executable(lndsr ar.c clouds.c date.c error.c grib.c input.c lndsr.c
                lut.c myhdf.c mystring.c output.c param.c prwv_input.c

@@ -425,15 +425,14 @@ int compute_aot(int band, float toarhoblue, float toarhored, float ts,
         if (iaot==0) iaot=1;
         temp1=surrhoblue[iaot-1]-eratio*surrhored[iaot-1];
         temp2=surrhoblue[iaot]-eratio*surrhored[iaot];
-        /* Calculate slope of line with temp as function of wavelength */
-        slope = (temp2 - temp1) /
-                (sixs_tables->aot_wavelength[1][iaot] -
-                 sixs_tables->aot_wavelength[1][iaot-1]);
+        /* Calculate slope of line with wavelength as function of temp. */
+        slope = (sixs_tables->aot_wavelength[1][iaot] -
+                 sixs_tables->aot_wavelength[1][iaot-1])/(temp2 - temp1);
 
         /* let's hope all the aot table are independent of wavelength but
            that need to be checked */        
         /* Calculate wavelength where temp = 0 */
-        *aot=sixs_tables->aot_wavelength[1][iaot-1]-temp1/slope;
+        *aot = sixs_tables->aot_wavelength[1][iaot-1] - temp1*slope;
     }
 /*        printf(" variables in compaot toarhored %f toarhoblue %f aot %f\n",
           toarhored,toarhoblue,*aot); */

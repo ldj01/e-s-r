@@ -66,7 +66,7 @@ for i in "${data_files[@]}"; do
         fi
         numdiffs=`compare -metric AE -depth $depth -size ${samples}x${lines} \
                       gray:$i gray:${base_name} null: 2>&1`
-        if [ $numdiffs != "0" ]; then
+        if [ "x$numdiffs" != "x0" ]; then
             echo "${base_name} differs from reference version in $numdiffs " \
                  "pixels."
             status=1

@@ -35,10 +35,20 @@ for i in "${data_files[@]}"; do
 
     echo "Comparing $base_name..."
 
+    # For the XML file, ignore the records that vary from one run to the next.
     # If the file is an ASCII header file, use diff.  Otherwise, assume it's
     # a binary file, and use cmp to dump the octal differences.
     ext="${i##*.}"
-    if [ "$ext" = "hdr" ]; then
+    if [ "$ext" = "xml" ]; then
+        sed -e 's%<production_date>.*<%<production_date><%' $i > tmp1.xml
+        sed -e 's%<production_date>.*<%<production_date><%' $base_name > \
+                                                                      tmp2.xml
+        diff tmp1.xml tmp2.xml
+        if [ $? -ne 0 ]; then
+            echo "${base_name} differs from reference version."
+            status=1
+        fi
+    elif [ "$ext" = "hdr" ]; then
         diff $i $base_name
         if [ $? -ne 0 ]; then
             echo "${base_name} differs from reference version."
@@ -55,7 +65,7 @@ for i in "${data_files[@]}"; do
         fi
         numdiffs=`compare -metric AE -depth $depth -size ${samples}x${lines} \
                       gray:$i gray:${base_name} null: 2>&1`
-        if [ $numdiffs != "0" ]; then
+        if [ "x$numdiffs" != "x0" ]; then
             echo "${base_name} differs from reference version in $numdiffs " \
                  "pixels."
             status=1

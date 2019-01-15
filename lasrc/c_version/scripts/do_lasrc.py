@@ -211,11 +211,15 @@ class SurfaceReflectance():
         if offset_therm != None:
             offset_therm_opt_str = '--offset_therm={} '.format(offset_therm)
 
-        cmdstr = ('lasrc --xml={} --aux={} {}{}{}{}{}{}{}'
-                  .format(xml_infile, aux_file, process_sr_opt_str,
-                          write_toa_opt_str, verbose_opt_str,
-                          scale_refl_opt_str, scale_therm_opt_str,
-                          offset_refl_opt_str, offset_therm_opt_str))
+        cmdstr = ('lasrc --xml={XML} --aux={AUX} '
+                  '{SR}{TOA}{VERB}{SCALE_REF}{SCALE_THERM}{OFFSET_REF}'
+                  '{OFFSET_THERM}'
+                  .format(XML=xml_infile, AUX=aux_file, SR=process_sr_opt_str,
+                          TOA=write_toa_opt_str, VERB=verbose_opt_str,
+                          SCALE_REF=scale_refl_opt_str,
+                          SCALE_THERM=scale_therm_opt_str,
+                          OFFSET_REF=offset_refl_opt_str,
+                          OFFSET_THERM=offset_therm_opt_str))
         msg = 'Executing lasrc command: {}'.format(cmdstr)
         logger.debug (msg)
         (status, output) = commands.getstatusoutput (cmdstr)

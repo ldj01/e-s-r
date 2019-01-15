@@ -45,8 +45,10 @@ typedef char byte;
 #define DEG2RAD 0.017453293
 #define RAD2DEG 57.29577951
 
+#define ATMOS_PRES_0 1013.0 /* mean atmospheric pressure (mbar) at sea level */
+
 /* For divisions - to minimize processing time */
-#define ONE_DIV_1013 0.000987166
+#define ONE_DIV_ATMOS_PRES_0 0.000987166
 #define ONE_DIV_8500 0.000117647
 
 /* Number of bands corrected to surface reflectance (bands 1-7).  The

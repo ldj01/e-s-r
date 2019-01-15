@@ -1071,24 +1071,24 @@ int compute_sr_refl
                The dimensions on the DEM array is the same as that of the CMG
                arrays. Use the current pixel locations already calculated. */
             if (dem[cmg_pix11] != -9999)
-                pres11 = 1013.0 * exp (-dem[cmg_pix11] * ONE_DIV_8500);
+                pres11 = ATMOS_PRES_0 * exp (-dem[cmg_pix11] * ONE_DIV_8500);
             else
-                pres11 = 1013.0;
+                pres11 = ATMOS_PRES_0;
 
             if (dem[cmg_pix12] != -9999)
-                pres12 = 1013.0 * exp (-dem[cmg_pix12] * ONE_DIV_8500);
+                pres12 = ATMOS_PRES_0 * exp (-dem[cmg_pix12] * ONE_DIV_8500);
             else
-                pres12 = 1013.0;
+                pres12 = ATMOS_PRES_0;
 
             if (dem[cmg_pix21] != -9999)
-                pres21 = 1013.0 * exp (-dem[cmg_pix21] * ONE_DIV_8500);
+                pres21 = ATMOS_PRES_0 * exp (-dem[cmg_pix21] * ONE_DIV_8500);
             else
-                pres21 = 1013.0;
+                pres21 = ATMOS_PRES_0;
 
             if (dem[cmg_pix22] != -9999)
-                pres22 = 1013.0 * exp (-dem[cmg_pix22] * ONE_DIV_8500);
+                pres22 = ATMOS_PRES_0 * exp (-dem[cmg_pix22] * ONE_DIV_8500);
             else
-                pres22 = 1013.0;
+                pres22 = ATMOS_PRES_0;
 
             /*** Handle all the variables related to the current pixel in the
                  Landsat scene, which means interpolating the global-level
@@ -2104,7 +2104,7 @@ static int init_sr_refl
     /* Getting parameters for atmospheric correction */
     /* Update to get the parameter of the scene center */
     *raot550nm = 0.12;
-    *pres = 1013.0;
+    *pres = ATMOS_PRES_0;
     *uoz = 0.30;
     *uwv = 0.5;
 
@@ -2158,9 +2158,9 @@ static int init_sr_refl
 
     dem_pix = lcmg * DEM_NBLON + scmg;
     if (dem[dem_pix] != -9999)
-        *pres = 1013.0 * exp (-dem[dem_pix] * ONE_DIV_8500);
+        *pres = ATMOS_PRES_0 * exp (-dem[dem_pix] * ONE_DIV_8500);
     else
-        *pres = 1013.0;
+        *pres = ATMOS_PRES_0;
     *raot550nm = DEFAULT_AERO;
 
     /* Successful completion */

@@ -405,7 +405,7 @@ int atmcorlamb2
     compsalb (ip1, ip2, iaot1, iaot2, mraot550nm, iband, pres, tpres, aot550nm,
         sphalbt, normext, satm, next);
 
-    atm_pres = pres * ONE_DIV_1013;
+    atm_pres = pres * ONE_DIV_ATMOS_PRES_0;
     comptg (iband, xts, xtv, xmus, xmuv, uoz, uwv, atm_pres, ogtransa1,
         ogtransb0, ogtransb1, wvtransa, wvtransb, oztransa, &tgoz, &tgwv,
         &tgwvhalf, &tgog);

@@ -144,10 +144,10 @@ int compute_toa_refl
             refl_mult = input->meta.gain[iband];
             refl_add = input->meta.bias[iband];
 
-#ifdef _OPENMP
-            #pragma omp parallel for private (line, samp, i, xmus, rotoa)
-#endif
             float angle_sf = 0.01*DEG2RAD;  /* solar angle scale factor */
+#ifdef _OPENMP
+            #pragma omp parallel for private (i, xmus, rotoa)
+#endif
             for (i = 0; i < nlines*nsamps; i++)
             {
                 /* If this pixel is fill, continue with the next pixel. */
@@ -523,8 +523,8 @@ int compute_sr_refl
     float corf;         /* aerosol impact (higher values represent high
                            aerosol) */
     float ros4,ros5;    /* surface reflectance for bands 4 and 5 */
-    int tmp_percent;      /* current percentage for printing status */
 #ifndef _OPENMP
+    int tmp_percent;      /* current percentage for printing status */
     int curr_tmp_percent; /* percentage for current line */
     float percent_term = 100.0/nlines;
 #endif
@@ -820,9 +820,6 @@ int compute_sr_refl
         bsatm[ib] = satm;
 
         /* Perform atmospheric corrections for bands 1-7 */
-#ifdef _OPENMP
-        #pragma omp parallel for private (i, j, curr_pix, rotoa, roslamb)
-#endif
 
         /* Store the TOA scaled TOA reflectance values for later
            use before completing atmospheric corrections */
@@ -837,6 +834,9 @@ int compute_sr_refl
         else if (ib == DN_BAND7)
             memcpy(aerob7, sband[ib], nlines*nsamps*sizeof(uint16));
 
+#ifdef _OPENMP
+        #pragma omp parallel for private (i, j, curr_pix, rotoa, roslamb)
+#endif
         for (i = 0; i < nlines*nsamps; i++)
         {
             /* Skip fill pixels, which have already been marked in the
@@ -939,9 +939,10 @@ int compute_sr_refl
     /* Interpolate the auxiliary data for each pixel location */
     mytime = time(NULL);
     printf ("Interpolating the auxiliary data ... %s", ctime(&mytime));
-    tmp_percent = 0;
 #ifdef _OPENMP
     #pragma omp parallel for private (i, j, curr_pix, img, geo, lat, lon, xcmg, ycmg, lcmg, scmg, scmg1, u, v, u_x_v, cmg_pix11, cmg_pix12, cmg_pix21, cmg_pix22, wv11, wv12, wv21, wv22, uoz11, uoz12, uoz21, uoz22, pres11, pres12, pres21, pres22)
+#else
+    tmp_percent = 0;
 #endif
 
     for (i = 0, curr_pix = 0; i < nlines; i++)
@@ -1132,14 +1133,21 @@ int compute_sr_refl
     mytime = time(NULL);
     printf ("Aerosol Inversion using %d x %d aerosol window ... %s",
         AERO_WINDOW, AERO_WINDOW, ctime(&mytime));
-    tmp_percent = 0;
 #ifdef _OPENMP
-    #pragma omp parallel for private (i, j, center_line, center_samp, nearest_line, nearest_samp, curr_pix, center_pix, img, geo, lat, lon, xcmg, ycmg, lcmg, scmg, u, v, u_x_v, ratio_pix11, ratio_pix12, ratio_pix21, ratio_pix22, slpr11, slpr12, slpr21, slpr22, intr11, intr12, intr21, intr22, slprb1, slprb2, slprb7, intrb1, intrb2, intrb7, xndwi, ndwi_th1, ndwi_th2, iband, iband1, iband3, iaots, retval, eps, eps1, eps2, eps3, residual, residual1, residual2, residual3, raot, sraot1, sraot3, xa, xb, psmin, corf, next, rotoa, raot550nm, roslamb, tgo, roatm, ttatmg, satm, xrorayp, ros5, ros4, erelc, troatm)
+#pragma omp parallel for private (i, j, center_line, center_samp, \
+        nearest_line, nearest_samp, curr_pix, center_pix, img, geo, lat, lon, \
+        xcmg, ycmg, lcmg, scmg, u, v, u_x_v, ratio_pix11, ratio_pix12, \
+        ratio_pix21, ratio_pix22, slpr11, slpr12, slpr21, slpr22, intr11, \
+        intr12, intr21, intr22, slprb1, slprb2, slprb7, intrb1, intrb2, \
+        intrb7, xndwi, ndwi_th1, ndwi_th2, iband, iband1, iband3, iaots, \
+        retval, eps, eps1, eps2, eps3, residual, residual1, residual2, \
+        residual3, raot, sraot1, sraot3, xa, xb, corf, next, rotoa, \
+        raot550nm, roslamb, tgo, roatm, ttatmg, satm, xrorayp, ros5, ros4, \
+        erelc, troatm)
+#else
+    tmp_percent = 0;
 #endif
-    int curr_line_index;
-    int lindex_step = AERO_WINDOW*nsamps;
-    for (i = HALF_AERO_WINDOW, curr_line_index = i*nsamps; i < nlines;
-         i += AERO_WINDOW, curr_line_index += lindex_step)
+    for (i = HALF_AERO_WINDOW; i < nlines; i += AERO_WINDOW)
     {
 #ifndef _OPENMP
         /* update status, but not if multi-threaded */
@@ -1158,7 +1166,7 @@ int compute_sr_refl
         /* Set the center line for the current aerosol window. */
         center_line = i;
 
-        curr_pix = curr_line_index + HALF_AERO_WINDOW;
+        curr_pix = i*nsamps + HALF_AERO_WINDOW;
         for (j = HALF_AERO_WINDOW; j < nsamps;
              j += AERO_WINDOW, curr_pix += AERO_WINDOW)
         {

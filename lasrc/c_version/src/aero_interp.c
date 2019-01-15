@@ -44,8 +44,8 @@ void aerosol_interp
     int center_samp1;      /* sample+1 for the center of the aerosol window */
     int refl_indx = -99;   /* index of band 1 or first band */
     int tmp_percent = 0;   /* current percentage for printing status */
-    int percent_step;      /* 10% of nlines */
-    int next_percent;      /* next 10% nlines count */
+    int message_line_step; /* 10% of nlines */
+    int next_message_line; /* next 10% nlines count */
     int aero_pix11;        /* pixel location for aerosol window values
                               [lcmg][scmg] */
     int aero_pix12;        /* pixel location for aerosol window values
@@ -81,8 +81,8 @@ void aerosol_interp
 
     /* Interpolate the aerosol data for each pixel location */
     tmp_percent = 10;
-    percent_step = nlines/tmp_percent;
-    next_percent = percent_step;
+    message_line_step = nlines/tmp_percent;
+    next_message_line = message_line_step;
     center_line = HALF_AERO_WINDOW;
     int center_lindex = center_line*nsamps;
     int center_lindex1;
@@ -92,11 +92,11 @@ void aerosol_interp
     for (line = 0, curr_pix = 0; line < nlines; line++)
     {
         /* update status */
-        if (line > next_percent)
+        if (line > next_message_line)
         {
             printf ("%d%% ", tmp_percent);
             fflush (stdout);
-            next_percent += percent_step;
+            next_message_line += message_line_step;
             tmp_percent += 10;
         }
 

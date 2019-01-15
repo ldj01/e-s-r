@@ -66,8 +66,8 @@ int compute_toa_refl
 
     double offset_refl;         /* add offset for reflective bands */
     double offset_therm;        /* add offset for thermal bands */
-    double output_mult_refl;    /* scale_refl inverse */
-    double output_mult_therm;   /* scale_therm inverse */
+    double output_mult_refl;    /* output reflective scale factor */
+    double output_mult_therm;   /* output thermal scale factor */
     double min_refl,            /* Minimum scaled reflective value */
            max_refl;            /* Maximum scaled reflective value */
     double min_therm,           /* Minimum scaled thermal value */
@@ -713,7 +713,7 @@ int compute_sr_refl
 
     double scale_refl;          /* scale for reflective bands */
     double offset_refl;         /* add offset for reflective bands */
-    double output_mult_refl;    /* scale_refl inverse */
+    double output_mult_refl;    /* output reflective scale factor */
     double min_refl,            /* Minimum scaled reflective value */
            max_refl;            /* Maximum scaled reflective value */
 

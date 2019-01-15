@@ -6,8 +6,8 @@ static double scale_refl;    /* scale for reflective bands */
 static double offset_refl;   /* add offset for reflective bands */
 static double scale_therm;   /* scale for thermal bands */
 static double offset_therm;  /* add offset for thermal bands */
-static double mult_refl;     /* scale_refl inverse */
-static double mult_therm;    /* scale_therm inverse */
+static double mult_refl;     /* output reflective scale factor */
+static double mult_therm;    /* output thermal scale factor */
 
 /******************************************************************************
 MODULE:  get_args

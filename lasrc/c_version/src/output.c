@@ -59,8 +59,8 @@ Output_t *open_output
     double offset_refl;   /* add offset for reflective bands */
     double scale_therm;   /* scale for thermal bands */
     double offset_therm;  /* add offset for thermal bands */
-    double mult_refl;     /* scale_refl inverse */
-    double mult_therm;    /* scale_therm inverse */
+    double mult_refl;     /* output reflective scale factor */
+    double mult_therm;    /* output thermal scale factor */
 
     /* Create the Output data structure */
     output = (Output_t *) malloc (sizeof (Output_t));

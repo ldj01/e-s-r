@@ -140,7 +140,8 @@ NOTES:
 static inline bool btest
 (
     uint8 byte_val,   /* I: byte value to be tested with the bit n */
-    byte n            /* I: bit number to be tested (0 is rightmost bit) */
+    byte n            /* I: bit number to be tested (0 is least significant
+                            bit) */
 )
 {
     /* Take 2 ** n, then AND that result with the byte value */

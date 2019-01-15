@@ -55,10 +55,8 @@ int compute_toa_refl
     float refl_add;      /* reflectance additive for bands 1-9 */
     float xcals;         /* radiance multiplier for bands 10 and 11 */
     float xcalo;         /* radiance additive for bands 10 and 11 */
-    float k1b10;         /* K1 temperature constant for band 10 */
-    float k1b11;         /* K1 temperature constant for band 11 */
-    float k2b10;         /* K2 temperature constant for band 10 */
-    float k2b11;         /* K2 temperature constant for band 11 */
+    float k1b;           /* K1 temperature constant */
+    float k2b;           /* K2 temperature constant */
     float xmus;          /* cosine of solar zenith angle (per-pixel) */
     uint16 *uband = NULL;  /* array for input image data for a single band,
                               nlines x nsamps */
@@ -116,8 +114,7 @@ int compute_toa_refl
         printf ("%d ... ", ib+1);
 
         /* Read the current band and calibrate bands 1-9 (except pan) to
-           obtain TOA reflectance. Bands are corrected for the sun angle at
-           the center of the scene. */
+           obtain TOA reflectance. Bands are corrected for the sun angle. */
         if (ib <= DN_BAND9)
         {
             if (ib <= DN_BAND7)
@@ -184,9 +181,25 @@ int compute_toa_refl
 
         /* Read the current band and calibrate thermal bands.  Not available
            for OLI-only scenes. */
-        else if (ib == DN_BAND10 && strcmp (instrument, "OLI"))
+        else if ((ib == DN_BAND10 || ib == DN_BAND11) &&
+                 strcmp(instrument, "OLI"))
         {
-            if (get_input_th_lines (input, 0, 0, nlines, uband) != SUCCESS)
+            int thermal_band;        /* band array value */
+            int thermal_band_index;  /* 0 = band 10, 1 = band 11 */
+
+            if (ib == DN_BAND10)
+            {
+                thermal_band = SR_BAND10;
+                thermal_band_index = 0;
+            }
+            else
+            {
+                thermal_band = SR_BAND11;
+                thermal_band_index = 1;
+            }
+
+            if (get_input_th_lines(input, thermal_band_index, 0, nlines,
+                                   uband) != SUCCESS)
             {
                 sprintf (errmsg, "Reading band %d", ib+1);
                 error_handler (true, FUNC_NAME, errmsg);
@@ -194,12 +207,12 @@ int compute_toa_refl
             }
 
             /* Get brightness temp coefficients for this band from XML file */
-            xcals = input->meta.gain_th[0];
-            xcalo = input->meta.bias_th[0];
-            k1b10 = input->meta.k1_const[0];
-            k2b10 = input->meta.k2_const[0];
+            xcals = input->meta.gain_th[thermal_band_index];
+            xcalo = input->meta.bias_th[thermal_band_index];
+            k1b = input->meta.k1_const[thermal_band_index];
+            k2b = input->meta.k2_const[thermal_band_index];
 
-            /* Compute brightness temp for band 10.  Make sure it falls
+            /* Compute brightness temp for band.  Make sure it falls
                within the min/max range for the thermal bands. */
 
 #ifdef _OPENMP
@@ -210,7 +223,7 @@ int compute_toa_refl
                 /* If this pixel is fill, continue with then next pixel. */
                 if (level1_qa_is_fill (qaband[i]))
                 {
-                    sband[SR_BAND10][i] = FILL_VALUE;
+                    sband[thermal_band][i] = FILL_VALUE;
                     radsat[i] = RADSAT_FILL_VALUE;
                     continue;
                 }
@@ -219,76 +232,23 @@ int compute_toa_refl
                 tmpf = xcals * uband[i] + xcalo;
 
                 /* Compute TOA brightness temp (K) and scale for output */
-                tmpf = k2b10 / log (k1b10 / tmpf + 1.0);
+                tmpf = k2b/log(k1b/tmpf + 1.0);
                 tmpf = (tmpf - offset_therm) * output_mult_therm;
 
                 /* Make sure the brightness temp falls within the specified
                    range */
                 if (tmpf < min_therm)
-                    sband[SR_BAND10][i] = min_therm;
+                    sband[thermal_band][i] = min_therm;
                 else if (tmpf > max_therm)
-                    sband[SR_BAND10][i] = max_therm;
+                    sband[thermal_band][i] = max_therm;
                 else
-                    sband[SR_BAND10][i] = roundf (tmpf);
+                    sband[thermal_band][i] = roundf (tmpf);
 
                 /* Check for saturation */
                 if (uband[i] == L1_SATURATED)
                     radsat[i] |= 1 << (ib+1);
             } /* pixel loop */
-        }  /* end if band 10 */
-
-        else if (ib == DN_BAND11 && strcmp (instrument, "OLI"))
-        {
-            if (get_input_th_lines (input, 1, 0, nlines, uband) != SUCCESS)
-            {
-                sprintf (errmsg, "Reading band %d", ib+1);
-                error_handler (true, FUNC_NAME, errmsg);
-                return (ERROR);
-            }
-
-            /* Get brightness temp coefficients for this band from XML file */
-            xcals = input->meta.gain_th[1];
-            xcalo = input->meta.bias_th[1];
-            k1b11 = input->meta.k1_const[1];
-            k2b11 = input->meta.k2_const[1];
-
-            /* Compute brightness temp for band 11.  Make sure it falls
-               within the min/max range for the thermal bands. */
-
-#ifdef _OPENMP
-            #pragma omp parallel for private (i, tmpf)
-#endif
-            for (i = 0; i < nlines*nsamps; i++)
-            {
-                /* If this pixel is fill, continue with the next pixel. */
-                if (level1_qa_is_fill (qaband[i]))
-                {
-                    sband[SR_BAND11][i] = FILL_VALUE;
-                    radsat[i] = RADSAT_FILL_VALUE;
-                    continue;
-                }
-
-                /* Compute the TOA spectral radiance */
-                tmpf = xcals * uband[i] + xcalo;
-
-                /* Compute TOA brightness temp (K) and scale for output */
-                tmpf = k2b11 / log (k1b11 / tmpf + 1.0);
-                tmpf = (tmpf - offset_therm) * output_mult_therm;
-
-                /* Make sure the brightness temp falls within the specified
-                   range */
-                if (tmpf < min_therm)
-                    sband[SR_BAND11][i] = min_therm;
-                else if (tmpf > max_therm)
-                    sband[SR_BAND11][i] = max_therm;
-                else
-                    sband[SR_BAND11][i] = roundf (tmpf);
-
-                /* Check for saturation only */
-                if (uband[i] == L1_SATURATED)
-                    radsat[i] |= 1 << (ib+1);
-            }
-        }  /* end if band 11 */
+        }  /* end if band 10 or 11 */
     }  /* end for ib */
     printf ("\n");
 
@@ -2344,7 +2304,7 @@ static bool find_closest_non_fill
     int start_line, end_line;
     int start_samp, end_samp;
     int line_index;
-    int aero_window;         /* looping variabel for the aerosol window */
+    int aero_window;         /* looping variable for the aerosol window */
 
     /* Loop around the center pixel, moving outward with each loop, searching
        for a pixel that is not of the QA type specified and is not fill */
@@ -2425,7 +2385,7 @@ static bool find_closest_non_cloud_shadow_water
     int start_line, end_line;
     int start_samp, end_samp;
     int line_index;
-    int aero_window;         /* looping variabel for the aerosol window */
+    int aero_window;         /* looping variable for the aerosol window */
 
     /* Loop around the center pixel, moving outward with each loop, searching
        for a pixel that is not of the QA type specified and is not fill */
@@ -2509,7 +2469,7 @@ static bool find_closest_non_water
     int start_line, end_line;
     int start_samp, end_samp;
     int line_index;
-    int aero_window;         /* looping variabel for the aerosol window */
+    int aero_window;         /* looping variable for the aerosol window */
 
     /* Loop around the center pixel, moving outward with each loop, searching
        for a pixel that is not of the QA type specified and is not fill */

@@ -984,12 +984,12 @@ int compute_sr_refl
             /* If the current CMG pixel is at the edge of the CMG array,
                then allow the next pixel for interpolation to wrap around
                the array */
-            if (scmg >= CMG_NBLON-1)  /* 180 degrees so wrap around */
+            if (scmg >= CMG_NBLON - 1)  /* 180 degrees so wrap around */
                 scmg1 = 0;
             else
                 scmg1 = scmg + 1;
 
-            if (lcmg >= CMG_NBLAT-1)  /* -90 degrees so wrap around */
+            if (lcmg >= CMG_NBLAT - 1)  /* -90 degrees so wrap around */
                 cmg_index1 = 0;
             else
                 cmg_index1 = cmg_index + CMG_NBLON;
@@ -1294,7 +1294,7 @@ int compute_sr_refl
             /* If the current CMG pixel is at the edge of the CMG array, then
                allow the next pixel for interpolation to wrap around the
                array */
-            if (lcmg >= CMG_NBLAT-1)  /* -90 degrees so wrap around */
+            if (lcmg >= CMG_NBLAT - 1)  /* -90 degrees so wrap around */
                 cmg_index1 = 0;
             else
                 cmg_index1 = cmg_index + RATIO_NBLON;

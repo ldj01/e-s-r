@@ -24,7 +24,7 @@
 /* Prototypes */
 void usage ();
 
-/* data retreval functions*/
+/* data retrieval functions*/
 double get_scale_refl();    /* scale for reflective bands */
 double get_offset_refl();   /* add offset for reflective bands */
 double get_scale_therm();  /* scale for thermal bands */
@@ -43,8 +43,6 @@ int get_args
     bool *write_toa,      /* O: write intermediate TOA products flag */
     bool *verbose         /* O: verbose flag */
 );
-
-void usage ();
 
 int compute_toa_refl
 (

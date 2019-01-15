@@ -60,7 +60,7 @@ Write the scaled SR values for bands 1-7 (reflectance bands)
 Append the SR bands 1-7 to the XML file
 Write the cloud mask band
 Append the cloud mask band to the XML file
-   ==> Cloud mask bit values representation (right to left):
+   ==> Cloud mask bit values representation (LSB to MSB):
        bit 0 - cirrus cloud bit
                ==> 0 - not cirrus cloud
                ==> 1 - cirrus cloud

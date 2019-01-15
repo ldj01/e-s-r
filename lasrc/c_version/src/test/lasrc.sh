@@ -19,9 +19,9 @@ mkdir lasrc && cd lasrc
 
 cp $input_dir/*.img .
 cp $input_dir/*.hdr .
+cp $input_dir/*.xml .
+chmod u+w *.xml
 
-sed -e s%LEVEL2_UNIT_TEST_DATA%${ESPA_UNIT_TEST_DATA_DIR}% \
-    ${input_dir}/${base_scene}.xml > ${base_scene}.xml
 $bin_dir/lasrc --xml=${base_scene}.xml --aux=${aux_file}
 if [ $? -ne 0 ]; then
     echo "Error: lasrc processing failed."

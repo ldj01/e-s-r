@@ -3,6 +3,8 @@
 #include "aero_interp.h"
 #include "poly_coeff.h"
 
+#define DEM_FILL -9999  /* elevation fill value */
+
 /******************************************************************************
 MODULE:  compute_toa_refl
 
@@ -1030,22 +1032,22 @@ int compute_sr_refl
                (sea level) if the DEM is fill (= -9999), which is likely ocean.
                The dimensions on the DEM array is the same as that of the CMG
                arrays. Use the current pixel locations already calculated. */
-            if (dem[cmg_pix11] != -9999)
+            if (dem[cmg_pix11] != DEM_FILL)
                 pres11 = ATMOS_PRES_0 * exp (-dem[cmg_pix11] * ONE_DIV_8500);
             else
                 pres11 = ATMOS_PRES_0;
 
-            if (dem[cmg_pix12] != -9999)
+            if (dem[cmg_pix12] != DEM_FILL)
                 pres12 = ATMOS_PRES_0 * exp (-dem[cmg_pix12] * ONE_DIV_8500);
             else
                 pres12 = ATMOS_PRES_0;
 
-            if (dem[cmg_pix21] != -9999)
+            if (dem[cmg_pix21] != DEM_FILL)
                 pres21 = ATMOS_PRES_0 * exp (-dem[cmg_pix21] * ONE_DIV_8500);
             else
                 pres21 = ATMOS_PRES_0;
 
-            if (dem[cmg_pix22] != -9999)
+            if (dem[cmg_pix22] != DEM_FILL)
                 pres22 = ATMOS_PRES_0 * exp (-dem[cmg_pix22] * ONE_DIV_8500);
             else
                 pres22 = ATMOS_PRES_0;
@@ -2117,7 +2119,7 @@ static int init_sr_refl
         *uoz = 0.3;
 
     dem_pix = lcmg * DEM_NBLON + scmg;
-    if (dem[dem_pix] != -9999)
+    if (dem[dem_pix] != DEM_FILL)
         *pres = ATMOS_PRES_0 * exp (-dem[dem_pix] * ONE_DIV_8500);
     else
         *pres = ATMOS_PRES_0;

@@ -826,29 +826,14 @@ int compute_sr_refl
 
     float lat, lon;       /* pixel lat, long location */
     int lcmg, scmg;       /* line/sample index for the CMG */
-#ifdef INTERP_AUX
-    int scmg1;            /* line+1/sample+1 index for the CMG */
-#endif
     float u, v;           /* line/sample index for the CMG */
     float u_x_v;          /* u * v */
     float ndwi_th1, ndwi_th2; /* values for NDWI calculations */
     float xcmg, ycmg;     /* x/y location for CMG */
     float xndwi;          /* calculated NDWI value */
-#ifdef INTERP_AUX
-    int uoz11, uoz21, uoz12, uoz22;  /* ozone at line,samp; line, samp+1;
-                                        line+1, samp; and line+1, samp+1 */
-    float pres11, pres12, pres21, pres22;  /* pressure at line,samp;
-                             line, samp+1; line+1, samp; and line+1, samp+1 */
-    float wv11, wv12, wv21, wv22;  /* water vapor at line,samp;
-                             line, samp+1; line+1, samp; and line+1, samp+1 */
-#endif
     float median_aerosol; /* median aerosol value for clear pixels */
     uint8 *ipflag = NULL; /* QA flag to assist with aerosol interpolation,
                              nlines x nsamps */
-    float *twvi = NULL;   /* interpolated water vapor value,
-                             nlines x nsamps */
-    float *tozi = NULL;   /* interpolated ozone value, nlines x nsamps */
-    float *tp = NULL;     /* interpolated pressure value, nlines x nsamps */
     float *taero = NULL;  /* aerosol values for each pixel, nlines x nsamps */
     float *teps = NULL;   /* angstrom coeff for each pixel, nlines x nsamps */
     uint16 *aerob1 = NULL; /* atmospherically corrected band 1 data
@@ -955,12 +940,6 @@ int compute_sr_refl
     int ratio_pix12;  /* pixel location for ratio products [lcmg][scmg+1] */
     int ratio_pix21;  /* pixel location for ratio products [lcmg+1][scmg] */
     int ratio_pix22;  /* pixel location for ratio products [lcmg+1][scmg+1] */
-#ifdef INTERP_AUX
-    int cmg_pix11;    /* pixel location for CMG/DEM products [lcmg][scmg] */
-    int cmg_pix12;    /* pixel location for CMG/DEM products [lcmg][scmg+1] */
-    int cmg_pix21;    /* pixel location for CMG/DEM products [lcmg+1][scmg] */
-    int cmg_pix22;    /* pixel location for CMG/DEM products [lcmg+1][scmg+1] */
-#endif
 
     /* Variables for finding the eps that minimizes the residual */
     double xa, xb;                  /* coefficients */
@@ -1028,7 +1007,7 @@ int compute_sr_refl
     /* Allocate memory for the many arrays needed to do the surface reflectance
        computations */
     retval = memory_allocation_sr (nlines, nsamps, &aerob1, &aerob2, &aerob4,
-        &aerob5, &aerob7, &ipflag, &twvi, &tozi, &tp, &taero, &teps, &dem,
+        &aerob5, &aerob7, &ipflag, &taero, &teps, &dem,
         &andwi, &sndwi, &ratiob1, &ratiob2, &ratiob7, &intratiob1, &intratiob2,
         &intratiob7, &slpratiob1, &slpratiob2, &slpratiob7, &wv, &oz, &rolutt,
         &transt, &sphalbt, &normext, &tsmax, &tsmin, &nbfic, &nbfi, &ttv);
@@ -1228,203 +1207,6 @@ int compute_sr_refl
         get_3rd_order_poly_coeff(aot550nm, satm_arr[ib], NAOT_VALS,
                                  satm_coef[ib]);
     }
-
-#ifdef INTERP_AUX
-/* TODO -- if the auxiliary data interpolation is taken out, then these
-   variables can be removed from the memory initialization as well - tozi,
-   twvi, tp */
-    /* Interpolate the auxiliary data for each pixel location */
-    mytime = time(NULL);
-    printf ("Interpolating the auxiliary data ... %s", ctime(&mytime));
-#ifdef _OPENMP
-    #pragma omp parallel for private (i, j, curr_pix, img, geo, lat, lon, xcmg, ycmg, lcmg, scmg, scmg1, u, v, u_x_v, cmg_pix11, cmg_pix12, cmg_pix21, cmg_pix22, wv11, wv12, wv21, wv22, uoz11, uoz12, uoz21, uoz22, pres11, pres12, pres21, pres22)
-#else
-    tmp_percent = 0;
-#endif
-
-    for (i = 0, curr_pix = 0; i < nlines; i++)
-    {
-#ifndef _OPENMP
-        /* update status, but not if multi-threaded */
-        curr_tmp_percent = percent_term* i;
-        if (curr_tmp_percent > tmp_percent)
-        {
-            tmp_percent = curr_tmp_percent;
-            if (tmp_percent % 10 == 0)
-            {
-                printf ("%d%% ", tmp_percent);
-                fflush (stdout);
-            }
-        }
-#endif
-
-        for (j = 0; j < nsamps; j++, curr_pix++)
-        {
-            /* If this pixel is fill, do not process */
-            if (qaband[curr_pix] == 1)
-            {
-                ipflag[curr_pix] |= (1 << IPFLAG_FILL);
-                continue;
-            }
-
-            /* Get the lat/long for the current pixel */
-            img.l = i - 0.5;
-            img.s = j + 0.5;
-            img.is_fill = false;
-            if (!from_space (space, &img, &geo))
-            {
-                sprintf (errmsg, "Mapping line/sample (%d, %d) to "
-                    "geolocation coords", i, j);
-                error_handler (true, FUNC_NAME, errmsg);
-                exit (ERROR);
-            }
-            lat = geo.lat * RAD2DEG;
-            lon = geo.lon * RAD2DEG;
-
-            /*** Handle all the variables related to the current pixel in the
-                 auxiliary products ***/
-            /* Use that lat/long to determine the line/sample in the
-               CMG-related lookup tables, using the center of the UL
-               pixel. Note, we are basically making sure the line/sample
-               combination falls within -90, 90 and -180, 180 global climate
-               data boundaries.  However, the source code below uses lcmg+1
-               and scmg+1, which for some scenes may wrap around the dateline
-               or the poles.  Thus we need to wrap the CMG data around to the
-               beginning of the array. */
-            /* Each CMG pixel is 0.05 x 0.05 degrees.  Use the center of the
-               pixel for each calculation.  Negative latitude values should be
-               the largest line values in the CMG grid.  Negative longitude
-               values should be the smallest sample values in the CMG grid. */
-            /* The line/sample calculation from the x/ycmg values are not
-               rounded.  The interpolation of the value using line+1 and
-               sample+1 are based on the truncated numbers, therefore rounding
-               up is not appropriate. */
-            ycmg = (89.975 - lat) * 20.0;   /* vs / 0.05 */
-            xcmg = (179.975 + lon) * 20.0;  /* vs / 0.05 */
-            lcmg = (int) ycmg;
-            scmg = (int) xcmg;
-
-            /* Handle the edges of the lat/long values in the CMG grid */
-            if (lcmg < 0)
-                lcmg = 0;
-            else if (lcmg >= CMG_NBLAT)
-                lcmg = CMG_NBLAT;
-
-            if (scmg < 0)
-                scmg = 0;
-            else if (scmg >= CMG_NBLON)
-                scmg = CMG_NBLON;
-
-            int cmg_index = lcmg*CMG_NBLON;
-            int cmg_index1;
-
-            /* If the current CMG pixel is at the edge of the CMG array,
-               then allow the next pixel for interpolation to wrap around
-               the array */
-            if (scmg >= CMG_NBLON - 1)  /* 180 degrees so wrap around */
-                scmg1 = 0;
-            else
-                scmg1 = scmg + 1;
-
-            if (lcmg >= CMG_NBLAT - 1)  /* -90 degrees so wrap around */
-                cmg_index1 = 0;
-            else
-                cmg_index1 = cmg_index + CMG_NBLON;
-
-            /* Determine the four CMG pixels to be used for the current
-               Landsat pixel */
-            cmg_pix11 = cmg_index + scmg;
-            cmg_pix12 = cmg_index + scmg1;
-            cmg_pix21 = cmg_index1 + scmg;
-            cmg_pix22 = cmg_index1 + scmg1;
-
-            /* Get the water vapor pixels. If the water vapor value is
-               fill (=0), then use it as-is. */
-            wv11 = wv[cmg_pix11];
-            wv12 = wv[cmg_pix12];
-            wv21 = wv[cmg_pix21];
-            wv22 = wv[cmg_pix22];
-
-            /* Get the ozone pixels. If the ozone value is fill (=0), then use
-               a default value of 120. */
-            uoz11 = oz[cmg_pix11];
-            if (uoz11 == 0)
-                uoz11 = 120;
-
-            uoz12 = oz[cmg_pix12];
-            if (uoz12 == 0)
-                uoz12 = 120;
-
-            uoz21 = oz[cmg_pix21];
-            if (uoz21 == 0)
-                uoz21 = 120;
-
-            uoz22 = oz[cmg_pix22];
-            if (uoz22 == 0)
-                uoz22 = 120;
-
-            /* Get the surface pressure from the global DEM.  Set to 1013.0
-               (sea level) if the DEM is fill (= -9999), which is likely ocean.
-               The dimensions on the DEM array is the same as that of the CMG
-               arrays. Use the current pixel locations already calculated. */
-            if (dem[cmg_pix11] != DEM_FILL)
-                pres11 = ATMOS_PRES_0 * exp (-dem[cmg_pix11] * ONE_DIV_8500);
-            else
-                pres11 = ATMOS_PRES_0;
-
-            if (dem[cmg_pix12] != DEM_FILL)
-                pres12 = ATMOS_PRES_0 * exp (-dem[cmg_pix12] * ONE_DIV_8500);
-            else
-                pres12 = ATMOS_PRES_0;
-
-            if (dem[cmg_pix21] != DEM_FILL)
-                pres21 = ATMOS_PRES_0 * exp (-dem[cmg_pix21] * ONE_DIV_8500);
-            else
-                pres21 = ATMOS_PRES_0;
-
-            if (dem[cmg_pix22] != DEM_FILL)
-                pres22 = ATMOS_PRES_0 * exp (-dem[cmg_pix22] * ONE_DIV_8500);
-            else
-                pres22 = ATMOS_PRES_0;
-
-            /*** Handle all the variables related to the current pixel in the
-                 Landsat scene, which means interpolating the global-level
-                 variables ***/
-            /* Determine the fractional difference between the integer location
-               and floating point pixel location to be used for interpolation */
-            u = (ycmg - lcmg);
-            v = (xcmg - scmg);
-            u_x_v = u * v;
-
-            /* Interpolate water vapor, and unscale */
-            twvi[curr_pix] = wv11
-                           + u*(wv21 - wv11)
-                           + v*(wv12 - wv11)
-                           + u_x_v*(wv11 - wv12 - wv21 + wv22);
-            twvi[curr_pix] = twvi[curr_pix] * 0.01;   /* vs / 100 */
-
-            /* Interpolate ozone, and unscale */
-            tozi[curr_pix] = uoz11
-                           + u*(uoz21 - uoz11)
-                           + v*(uoz12 - uoz11)
-                           + u_x_v*(uoz11 - uoz12 - uoz21 + uoz22);
-            tozi[curr_pix] = tozi[curr_pix] * 0.0025;   /* vs / 400 */
-
-
-            /* Interpolate surface pressure */
-            tp[curr_pix] = pres11
-                         + u*(pres21 - pres11)
-                         + v*(pres12 - pres11)
-                         + u_x_v*(pres11 - pres12 - pres21 + pres22);
-        }  /* end for j */
-    }  /* end for i */
-
-#ifndef _OPENMP
-    /* update status */
-    printf ("100%%\n");
-    fflush (stdout);
-#endif
-#endif
 
     /* Start the aerosol inversion */
     mytime = time(NULL);
@@ -2134,9 +1916,6 @@ int compute_sr_refl
     }  /* end for ib */
 
     /* Free memory for arrays no longer needed */
-    free (twvi);
-    free (tozi);
-    free (tp);
     free (taero);
     free (teps);
  

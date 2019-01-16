@@ -2263,10 +2263,6 @@ int memory_allocation_sr
                                (TOA refl), nlines x nsamps */
     uint8 **ipflag,      /* O: QA flag to assist with aerosol interpolation,
                                nlines x nsamps */
-    float **twvi,        /* O: interpolated water vapor value,
-                               nlines x nsamps */
-    float **tozi,        /* O: interpolated ozone value, nlines x nsamps */
-    float **tp,          /* O: interpolated pressure value, nlines x nsamps */
     float **taero,       /* O: aerosol values for each pixel, nlines x nsamps */
     float **teps,        /* O: eps (angstrom coefficient) for each pixel,
                                nlines x nsamps*/
@@ -2345,30 +2341,6 @@ int memory_allocation_sr
     if (*aerob7 == NULL)
     {
         sprintf (errmsg, "Error allocating memory for aerob7");
-        error_handler (true, FUNC_NAME, errmsg);
-        return (ERROR);
-    }
-
-    *twvi = calloc (npixels, sizeof (float));
-    if (*twvi == NULL)
-    {
-        sprintf (errmsg, "Error allocating memory for twvi");
-        error_handler (true, FUNC_NAME, errmsg);
-        return (ERROR);
-    }
-
-    *tozi = calloc (npixels, sizeof (float));
-    if (*tozi == NULL)
-    {
-        sprintf (errmsg, "Error allocating memory for tozi");
-        error_handler (true, FUNC_NAME, errmsg);
-        return (ERROR);
-    }
-
-    *tp = calloc (npixels, sizeof (float));
-    if (*tp == NULL)
-    {
-        sprintf (errmsg, "Error allocating memory for tp");
         error_handler (true, FUNC_NAME, errmsg);
         return (ERROR);
     }

@@ -86,7 +86,6 @@ void aerosol_interp
     center_line = HALF_AERO_WINDOW;
     int center_lindex = center_line*nsamps;
     int center_lindex1;
-    int aero_lindex = AERO_WINDOW;
     int aero_window_index_step = AERO_WINDOW*nsamps;
     float aero_step = 1.0/AERO_WINDOW;
     for (line = 0, curr_pix = 0; line < nlines; line++)
@@ -102,12 +101,8 @@ void aerosol_interp
 
         /* Determine the line of the representative center pixel in the
            aerosol NxN window array */
-        if (line == aero_lindex)
-        {
-            center_line += AERO_WINDOW;
-            center_lindex += aero_window_index_step;
-            aero_lindex += AERO_WINDOW;
-        }
+        center_line = (int)(line*aero_step)*AERO_WINDOW + HALF_AERO_WINDOW;
+        center_lindex = center_line*nsamps;
 
         /* Determine fractional location of this line in the aerosol window.
            Negative values are at the top of the window. */
@@ -137,25 +132,15 @@ void aerosol_interp
 
             /* If the aerosol window line value is outside the bounds of the
                scene, then just use the same line in the aerosol window */
-            if (center_line1 >= nlines-1)
+            if (center_line1 >= nlines - 1)
             {
                 center_line1 = center_line;
                 center_lindex1 = center_lindex;
             }
         }
 
-        center_samp = HALF_AERO_WINDOW;
-        int aero_sindex = AERO_WINDOW;
         for (samp = 0; samp < nsamps; samp++, curr_pix++)
         {
-            /* Determine the sample of the representative center pixel in the
-               aerosol NxN window array */
-            if (samp == aero_sindex)
-            {
-                center_samp += AERO_WINDOW;
-                aero_sindex += AERO_WINDOW;
-            }
-
             /* If this pixel is fill, then don't process */
             if (level1_qa_is_fill (qaband[curr_pix]))
                 continue;
@@ -184,6 +169,10 @@ void aerosol_interp
                 ipflag[curr_pix] = (1 << IPFLAG_WATER);
                 continue;
             }
+
+            /* Determine the sample of the representative center pixel in the
+               aerosol NxN window array */
+            center_samp = (int)(samp*aero_step)*AERO_WINDOW + HALF_AERO_WINDOW;
 
             /* If the current line, sample are the center line, sample, then
                skip to the next pixel.  We already have the aerosol value. */

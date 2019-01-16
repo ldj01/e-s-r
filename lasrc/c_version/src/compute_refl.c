@@ -76,7 +76,7 @@ int compute_toa_refl
     printf ("Start TOA reflectance corrections: %s", ctime(&mytime));
 
     /* Allocate memory for band data */
-    uband = calloc (nlines*nsamps, sizeof (uint16));
+    uband = malloc (nlines*nsamps*sizeof(uint16));
     if (uband == NULL)
     {
         sprintf (errmsg, "Error allocating memory for uband");

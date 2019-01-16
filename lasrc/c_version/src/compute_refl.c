@@ -1249,6 +1249,9 @@ int compute_sr_refl
         for (j = HALF_AERO_WINDOW; j < nsamps;
              j += AERO_WINDOW, curr_pix += AERO_WINDOW)
         {
+            int cmg_index;   /* CMG array indices */
+            int cmg_index1;
+
             /* Keep track of the center pixel for the current aerosol window;
                may need to return here if this is fill, cloudy or water */
             center_samp = j;
@@ -1407,8 +1410,7 @@ int compute_sr_refl
             else if (scmg >= CMG_NBLON)
                 scmg = CMG_NBLON;
 
-            int cmg_index = lcmg*RATIO_NBLON;
-            int cmg_index1;
+            cmg_index = lcmg*RATIO_NBLON;
             
             /* If the current CMG pixel is at the edge of the CMG array, then
                allow the next pixel for interpolation to wrap around the

@@ -40,6 +40,8 @@ void aerosol_interp
     int curr_pix;          /* current pixel in 1D arrays of nlines * nsamps */
     int center_line;       /* line for the center of the aerosol window */
     int center_line1;      /* line+1 for the center of the aerosol window */
+    int center_lindex;     /* center line array index */
+    int center_lindex1;    /* center line 1 array index */
     int center_samp;       /* sample for the center of the aerosol window */
     int center_samp1;      /* sample+1 for the center of the aerosol window */
     int refl_indx = -99;   /* index of band 1 or first band */
@@ -63,6 +65,10 @@ void aerosol_interp
     float u, v;            /* line, sample fractional distance from current
                               pixel (weight applied to furthest line, sample) */
     float u_x_v;           /* u * v */
+    int aero_window_index_step = AERO_WINDOW*nsamps; /* aerosol window array
+                                                        step size */
+    float aero_step = 1.0/AERO_WINDOW; /* fraction of window size representing
+                                          1 pixel */
 
     /* Use band 1 band-related metadata for the reflectance information for
        Landsat (Level 1 products).  If band 1 isn't available then just use the
@@ -83,11 +89,6 @@ void aerosol_interp
     tmp_percent = 10;
     message_line_step = nlines/tmp_percent;
     next_message_line = message_line_step;
-    center_line = HALF_AERO_WINDOW;
-    int center_lindex = center_line*nsamps;
-    int center_lindex1;
-    int aero_window_index_step = AERO_WINDOW*nsamps;
-    float aero_step = 1.0/AERO_WINDOW;
     for (line = 0, curr_pix = 0; line < nlines; line++)
     {
         /* update status */
@@ -224,8 +225,8 @@ void aerosol_interp
 
             /* From here make the fractional distance positive, regardless of
                where it is in the window. */
-            u = fabs (u);
-            v = fabs (v);
+            u = fabs(u);
+            v = fabs(v);
             u_x_v = u * v;
 
             /* Interpolate the aerosol */

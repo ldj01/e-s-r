@@ -49,7 +49,6 @@ int compute_toa_refl
     char FUNC_NAME[] = "compute_toa_refl";   /* function name */
     int i;               /* looping variable for pixels */
     int ib;              /* looping variable for input bands */
-    int sband_ib;        /* looping variable for output bands */
     int iband;           /* current band */
     float refl_mult;     /* reflectance multiplier for bands 1-9 */
     float refl_add;      /* reflectance additive for bands 1-9 */
@@ -108,6 +107,8 @@ int compute_toa_refl
        reflectance and TOA brightness temp */
     for (ib = DN_BAND1; ib <= DN_BAND11; ib++)
     {
+        uint16 *band_ptr;  /* convenience pointer */
+
         /* Don't process the pan band */
         if (ib == DN_BAND8)
             continue;
@@ -120,12 +121,12 @@ int compute_toa_refl
             if (ib <= DN_BAND7)
             {
                 iband = ib;
-                sband_ib = ib;
+                band_ptr = sband[ib];
             }
             else
             {  /* don't count the pan band */
                 iband = ib - 1;
-                sband_ib = ib - 1;
+                band_ptr = sband[ib-1];
             }
 
             if (get_input_refl_lines (input, iband, 0, nlines, uband) !=
@@ -152,7 +153,7 @@ int compute_toa_refl
                 /* If this pixel is fill, continue with the next pixel. */
                 if (level1_qa_is_fill(qaband[i]))
                 {
-                    sband[sband_ib][i] = FILL_VALUE;
+                    band_ptr[i] = FILL_VALUE;
                     radsat[i] = RADSAT_FILL_VALUE;
                     continue;
                 }
@@ -168,11 +169,11 @@ int compute_toa_refl
                 /* Save the scaled TOA reflectance value, but make
                    sure it falls within the defined valid range. */
                 if (rotoa < min_refl)
-                    sband[sband_ib][i] = min_refl;
+                    band_ptr[i] = min_refl;
                 else if (rotoa > max_refl)
-                    sband[sband_ib][i] = max_refl;
+                    band_ptr[i] = max_refl;
                 else
-                    sband[sband_ib][i] = roundf (rotoa);
+                    band_ptr[i] = roundf (rotoa);
 
                 /* Check for saturation. Saturation is when the pixel
                    reaches the max allowed value. */
@@ -186,17 +187,16 @@ int compute_toa_refl
         else if ((ib == DN_BAND10 || ib == DN_BAND11) &&
                  strcmp(instrument, "OLI"))
         {
-            int thermal_band;        /* band array value */
             int thermal_band_index;  /* 0 = band 10, 1 = band 11 */
 
             if (ib == DN_BAND10)
             {
-                thermal_band = SR_BAND10;
+                band_ptr = sband[SR_BAND10];
                 thermal_band_index = 0;
             }
             else
             {
-                thermal_band = SR_BAND11;
+                band_ptr = sband[SR_BAND11];
                 thermal_band_index = 1;
             }
 
@@ -227,7 +227,7 @@ int compute_toa_refl
                 /* If this pixel is fill, continue with then next pixel. */
                 if (level1_qa_is_fill (qaband[i]))
                 {
-                    sband[thermal_band][i] = FILL_VALUE;
+                    band_ptr[i] = FILL_VALUE;
                     radsat[i] = RADSAT_FILL_VALUE;
                     continue;
                 }
@@ -242,11 +242,11 @@ int compute_toa_refl
                 /* Make sure the brightness temp falls within the specified
                    range */
                 if (tmpf < min_therm)
-                    sband[thermal_band][i] = min_therm;
+                    band_ptr[i] = min_therm;
                 else if (tmpf > max_therm)
-                    sband[thermal_band][i] = max_therm;
+                    band_ptr[i] = max_therm;
                 else
-                    sband[thermal_band][i] = roundf (tmpf);
+                    band_ptr[i] = roundf (tmpf);
 
                 /* Check for saturation */
                 if (uband[i] == L1_SATURATED)
@@ -754,6 +754,8 @@ int compute_sr_refl
         "band ... %s", ctime(&mytime));
     for (ib = 0; ib <= SR_BAND7; ib++)
     {
+        uint16 *band_ptr = sband[ib];  /* convenience pointer */
+
         printf (" %d ...", ib+1);
 
         /* Get the parameters for the atmospheric correction */
@@ -788,15 +790,15 @@ int compute_sr_refl
         /* Store the TOA scaled TOA reflectance values for later
            use before completing atmospheric corrections */
         if (ib == DN_BAND1)
-            memcpy(aerob1, sband[ib], nlines*nsamps*sizeof(uint16));
+            memcpy(aerob1, band_ptr, nlines*nsamps*sizeof(uint16));
         else if (ib == DN_BAND2)
-            memcpy(aerob2, sband[ib], nlines*nsamps*sizeof(uint16));
+            memcpy(aerob2, band_ptr, nlines*nsamps*sizeof(uint16));
         else if (ib == DN_BAND4)
-            memcpy(aerob4, sband[ib], nlines*nsamps*sizeof(uint16));
+            memcpy(aerob4, band_ptr, nlines*nsamps*sizeof(uint16));
         else if (ib == DN_BAND5)
-            memcpy(aerob5, sband[ib], nlines*nsamps*sizeof(uint16));
+            memcpy(aerob5, band_ptr, nlines*nsamps*sizeof(uint16));
         else if (ib == DN_BAND7)
-            memcpy(aerob7, sband[ib], nlines*nsamps*sizeof(uint16));
+            memcpy(aerob7, band_ptr, nlines*nsamps*sizeof(uint16));
 
 #ifdef _OPENMP
         #pragma omp parallel for private (i, j, curr_pix, rotoa, roslamb)
@@ -812,10 +814,10 @@ int compute_sr_refl
                scattering component and water vapor), and store the
                scaled value for further corrections.  (NOTE: the full
                computations are in atmcorlamb2) */
-            rotoa = sband[ib][i] * scale_refl + offset_refl;
+            rotoa = band_ptr[i] * scale_refl + offset_refl;
             roslamb = rotoa - tgo*roatm;
             roslamb /= tgo*ttatmg + satm*roslamb;
-            sband[ib][i] = (roslamb - offset_refl)*output_mult_refl;
+            band_ptr[i] = (roslamb - offset_refl)*output_mult_refl;
         }  /* pixel loop */
     }  /* for ib */
     printf ("\n");
@@ -1735,6 +1737,8 @@ int compute_sr_refl
        isn't spanned */
     for (ib = 0; ib <= DN_BAND7; ib++)
     {
+        uint16 *band_ptr = sband[ib];  /* convenience pointer */
+
         printf ("  Band %d\n", ib+1);
 #ifdef _OPENMP
         #pragma omp parallel for private (i, j, curr_pix, rsurf, rotoa, raot550nm, eps, retval, tmpf, roslamb, tgo, roatm, ttatmg, satm, xrorayp, next)
@@ -1752,7 +1756,7 @@ int compute_sr_refl
                 continue;
 
             /* Correct all pixels */
-            rsurf = sband[ib][curr_pix] * scale_refl + offset_refl;
+            rsurf = band_ptr[curr_pix] * scale_refl + offset_refl;
             rotoa = (rsurf * bttatmg[ib] / (1.0 - bsatm[ib] * rsurf) +
                      broatm[ib]) * btgo[ib];
             raot550nm = taero[curr_pix];
@@ -1790,11 +1794,11 @@ int compute_sr_refl
                falls within the defined valid range. */
             roslamb = (roslamb - offset_refl) * output_mult_refl;
             if (roslamb < min_refl)
-                sband[ib][curr_pix] = min_refl;
+                band_ptr[curr_pix] = min_refl;
             else if (roslamb > max_refl)
-                sband[ib][curr_pix] = max_refl;
+                band_ptr[curr_pix] = max_refl;
             else
-                sband[ib][curr_pix] = roundf (roslamb);
+                band_ptr[curr_pix] = roundf (roslamb);
         }  /* pixel loop */
     }  /* end for ib */
 
@@ -1821,9 +1825,11 @@ int compute_sr_refl
     /* Loop through the reflectance bands and write the data */
     for (ib = 0; ib <= DN_BAND7; ib++)
     {
+        uint16 *band_ptr = sband[ib];  /* convenience pointer */
+
         printf ("  Band %d: %s\n", ib+1,
             sr_output->metadata.band[ib].file_name);
-        if (put_output_lines (sr_output, sband[ib], ib, 0, nlines,
+        if (put_output_lines (sr_output, band_ptr, ib, 0, nlines,
             sizeof (uint16)) != SUCCESS)
         {
             sprintf (errmsg, "Writing output data for band %d", ib);

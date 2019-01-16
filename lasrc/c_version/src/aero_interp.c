@@ -225,8 +225,8 @@ void aerosol_interp
 
             /* From here make the fractional distance positive, regardless of
                where it is in the window. */
-            u = fabs(u);
-            v = fabs(v);
+            u = fabsf(u);
+            v = fabsf(v);
             u_x_v = u * v;
 
             /* Interpolate the aerosol */

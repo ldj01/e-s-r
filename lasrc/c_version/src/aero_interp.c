@@ -296,15 +296,12 @@ void aerosol_fill_median
 )
 {
     int line, samp;       /* looping variable for lines and samples */
-    int curr_line_index;  /* array index of first sample in current line */
     int curr_pix;         /* current pixel in 1D arrays of nlines * nsamps */
 
     /* Loop through the center of the NxN window pixels */
-    int lindex_step = AERO_WINDOW*nsamps;
-    for (line = HALF_AERO_WINDOW, curr_line_index = line*nsamps;
-         line < nlines; line += AERO_WINDOW, curr_line_index += lindex_step)
+    for (line = HALF_AERO_WINDOW; line < nlines; line += AERO_WINDOW)
     {
-        curr_pix = curr_line_index + HALF_AERO_WINDOW;
+        curr_pix = line*nsamps + HALF_AERO_WINDOW;
         for (samp = HALF_AERO_WINDOW; samp < nsamps;
              samp += AERO_WINDOW, curr_pix += AERO_WINDOW)
         {

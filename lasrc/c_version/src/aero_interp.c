@@ -301,7 +301,7 @@ void aerosol_fill_median
     /* Loop through the center of the NxN window pixels */
     for (line = HALF_AERO_WINDOW; line < nlines; line += AERO_WINDOW)
     {
-        curr_pix = line*nsamps + HALF_AERO_WINDOW;
+        curr_pix = line * nsamps + HALF_AERO_WINDOW;
         for (samp = HALF_AERO_WINDOW; samp < nsamps;
              samp += AERO_WINDOW, curr_pix += AERO_WINDOW)
         {
@@ -351,7 +351,6 @@ float find_median_aerosol
     char errmsg[STR_SIZE];                         /* error message */
     char FUNC_NAME[] = "find_median_aerosol";      /* function name */
     int line, samp;       /* looping variable for lines and samples */
-    int curr_line_index;  /* array index of first sample in current line */
     int curr_pix;         /* current pixel in 1D arrays of nlines * nsamps */
     int nbclrpix;         /* number of clear aerosol pixels in this array */
     int nwindows;         /* number of NxN windows in the image */
@@ -374,11 +373,9 @@ float find_median_aerosol
     /* Loop through the NxN center window values and write the clear aerosol
        values to the aerosol array for determining the median */
     nbclrpix = 0;
-    int lindex_step = AERO_WINDOW*nsamps;
-    for (line = HALF_AERO_WINDOW, curr_line_index = line*nsamps;
-         line < nlines; line += AERO_WINDOW, curr_line_index += lindex_step)
+    for (line = HALF_AERO_WINDOW; line < nlines; line += AERO_WINDOW)
     {
-        curr_pix = curr_line_index + HALF_AERO_WINDOW;
+        curr_pix = line * nsamps + HALF_AERO_WINDOW;
         for (samp = HALF_AERO_WINDOW; samp < nsamps;
              samp += AERO_WINDOW, curr_pix += AERO_WINDOW)
         {

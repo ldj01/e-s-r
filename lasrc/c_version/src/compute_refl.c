@@ -51,15 +51,12 @@ int compute_toa_refl
     int ib;              /* looping variable for input bands */
     int sband_ib;        /* looping variable for output bands */
     int iband;           /* current band */
-    float rotoa;         /* top of atmosphere reflectance */
-    float tmpf;          /* temporary floating point value */
     float refl_mult;     /* reflectance multiplier for bands 1-9 */
     float refl_add;      /* reflectance additive for bands 1-9 */
     float xcals;         /* radiance multiplier for bands 10 and 11 */
     float xcalo;         /* radiance additive for bands 10 and 11 */
     float k1b;           /* K1 temperature constant */
     float k2b;           /* K2 temperature constant */
-    float xmus;          /* cosine of solar zenith angle (per-pixel) */
     uint16 *uband = NULL;  /* array for input image data for a single band,
                               nlines x nsamps */
     time_t mytime;       /* time variable */
@@ -72,6 +69,7 @@ int compute_toa_refl
            max_refl;            /* Maximum scaled reflective value */
     double min_therm,           /* Minimum scaled thermal value */
            max_therm;           /* Maximum scaled thermal value */
+    float angle_sf = 0.01*DEG2RAD;  /* solar angle scale factor */
 
     /* Start the processing */
     mytime = time(NULL);
@@ -143,12 +141,14 @@ int compute_toa_refl
             refl_mult = input->meta.gain[iband];
             refl_add = input->meta.bias[iband];
 
-            float angle_sf = 0.01*DEG2RAD;  /* solar angle scale factor */
 #ifdef _OPENMP
-            #pragma omp parallel for private (i, xmus, rotoa)
+            #pragma omp parallel for private (i)
 #endif
             for (i = 0; i < nlines*nsamps; i++)
             {
+                float xmus;   /* cosine of solar zenith angle (per-pixel) */
+                float rotoa;  /* top of atmosphere reflectance */
+
                 /* If this pixel is fill, continue with the next pixel. */
                 if (level1_qa_is_fill(qaband[i]))
                 {
@@ -218,10 +218,12 @@ int compute_toa_refl
                within the min/max range for the thermal bands. */
 
 #ifdef _OPENMP
-            #pragma omp parallel for private (i, tmpf)
+            #pragma omp parallel for private (i)
 #endif
             for (i = 0; i < nlines*nsamps; i++)
             {
+                float tmpf;   /* temporary floating point value */
+
                 /* If this pixel is fill, continue with then next pixel. */
                 if (level1_qa_is_fill (qaband[i]))
                 {

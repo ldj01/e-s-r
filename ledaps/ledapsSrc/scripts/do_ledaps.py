@@ -145,6 +145,7 @@ class Ledaps():
     #   offset_refl = offset value for reflective bands
     #   scale_therm = scale value for thermal bands
     #   offset_therm = offset value for thermal bands
+    #   num_threads = number of threads for processing
     #
     # Returns:
     #     ERROR - error running the LEDAPS applications
@@ -157,7 +158,8 @@ class Ledaps():
     #      an error.
     #######################################################################
     def runLedaps(self, xmlfile=None, process_sr="True", scale_refl=None,
-                        offset_refl=None, scale_therm=None, offset_therm=None):
+                        offset_refl=None, scale_therm=None, offset_therm=None, 
+                        num_threads=None):
         # If no parameters were passed then get the info from the command line
         if xmlfile is None:
 
@@ -188,7 +190,9 @@ class Ledaps():
                 type="float", help="scaling value for thermal bands")
             parser.add_option ("--offset_therm", dest="offset_therm",
                 type="float", help="offset value for thermal bands")
-
+            parser.add_option ("--num_threads", dest="num_threads",
+                               type="int",
+                               help="number of threads for processing")
             (options, args) = parser.parse_args()
 
             # Validate the command-line options
@@ -204,6 +208,7 @@ class Ledaps():
             offset_refl = options.offset_refl
             scale_therm = options.scale_therm
             offset_therm = options.offset_therm
+            num_threads = options.num_threads
 
         # Obtain logger from logging using the module's name
         logger = logging.getLogger(__name__)
@@ -320,8 +325,13 @@ class Ledaps():
                 return ERROR
 
             if process_sr == 'True':
-                cmdstr = ('lndsr --pfile lndsr.{}.txt {}{}'
-                          .format(xml, scale_refl_opt_str, offset_refl_opt_str))
+                num_threads_opt_str = ''
+                if num_threads is not None:
+                    num_threads_opt_str = '--num_threads={}'.format(num_threads)
+
+                cmdstr = 'lndsr --pfile lndsr.{}.txt {}{}{}'.format(xml,
+                          scale_refl_opt_str, offset_refl_opt_str,
+                          num_threads_opt_str)
                 (status, output) = commands.getstatusoutput(cmdstr)
                 logger.info(output)
                 exit_code = status >> 8

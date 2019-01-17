@@ -22,7 +22,7 @@ cp $input_dir/*.hdr .
 cp $input_dir/*.xml .
 chmod u+w *.xml
 
-$bin_dir/lasrc --xml=${base_scene}.xml --aux=${aux_file}
+$bin_dir/lasrc --xml=${base_scene}.xml --aux=${aux_file} --num_threads 6
 if [ $? -ne 0 ]; then
     echo "Error: lasrc processing failed."
     exit 1

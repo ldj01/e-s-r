@@ -31,6 +31,7 @@ double get_scale_therm();  /* scale for thermal bands */
 double get_offset_therm();  /* add offset for thermal bands */
 double get_mult_refl();     /* scale_refl inverse */
 double get_mult_therm();    /* scale_therm inverse */
+int    get_num_threads();   /* number of threads */
 
 int get_args
 (

@@ -95,5 +95,5 @@ int free_mem_atmos_coeff(atmos_t *atmos_coef);
 /* data retrieval functions*/
 double get_scale_refl();    /* scale for reflective bands */
 double get_offset_refl();   /* add offset for reflective bands */
-
+int get_num_threads();   /* number of threads for processing */
 #endif

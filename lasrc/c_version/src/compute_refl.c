@@ -117,7 +117,8 @@ int compute_toa_refl
             refl_add = input->meta.bias[iband];
 
 #ifdef _OPENMP
-            #pragma omp parallel for private (line, samp, i, xmus, rotoa)
+            #pragma omp parallel for private (line, samp, i, xmus, rotoa) \
+            num_threads(get_num_threads())
 #endif
             for (line = 0; line < nlines; line++)
             {
@@ -178,7 +179,8 @@ int compute_toa_refl
                within the min/max range for the thermal bands. */
 
 #ifdef _OPENMP
-            #pragma omp parallel for private (i, tmpf)
+            #pragma omp parallel for private (i, tmpf) \
+            num_threads(get_num_threads())
 #endif
             for (i = 0; i < nlines*nsamps; i++)
             {
@@ -224,7 +226,8 @@ int compute_toa_refl
                within the min/max range for the thermal bands. */
 
 #ifdef _OPENMP
-            #pragma omp parallel for private (i, tmpf)
+            #pragma omp parallel for private (i, tmpf) \
+            num_threads(get_num_threads())
 #endif
             for (i = 0; i < nlines*nsamps; i++)
             {
@@ -662,7 +665,8 @@ int compute_sr_refl
 
         /* Perform atmospheric corrections for bands 1-7 */
 #ifdef _OPENMP
-        #pragma omp parallel for private (i, j, curr_pix, rotoa, roslamb)
+        #pragma omp parallel for private (i, j, curr_pix, rotoa, roslamb) \
+        num_threads(get_num_threads())
 #endif
         for (i = 0; i < nlines; i++)
         {
@@ -797,7 +801,12 @@ int compute_sr_refl
     printf ("Interpolating the auxiliary data ... %s", ctime(&mytime));
     tmp_percent = 0;
 #ifdef _OPENMP
-    #pragma omp parallel for private (i, j, curr_pix, img, geo, lat, lon, xcmg, ycmg, lcmg, scmg, lcmg1, scmg1, u, v, one_minus_u, one_minus_v, one_minus_u_x_one_minus_v, one_minus_u_x_v, u_x_one_minus_v, u_x_v, cmg_pix11, cmg_pix12, cmg_pix21, cmg_pix22, wv11, wv12, wv21, wv22, uoz11, uoz12, uoz21, uoz22, pres11, pres12, pres21, pres22)
+    #pragma omp parallel for private (i, j, curr_pix, img, geo, lat, lon, \
+    xcmg, ycmg, lcmg, scmg, lcmg1, scmg1, u, v, one_minus_u, one_minus_v, \
+    one_minus_u_x_one_minus_v, one_minus_u_x_v, u_x_one_minus_v, u_x_v, \
+    cmg_pix11, cmg_pix12, cmg_pix21, cmg_pix22, wv11, wv12, wv21, wv22, \
+    uoz11, uoz12, uoz21, uoz22, pres11, pres12, pres21, pres22) \
+    num_threads(get_num_threads())
 #endif
 
     for (i = 0; i < nlines; i++)
@@ -993,7 +1002,18 @@ int compute_sr_refl
         AERO_WINDOW, AERO_WINDOW, ctime(&mytime));
     tmp_percent = 0;
 #ifdef _OPENMP
-    #pragma omp parallel for private (i, j, center_line, center_samp, nearest_line, nearest_samp, curr_pix, center_pix, img, geo, lat, lon, xcmg, ycmg, lcmg, scmg, lcmg1, scmg1, u, v, one_minus_u, one_minus_v, one_minus_u_x_one_minus_v, one_minus_u_x_v, u_x_one_minus_v, u_x_v, ratio_pix11, ratio_pix12, ratio_pix21, ratio_pix22, rb1, rb2, slpr11, slpr12, slpr21, slpr22, intr11, intr12, intr21, intr22, slprb1, slprb2, slprb7, intrb1, intrb2, intrb7, xndwi, ndwi_th1, ndwi_th2, iband, iband1, iband3, iaots, retval, eps, eps1, eps2, eps3, residual, residual1, residual2, residual3, raot, sraot1, sraot2, sraot3, xa, xb, xc, xd, xe, xf, coefa, coefb, epsmin, corf, next, rotoa, raot550nm, roslamb, tgo, roatm, ttatmg, satm, xrorayp, ros5, ros4, erelc, troatm)
+    #pragma omp parallel for private (i, j, center_line, center_samp, \
+    nearest_line, nearest_samp, curr_pix, center_pix, img, geo, lat, lon, \
+    xcmg, ycmg, lcmg, scmg, lcmg1, scmg1, u, v, one_minus_u, one_minus_v, \
+    one_minus_u_x_one_minus_v, one_minus_u_x_v, u_x_one_minus_v, u_x_v, \
+    ratio_pix11, ratio_pix12, ratio_pix21, ratio_pix22, rb1, rb2, slpr11, \
+    slpr12, slpr21, slpr22, intr11, intr12, intr21, intr22, slprb1, slprb2, \
+    slprb7, intrb1, intrb2, intrb7, xndwi, ndwi_th1, ndwi_th2, iband, iband1, \
+    iband3, iaots, retval, eps, eps1, eps2, eps3, residual, residual1, \
+    residual2, residual3, raot, sraot1, sraot2, sraot3, xa, xb, xc, xd, xe, \
+    xf, coefa, coefb, epsmin, corf, next, rotoa, raot550nm, roslamb, tgo, \
+    roatm, ttatmg, satm, xrorayp, ros5, ros4, erelc, troatm) \
+    num_threads(get_num_threads())
 #endif
     for (i = HALF_AERO_WINDOW; i < nlines; i += AERO_WINDOW)
     {
@@ -1619,7 +1639,9 @@ int compute_sr_refl
     {
         printf ("  Band %d\n", ib+1);
 #ifdef _OPENMP
-        #pragma omp parallel for private (i, j, curr_pix, rsurf, rotoa, raot550nm, eps, retval, tmpf, roslamb, tgo, roatm, ttatmg, satm, xrorayp, next)
+        #pragma omp parallel for private (i, j, curr_pix, rsurf, rotoa, \
+        raot550nm, eps, retval, tmpf, roslamb, tgo, roatm, ttatmg, satm, \
+        xrorayp, next) num_threads(get_num_threads())
 #endif
         for (i = 0; i < nlines; i++)
         {

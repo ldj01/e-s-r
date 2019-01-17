@@ -8,6 +8,7 @@ static double scale_therm;   /* scale for thermal bands */
 static double offset_therm;  /* add offset for thermal bands */
 static double mult_refl;     /* scale_refl inverse */
 static double mult_therm;    /* scale_therm inverse */
+static int num_threads;      /* number of threads */
 
 /******************************************************************************
 MODULE:  get_args
@@ -64,6 +65,7 @@ int get_args
         {"offset_therm", required_argument, 0, 'n'},
         {"scale_refl", required_argument, 0, 'r'},
         {"scale_therm", required_argument, 0, 't'},
+        {"num_threads", required_argument, 0, 'v'},
         {0, 0, 0, 0}
     };
 
@@ -79,6 +81,7 @@ int get_args
     mult_therm = 1 / SCALE_FACTOR_TH;
     offset_refl = OFFSET_REFL;
     offset_therm = OFFSET_THERM;
+    num_threads = 1;
 
     /* Loop through all the cmd-line options */
     opterr = 0;   /* turn off getopt_long error msgs as we'll print our own */
@@ -143,6 +146,10 @@ int get_args
             case 't':
                 scale_therm = atof(optarg);
                 mult_therm = 1 / scale_therm;
+                break;
+
+            case 'v': /* number of threads */
+                num_threads = atoi (optarg);
                 break;
 
             case '?':
@@ -219,4 +226,9 @@ double get_mult_refl(void)
 double get_mult_therm(void)
 {
     return mult_therm;
+}
+
+int get_num_threads(void)
+{
+    return num_threads;
 }

@@ -81,6 +81,7 @@ Key_string_t Param_string[PARAM_MAX] = {
 
 static double scale_refl;    /* scale for reflective bands */
 static double offset_refl;   /* add offset for reflective bands */
+static int num_threads = 1;      /* Number of threads for processing */
 
 /* Functions */
 
@@ -126,6 +127,7 @@ Param_t *GetParam(int argc, char *argv[])
       {"version", no_argument, &version_flag, 1},
       {"offset_refl", required_argument, 0, 'm'},
       {"scale_refl", required_argument, 0, 'n'},
+      {"num_threads", required_argument, 0, 'v'},
       {0, 0, 0, 0}
   };
 
@@ -181,6 +183,10 @@ Param_t *GetParam(int argc, char *argv[])
             sprintf(temp, "Error converting string '%s' to floating-point number", optarg);
             RETURN_ERROR(temp, "GetParam", NULL);
         }
+        break;
+
+      case 'v':  /* number of threads */
+        num_threads = atoi (optarg);
         break;
 
       case '?':
@@ -478,4 +484,9 @@ double get_scale_refl(void)
 double get_offset_refl(void)
 {
     return offset_refl;
+}
+
+int get_num_threads(void)
+{
+    return num_threads;
 }

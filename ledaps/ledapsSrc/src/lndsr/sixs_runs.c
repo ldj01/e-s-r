@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
+#include "lndsr.h"
 #include "sixs_runs.h"
 
 struct etm_spectral_function_t {
@@ -131,7 +132,7 @@ int create_6S_tables(sixs_tables_t *sixs_tables, Input_meta_t *meta) {
         #pragma omp parallel for private (i, j, k, sixs_cmd_filename, \
                                           sixs_out_filename, fd, cmd, line_in, \
                                           tgoz, tgco2, tgo2, tgno2, tgch4, \
-                                          tgco)
+                                          tgco) num_threads (get_num_threads())
 #endif
 	for (i=0;i<SIXS_NB_BANDS;i++) {
         int tg_read = 0;  /* number of "tg" components read for this band */

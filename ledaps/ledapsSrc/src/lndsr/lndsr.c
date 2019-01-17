@@ -857,7 +857,8 @@ int main (int argc, char *argv[]) {
         img.is_fill = false;
         img.l = il;
 #ifdef _OPENMP
-        #pragma omp parallel for private (is, geo, flat, flon, tmpflt_arr) firstprivate (img, atemp_line)
+        #pragma omp parallel for private (is, geo, flat, flon, tmpflt_arr) \
+        firstprivate (img, atemp_line) num_threads(get_num_threads())
 #endif
         for (is = 0; is < input->size.s; is++) {
             /* Get the geolocation info for this pixel */

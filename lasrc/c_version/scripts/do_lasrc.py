@@ -40,6 +40,7 @@ class SurfaceReflectance():
     #       should be completed.  True or False.  Default is True, otherwise
     #       the processing will halt after the TOA reflectance products are
     #       complete.
+    #   num_threads - number of threads used for processing
     #
     # Returns:
     #     ERROR - error running the surface reflectance application
@@ -54,7 +55,8 @@ class SurfaceReflectance():
     #      going to be grabbed from the command line, then it's assumed all
     #      the parameters will be pulled from the command line.
     #######################################################################
-    def runSr (self, xml_infile=None, process_sr=None, write_toa=False):
+    def runSr (self, xml_infile=None, process_sr=None, write_toa=False,
+               num_threads=None):
         # if no parameters were passed then get the info from the
         # command line
         if xml_infile == None:
@@ -84,6 +86,8 @@ class SurfaceReflectance():
                 type="float", help="scaling value for thermal bands")
             parser.add_option ("--offset_therm", dest="offset_therm",
                 type="float", help="offset value for thermal bands")
+            parser.add_option ("--num_threads", dest="num_threads",
+                type="int", help="number of threads used for processing")
             parser.add_option("--verbose", dest="verbose", default=False,
                 action="store_true", help="Turn verbose logging on")
 
@@ -102,6 +106,7 @@ class SurfaceReflectance():
             offset_refl = options.offset_refl
             scale_therm = options.scale_therm
             offset_therm = options.offset_therm
+            num_threads = options.num_threads
             verbose = options.verbose
 
         # get the logger
@@ -195,6 +200,7 @@ class SurfaceReflectance():
         scale_therm_opt_str = ''
         offset_refl_opt_str = ''
         offset_therm_opt_str = ''
+        num_threads_opt_str = ''
 
         if process_sr == 'False':
             process_sr_opt_str = '--process_sr=false '
@@ -202,20 +208,23 @@ class SurfaceReflectance():
             write_toa_opt_str = '--write_toa '
         if verbose:
             verbose_opt_str = '--verbose '
-        if scale_refl != None:
+        if scale_refl is not None:
             scale_refl_opt_str = '--scale_refl={} '.format(scale_refl)
-        if scale_therm != None :
+        if scale_therm is not None :
             scale_therm_opt_str = '--scale_therm={} '.format(scale_therm)
-        if offset_refl != None:
+        if offset_refl is not None:
             offset_refl_opt_str = '--offset_refl={} '.format(offset_refl)
-        if offset_therm != None:
+        if offset_therm is not None:
             offset_therm_opt_str = '--offset_therm={} '.format(offset_therm)
+        if num_threads is not None:
+            num_threads_opt_str = '--num_threads={} '.format(num_threads)
 
-        cmdstr = ('lasrc --xml={} --aux={} {}{}{}{}{}{}{}'
+        cmdstr = ('lasrc --xml={} --aux={} {}{}{}{}{}{}{}{}'
                   .format(xml_infile, aux_file, process_sr_opt_str,
                           write_toa_opt_str, verbose_opt_str,
                           scale_refl_opt_str, scale_therm_opt_str,
-                          offset_refl_opt_str, offset_therm_opt_str))
+                          offset_refl_opt_str, offset_therm_opt_str,
+                          num_threads_opt_str))
         msg = 'Executing lasrc command: {}'.format(cmdstr)
         logger.debug (msg)
         (status, output) = commands.getstatusoutput (cmdstr)

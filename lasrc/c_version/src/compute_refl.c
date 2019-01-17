@@ -491,51 +491,108 @@ static bool find_closest_non_fill
     int *nearest_samp  /* O: samp for nearest non-fill pix in aerosol window */
 )
 {
-    int curr_pix;            /* looping variable for pixels */
     int line, samp;          /* looping variables for lines and samples */
     int start_line, end_line;
     int start_samp, end_samp;
-    int line_index;
+    int top_cropped, bottom_cropped, left_cropped, right_cropped;
     int aero_window;         /* looping variable for the aerosol window */
+    uint16 *band_ptr;        /* band data pointer */
 
     /* Loop around the center pixel, moving outward with each loop, searching
        for a pixel that is not of the QA type specified and is not fill */
     for (aero_window = 1; aero_window <= HALF_AERO_WINDOW; aero_window++)
     {
-        if (center_line - aero_window > 0)
-            start_line = center_line - aero_window;
-        else
-            start_line = 0;
-        if (center_line + aero_window < nlines)
-            end_line = center_line + aero_window;
-        else
-            end_line = nlines - 1;
-        if (center_samp - aero_window > 0)
-            start_samp = center_samp - aero_window;
-        else
-            start_samp = 0;
-        if (center_samp + aero_window < nsamps)
-            end_samp = center_samp + aero_window;
-        else
-            end_samp = nsamps - 1;
-
-        for (line = start_line, line_index=line*nsamps; line <= end_line;
-             line++, line_index+=nsamps)
+        if (center_line - aero_window >= 0)
         {
-            curr_pix = line_index + start_samp;
-            for (samp = start_samp; samp <= end_samp; samp++, curr_pix++)
+            start_line = center_line - aero_window;
+            top_cropped = 0;
+        }
+        else
+        {
+            start_line = 0;
+            top_cropped = 1;
+        }
+        if (center_line + aero_window < nlines)
+        {
+            end_line = center_line + aero_window;
+            bottom_cropped = 0;
+        }
+        else
+        {
+            end_line = nlines - 1;
+            bottom_cropped = 1;
+        }
+        if (center_samp - aero_window >= 0)
+        {
+            start_samp = center_samp - aero_window;
+            left_cropped = 0;
+        }
+        else
+        {
+            start_samp = 0;
+            left_cropped = 1;
+        }
+        if (center_samp + aero_window < nsamps)
+        {
+            end_samp = center_samp + aero_window;
+            right_cropped = 0;
+        }
+        else
+        {
+            end_samp = nsamps - 1;
+            right_cropped = 1;
+        }
+
+        /* Check top line of current window. */
+        line = start_line;
+        band_ptr = &qaband[line*nsamps];
+        if (!top_cropped)
+        {
+            for (samp = start_samp; samp <= end_samp; samp++)
             {
-                /* If this pixel is not fill, then mark it as the closest
-                   non-fill pixel and return */
-                if (!level1_qa_is_fill (qaband[curr_pix]))
+                if (!level1_qa_is_fill(band_ptr[samp]))
                 {
                     *nearest_line = line;
                     *nearest_samp = samp;
-                    return (true);
+                    return true;
+                }
+            }
+            line++;
+            band_ptr += nsamps;
+        }
+
+        /* Check first and last samples of the sides of the current window. */
+        for (; line < end_line; line++, band_ptr+=nsamps)
+        {
+            if (!left_cropped && !level1_qa_is_fill(band_ptr[start_samp]))
+            {
+                *nearest_line = line;
+                *nearest_samp = start_samp;
+                return true;
+            }
+
+            if (!right_cropped && !level1_qa_is_fill(band_ptr[end_samp]))
+            {
+                *nearest_line = line;
+                *nearest_samp = end_samp;
+                return true;
+            }
+        }
+
+        /* Check the bottom line of the current window. */
+        if (!bottom_cropped)
+        {
+            for (samp = start_samp; samp <= end_samp; samp++)
+            {
+                if (!level1_qa_is_fill(band_ptr[samp]))
+                {
+                    *nearest_line = line;
+                    *nearest_samp = samp;
+                    return true;
                 }
             }
         }
-    }
+    } /* window loop */
 
     /* No pixel was found that met the criteria */
     return (false);
@@ -572,55 +629,125 @@ static bool find_closest_non_cloud_shadow_water
     int *nearest_samp  /* O: samp for nearest non-cloud pix in aerosol window */
 )
 {
-    int curr_pix;            /* looping variable for pixels */
     int line, samp;          /* looping variables for lines and samples */
     int start_line, end_line;
     int start_samp, end_samp;
+    int top_cropped, bottom_cropped, left_cropped, right_cropped;
     int line_index;
     int aero_window;         /* looping variable for the aerosol window */
+    uint16 *qband_ptr, *s4band_ptr, *s5band_ptr;  /* band data pointers */
 
     /* Loop around the center pixel, moving outward with each loop, searching
        for a pixel that is not of the QA type specified and is not fill */
     for (aero_window = 1; aero_window <= HALF_AERO_WINDOW; aero_window++)
     {
-        if (center_line - aero_window > 0)
-            start_line = center_line - aero_window;
-        else
-            start_line = 0;
-        if (center_line + aero_window < nlines)
-            end_line = center_line + aero_window;
-        else
-            end_line = nlines - 1;
-        if (center_samp - aero_window > 0)
-            start_samp = center_samp - aero_window;
-        else
-            start_samp = 0;
-        if (center_samp + aero_window < nsamps)
-            end_samp = center_samp + aero_window;
-        else
-            end_samp = nsamps - 1;
-
-        for (line = start_line, line_index=line*nsamps; line <= end_line;
-             line++, line_index+=nsamps)
+        if (center_line - aero_window >= 0)
         {
-            curr_pix = line_index + start_samp;
-            for (samp = start_samp; samp <= end_samp; samp++, curr_pix++)
+            start_line = center_line - aero_window;
+            top_cropped = 0;
+        }
+        else
+        {
+            start_line = 0;
+            top_cropped = 1;
+        }
+        if (center_line + aero_window < nlines)
+        {
+            end_line = center_line + aero_window;
+            bottom_cropped = 0;
+        }
+        else
+        {
+            end_line = nlines - 1;
+            bottom_cropped = 1;
+        }
+        if (center_samp - aero_window >= 0)
+        {
+            start_samp = center_samp - aero_window;
+            left_cropped = 0;
+        }
+        else
+        {
+            start_samp = 0;
+            left_cropped = 1;
+        }
+        if (center_samp + aero_window < nsamps)
+        {
+            end_samp = center_samp + aero_window;
+            right_cropped = 0;
+        }
+        else
+        {
+            end_samp = nsamps - 1;
+            right_cropped = 1;
+        }
+
+        /* Check top line of current window. */
+        line = start_line;
+        line_index = line*nsamps;
+        qband_ptr = &qaband[line_index];
+        s4band_ptr = &sband[SR_BAND4][line_index];
+        s5band_ptr = &sband[SR_BAND5][line_index];
+        if (!top_cropped)
+        {
+            for (samp = start_samp; samp <= end_samp; samp++)
             {
-                /* If this pixel is not fill, not water, and is not cloud or
-                   shadow, then mark it as the closest non-cloud pixel and
-                   return. */
-                if (!level1_qa_is_fill (qaband[curr_pix]) &&
-                    !is_cloud_or_shadow (qaband[curr_pix]) &&
-                    !is_water (sband[SR_BAND4][curr_pix],
-                               sband[SR_BAND5][curr_pix]))
+                if (!level1_qa_is_fill(qband_ptr[samp]) &&
+                    !is_cloud_or_shadow(qband_ptr[samp]) &&
+                    !is_water(s4band_ptr[samp], s5band_ptr[samp]))
                 {
                     *nearest_line = line;
                     *nearest_samp = samp;
-                    return (true);
+                    return true;
+                }
+            }
+            line++;
+            qband_ptr += nsamps;
+            s4band_ptr += nsamps;
+            s5band_ptr += nsamps;
+        }
+
+        /* Check first and last samples of the sides of the current window. */
+        for (; line < end_line;
+             line++, qband_ptr+=nsamps, s4band_ptr+=nsamps, s5band_ptr+=nsamps)
+        {
+            if (!left_cropped &&
+                !level1_qa_is_fill(qband_ptr[start_samp]) &&
+                !is_cloud_or_shadow(qband_ptr[start_samp]) &&
+                !is_water(s4band_ptr[start_samp], s5band_ptr[start_samp]))
+            {
+                *nearest_line = line;
+                *nearest_samp = start_samp;
+                return true;
+            }
+
+            if (!right_cropped &&
+                !level1_qa_is_fill(qband_ptr[end_samp]) &&
+                !is_cloud_or_shadow(qband_ptr[end_samp]) &&
+                !is_water(s4band_ptr[end_samp], s5band_ptr[end_samp]))
+            {
+                *nearest_line = line;
+                *nearest_samp = end_samp;
+                return true;
+            }
+        }
+
+        /* Check the bottom line of the current window. */
+        if (!bottom_cropped)
+        {
+            for (samp = start_samp; samp <= end_samp; samp++)
+            {
+                if (!level1_qa_is_fill(qband_ptr[samp]) &&
+                    !is_cloud_or_shadow(qband_ptr[samp]) &&
+                    !is_water(s4band_ptr[samp], s5band_ptr[samp]))
+                {
+                    *nearest_line = line;
+                    *nearest_samp = samp;
+                    return true;
                 }
             }
         }
-    }
+    } /* window loop */
 
     /* No pixel was found that met the criteria */
     return (false);
@@ -656,53 +783,121 @@ static bool find_closest_non_water
     int *nearest_samp  /* O: samp for nearest non-cloud pix in aerosol window */
 )
 {
-    int curr_pix;            /* looping variable for pixels */
     int line, samp;          /* looping variables for lines and samples */
     int start_line, end_line;
     int start_samp, end_samp;
+    int top_cropped, bottom_cropped, left_cropped, right_cropped;
     int line_index;
     int aero_window;         /* looping variable for the aerosol window */
+    uint16 *qband_ptr, *s4band_ptr, *s5band_ptr;  /* band data pointers */
 
     /* Loop around the center pixel, moving outward with each loop, searching
        for a pixel that is not of the QA type specified and is not fill */
     for (aero_window = 1; aero_window <= HALF_AERO_WINDOW; aero_window++)
     {
-        if (center_line - aero_window > 0)
-            start_line = center_line - aero_window;
-        else
-            start_line = 0;
-        if (center_line + aero_window < nlines)
-            end_line = center_line + aero_window;
-        else
-            end_line = nlines - 1;
-        if (center_samp - aero_window > 0)
-            start_samp = center_samp - aero_window;
-        else
-            start_samp = 0;
-        if (center_samp + aero_window < nsamps)
-            end_samp = center_samp + aero_window;
-        else
-            end_samp = nsamps - 1;
-
-        for (line = start_line, line_index=line*nsamps; line <= end_line;
-             line++, line_index+=nsamps)
+        if (center_line - aero_window >= 0)
         {
-            curr_pix = line_index + start_samp;
-            for (samp = start_samp; samp <= end_samp; samp++, curr_pix++)
+            start_line = center_line - aero_window;
+            top_cropped = 0;
+        }
+        else
+        {
+            start_line = 0;
+            top_cropped = 1;
+        }
+        if (center_line + aero_window < nlines)
+        {
+            end_line = center_line + aero_window;
+            bottom_cropped = 0;
+        }
+        else
+        {
+            end_line = nlines - 1;
+            bottom_cropped = 1;
+        }
+        if (center_samp - aero_window >= 0)
+        {
+            start_samp = center_samp - aero_window;
+            left_cropped = 0;
+        }
+        else
+        {
+            start_samp = 0;
+            left_cropped = 1;
+        }
+        if (center_samp + aero_window < nsamps)
+        {
+            end_samp = center_samp + aero_window;
+            right_cropped = 0;
+        }
+        else
+        {
+            end_samp = nsamps - 1;
+            right_cropped = 1;
+        }
+
+        /* Check top line of current window. */
+        line = start_line;
+        line_index = line*nsamps;
+        qband_ptr = &qaband[line_index];
+        s4band_ptr = &sband[SR_BAND4][line_index];
+        s5band_ptr = &sband[SR_BAND5][line_index];
+        if (!top_cropped)
+        {
+            for (samp = start_samp; samp <= end_samp; samp++)
             {
-                /* If this pixel is not fill and is not water, then mark it as
-                   the closest non-water pixel and return. */
-                if (!level1_qa_is_fill (qaband[curr_pix]) &&
-                    !is_water (sband[SR_BAND4][curr_pix],
-                               sband[SR_BAND5][curr_pix]))
+                if (!level1_qa_is_fill(qband_ptr[samp]) &&
+                    !is_water(s4band_ptr[samp], s5band_ptr[samp]))
                 {
                     *nearest_line = line;
                     *nearest_samp = samp;
-                    return (true);
+                    return true;
+                }
+            }
+            line++;
+            qband_ptr += nsamps;
+            s4band_ptr += nsamps;
+            s5band_ptr += nsamps;
+        }
+
+        /* Check first and last samples of the sides of the current window. */
+        for (; line < end_line;
+             line++, qband_ptr+=nsamps, s4band_ptr+=nsamps, s5band_ptr+=nsamps)
+        {
+            if (!left_cropped &&
+                !level1_qa_is_fill(qband_ptr[start_samp]) &&
+                !is_water(s4band_ptr[start_samp], s5band_ptr[start_samp]))
+            {
+                *nearest_line = line;
+                *nearest_samp = start_samp;
+                return true;
+            }
+
+            if (!right_cropped &&
+                !level1_qa_is_fill(qband_ptr[end_samp]) &&
+                !is_water(s4band_ptr[end_samp], s5band_ptr[end_samp]))
+            {
+                *nearest_line = line;
+                *nearest_samp = end_samp;
+                return true;
+            }
+        }
+
+        /* Check the bottom line of the current window. */
+        if (!bottom_cropped)
+        {
+            for (samp = start_samp; samp <= end_samp; samp++)
+            {
+                if (!level1_qa_is_fill(qband_ptr[samp]) &&
+                    !is_water(s4band_ptr[samp], s5band_ptr[samp]))
+                {
+                    *nearest_line = line;
+                    *nearest_samp = samp;
+                    return true;
                 }
             }
         }
-    }
+    } /* window loop */
 
     /* No pixel was found that met the criteria */
     return (false);

@@ -297,7 +297,7 @@ static int init_sr_refl
     char *intrefnm,     /* I: intrinsic reflectance filename */
     char *transmnm,     /* I: transmission filename */
     char *spheranm,     /* I: spherical albedo filename */
-    char *cmgdemnm,     /* I: climate modeling grid DEM filename */
+    char *cmgdemnm,     /* I: climate modeling grid (CMG) DEM filename */
     char *rationm,      /* I: ratio averages filename */
     char *auxnm,        /* I: auxiliary filename for ozone and water vapor */
     float *eps,         /* O: angstrom coefficient */
@@ -335,7 +335,8 @@ static int init_sr_refl
                               [NVIEW_ZEN_VALS x NSOLAR_ZEN_VALS] */
     float *nbfi,        /* O: number of azimuth angles
                               [NVIEW_ZEN_VALS x NSOLAR_ZEN_VALS] */
-    int16 *dem,         /* O: CMG DEM data array [DEM_NBLAT x DEM_NBLON] */
+    int16 *dem,         /* O: climate modeling grid (CMG) DEM data array
+                              [DEM_NBLAT x DEM_NBLON] */
     int16 *andwi,       /* O: avg NDWI [RATIO_NBLAT x RATIO_NBLON] */
     int16 *sndwi,       /* O: standard NDWI [RATIO_NBLAT x RATIO_NBLON] */
     int16 *ratiob1,     /* O: mean band1 ratio [RATIO_NBLAT x RATIO_NBLON] */
@@ -960,7 +961,7 @@ int compute_sr_refl
     char *intrefnm,     /* I: intrinsic reflectance filename */
     char *transmnm,     /* I: transmission filename */
     char *spheranm,     /* I: spherical albedo filename */
-    char *cmgdemnm,     /* I: climate modeling grid DEM filename */
+    char *cmgdemnm,     /* I: climate modeling grid (CMG) DEM filename */
     char *rationm,      /* I: ratio averages filename */
     char *auxnm         /* I: auxiliary filename for ozone and water vapor */
 )
@@ -1386,8 +1387,9 @@ int compute_sr_refl
             Img_coord_float_t img; /* coordinate in line/sample space */
             Geo_coord_t geo;  /* coordinate in lat/long space */
             float lat, lon;   /* pixel lat, long location */
-            float xcmg, ycmg; /* x/y location for CMG */
+            float xcmg, ycmg; /* x/y location for climate modeling grid (CMG) */
             int lcmg, scmg;   /* line/sample index for the CMG */
+            int cmg_index, cmg_index1;    /* CMG array indices */
             float u, v;       /* line/sample index for the CMG */
             float u_x_v;      /* u * v */
             int ratio_pix11;  /* pixel loc for ratio products [lcmg][scmg] */
@@ -1428,8 +1430,6 @@ int compute_sr_refl
             float troatm[NSR_BANDS];      /* atmospheric reflectance table for
                                              bands 1-7 */
             int iaots;        /* index for AOTs */
-            int cmg_index;    /* CMG array indices */
-            int cmg_index1;
             int nearest_line = i;         /* line for nearest non-fill/cloud
                                              pixel in the aerosol window */
             int nearest_samp = j;         /* samp for nearest non-fill/cloud
@@ -1532,13 +1532,13 @@ int compute_sr_refl
             lon = geo.lon * RAD2DEG;
 
             /* Use that lat/long to determine the line/sample in the
-               CMG-related lookup tables, using the center of the UL
-               pixel. Note, we are basically making sure the line/sample
-               combination falls within -90, 90 and -180, 180 global climate
-               data boundaries.  However, the source code below uses lcmg+1
-               and scmg+1, which for some scenes may wrap around the
-               dateline or the poles.  Thus we need to wrap the CMG data
-               around to the beginning of the array. */
+               climate modeling grid (CMG)-related lookup tables, using the
+               center of the UL pixel.  Note, we are basically making sure
+               the line/sample combination falls within -90, 90 and -180, 180
+               global climate data boundaries.  However, the source code
+               below uses lcmg+1 and scmg+1, which for some scenes may wrap
+               around the dateline or the poles.  Thus we need to wrap the
+               CMG data around to the beginning of the array. */
             /* Each CMG pixel is 0.05 x 0.05 degrees.  Use the center of the
                pixel for each calculation.  Negative latitude values should
                be the largest line values in the CMG grid.  Negative

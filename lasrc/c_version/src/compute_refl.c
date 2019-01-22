@@ -1619,7 +1619,8 @@ int compute_sr_refl
                 }
             }
 
-            /* Interpolate the slope/intercept for each band, and unscale */
+            /* Interpolate the slope/intercept for each band (1, 2, and 7),
+               and unscale */
             for (band_index = 0; band_index < 3; band_index++)
             {
                 slprb[band_index] = slpr[band_index][0]
@@ -1944,17 +1945,14 @@ int compute_sr_refl
                 {  /* Set the first aerosol bit (low aerosols) */
                     ipflag[curr_pix] |= (1 << AERO1_QA);
                 }
+                else if (tmpf < 0.03)
+                {  /* Set the second aerosol bit (average aerosols) */
+                    ipflag[curr_pix] |= (1 << AERO2_QA);
+                }
                 else
-                {
-                    if (tmpf < 0.03)
-                    {  /* Set the second aerosol bit (average aerosols) */
-                        ipflag[curr_pix] |= (1 << AERO2_QA);
-                    }
-                    else
-                    {  /* Set both aerosol bits (high aerosols) */
-                        ipflag[curr_pix] |= (1 << AERO1_QA);
-                        ipflag[curr_pix] |= (1 << AERO2_QA);
-                    }
+                {  /* Set both aerosol bits (high aerosols) */
+                    ipflag[curr_pix] |= (1 << AERO1_QA);
+                    ipflag[curr_pix] |= (1 << AERO2_QA);
                 }
             }  /* end if this is the coastal aerosol band */
 

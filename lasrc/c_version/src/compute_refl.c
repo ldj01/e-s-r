@@ -1940,7 +1940,7 @@ int compute_sr_refl
             if (ib == DN_BAND1)
             {
                 /* Set up aerosol QA bits */
-                tmpf = fabs (rsurf - roslamb);
+                tmpf = fabsf(rsurf - roslamb);
                 if (tmpf <= 0.015)
                 {  /* Set the first aerosol bit (low aerosols) */
                     ipflag[curr_pix] |= (1 << AERO1_QA);

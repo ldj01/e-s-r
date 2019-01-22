@@ -1500,23 +1500,20 @@ int compute_sr_refl
                        pixel for further processing */
                     nearest_pix = nearest_line*nsamps + nearest_samp;
                 }
-            }
+                else
+                {
+                    /* Assign generic aerosol values for the cloud or shadow
+                       pixel. */
+                    if (is_cloud (qaband[nearest_pix]))
+                        ipflag[center_pix] = (1 << IPFLAG_CLOUD);
+                    else if (is_shadow (qaband[nearest_pix]))
+                        ipflag[center_pix] = (1 << IPFLAG_SHADOW);
+                    taero[center_pix] = DEFAULT_AERO;
+                    teps[center_pix] = DEFAULT_EPS;
 
-            /* If the pixel selected is a cloud or shadow, then don't mess
-               with aerosol interpolation.  Just assign generic aerosol
-               values. */
-            if (is_cloud_or_shadow (qaband[nearest_pix]))
-            {
-                /* Assign generic values for the cloud pixel */
-                if (is_cloud (qaband[nearest_pix]))
-                    ipflag[center_pix] = (1 << IPFLAG_CLOUD);
-                else if (is_shadow (qaband[nearest_pix]))
-                    ipflag[center_pix] = (1 << IPFLAG_SHADOW);
-                taero[center_pix] = DEFAULT_AERO;
-                teps[center_pix] = DEFAULT_EPS;
-
-                /* Next window */
-                continue;
+                    /* Next window */
+                    continue;
+                }
             }
 
             /* Get the lat/long for the center of the current pixel

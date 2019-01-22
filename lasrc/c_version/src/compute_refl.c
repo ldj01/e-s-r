@@ -1362,60 +1362,10 @@ int compute_sr_refl
 #endif
     for (i = HALF_AERO_WINDOW; i < nlines; i += AERO_WINDOW)
     {
-        int center_line = i; /* line for the center of the aerosol window */
-        int center_samp;     /* sample for the center of the aerosol window */
-        int nearest_line;    /* line for nearest non-fill/cloud pixel in the
-                                aerosol window */
-        int nearest_samp;    /* samp for nearest non-fill/cloud pixel in the
-                                aerosol window */
-        int center_pix;      /* current pixel in 1D arrays of nlines*nsamps
-                                for the center of the aerosol window */
-        Img_coord_float_t img;  /* coordinate in line/sample space */
-        Geo_coord_t geo;     /* coordinate in lat/long space */
-        float lat, lon;      /* pixel lat, long location */
-        float xcmg, ycmg;    /* x/y location for CMG */
-        int lcmg, scmg;      /* line/sample index for the CMG */
-        float u, v;          /* line/sample index for the CMG */
-        float u_x_v;         /* u * v */
-        int ratio_pix11;     /* pixel loc for ratio products [lcmg][scmg] */
-        int ratio_pix12;     /* pixel loc for ratio products [lcmg][scmg+1] */
-        int ratio_pix21;     /* pixel loc for ratio products [lcmg+1][scmg] */
-        int ratio_pix22;     /* pixel loc for ratio products [lcmg+1][scmg+1] */
-        float slpr11, slpr12, slpr21, slpr22;
-                             /* band ratio slope at (line,samp), (line,samp+1),
-                                (line+1,samp), and (line+1,samp+1) */
-        float intr11, intr12, intr21, intr22;
-                             /* band ratio intercept at (line,samp),
-                                (line,samp+1), (line+1,samp), and
-                                (line+1,samp+1) */
-        float slprb1, slprb2, slprb7;  /* interpolated band ratio slope values
-                                          for band ratios 1, 2, 7 */
-        float intrb1, intrb2, intrb7;  /* interpolated band ratio intercept
-                                          values for band ratios 1, 2, 7 */
-        float xndwi;         /* calculated NDWI value */
-        float ndwi_th1, ndwi_th2;      /* values for NDWI calculations */
-        int iband;           /* current band */
-        int iband1, iband3;  /* band indices (zero-based) */
-        float eps1, eps2, eps3;        /* eps values for three runs */
-        float epsmin;        /* eps which minimizes the residual */
-        double xa, xb;       /* coefficients for finding the eps that
-                                minimizes the residual*/
-        float rotoa;   /* top of atmosphere reflectance */
-        float residual;      /* model residual */
-        float residual1, residual2, residual3; /* residuals for 3 different
-                                                  eps values */
-        float raot;          /* AOT reflectance */
-        float sraot1, sraot3; /* raot values for three different eps values */
-        float corf;          /* aerosol impact (higher values represent high
-                                aerosol) */
-        float ros4, ros5;    /* surface reflectance for bands 4 and 5 */
-        float erelc[NSR_BANDS];        /* band ratio variable for bands 1-7 */
-        float troatm[NSR_BANDS];       /* atmospheric reflectance table for
-                                          bands 1-7 */
-        int iaots;           /* index for AOTs */
-        int curr_pix = i*nsamps + HALF_AERO_WINDOW;
-                             /* current pixel in 1D arrays of nlines*nsamps */
-        int j;               /* sample loop counter */
+        int j; /* sample loop counter */
+        int center_pix = i*nsamps + HALF_AERO_WINDOW;
+               /* current pixel in 1D arrays of nlines*nsamps for the center
+                  of the aerosol window */
 
 #ifndef _OPENMP
         /* update status, but not if multi-threaded */
@@ -1430,32 +1380,75 @@ int compute_sr_refl
             }
         }
 #endif
-
         for (j = HALF_AERO_WINDOW; j < nsamps;
-             j += AERO_WINDOW, curr_pix += AERO_WINDOW)
+             j += AERO_WINDOW, center_pix += AERO_WINDOW)
         {
-            int cmg_index;   /* CMG array indices */
+            Img_coord_float_t img; /* coordinate in line/sample space */
+            Geo_coord_t geo;  /* coordinate in lat/long space */
+            float lat, lon;   /* pixel lat, long location */
+            float xcmg, ycmg; /* x/y location for CMG */
+            int lcmg, scmg;   /* line/sample index for the CMG */
+            float u, v;       /* line/sample index for the CMG */
+            float u_x_v;      /* u * v */
+            int ratio_pix11;  /* pixel loc for ratio products [lcmg][scmg] */
+            int ratio_pix12;  /* pixel loc for ratio products [lcmg][scmg+1] */
+            int ratio_pix21;  /* pixel loc for ratio products [lcmg+1][scmg] */
+            int ratio_pix22;  /* pixel loc for ratio products [lcmg+1][scmg+1]*/
+            float slpr11, slpr12, slpr21, slpr22;
+                              /* band ratio slope at (line,samp), (line,samp+1),
+                                 (line+1,samp), and (line+1,samp+1) */
+            float intr11, intr12, intr21, intr22;
+                              /* band ratio intercept at (line,samp),
+                                 (line,samp+1), (line+1,samp), and
+                                 (line+1,samp+1) */
+            float slprb1, slprb2, slprb7; /* interpolated band ratio slope
+                                             values for band ratios 1, 2, 7 */
+            float intrb1, intrb2, intrb7; /* interpolated band ratio intercept
+                                             values for band ratios 1, 2, 7 */
+            float xndwi;      /* calculated NDWI value */
+            float ndwi_th1, ndwi_th2;     /* values for NDWI calculations */
+            int iband;        /* current band */
+            int iband1, iband3;           /* band indices (zero-based) */
+            float eps1, eps2, eps3;       /* eps values for three runs */
+            float epsmin;     /* eps which minimizes the residual */
+            double xa, xb;    /* coefficients for finding the eps that
+                                 minimizes the residual*/
+            float rotoa;      /* top of atmosphere reflectance */
+            float residual;   /* model residual */
+            float residual1, residual2, residual3; /* residuals for 3 different
+                                                      eps values */
+            float raot;       /* AOT reflectance */
+            float sraot1, sraot3;         /* raot values for three different
+                                             eps values */
+            float corf;       /* aerosol impact (higher values represent high
+                                 aerosol) */
+            float ros4, ros5; /* surface reflectance for bands 4 and 5 */
+            float erelc[NSR_BANDS];       /* band ratio variable for
+                                             bands 1-7 */
+            float troatm[NSR_BANDS];      /* atmospheric reflectance table for
+                                             bands 1-7 */
+            int iaots;        /* index for AOTs */
+            int cmg_index;    /* CMG array indices */
             int cmg_index1;
-
-            /* Keep track of the center pixel for the current aerosol window;
-               may need to return here if this is fill, cloudy or water */
-            center_samp = j;
-            center_pix = curr_pix;
+            int nearest_line = i;         /* line for nearest non-fill/cloud
+                                             pixel in the aerosol window */
+            int nearest_samp = j;         /* samp for nearest non-fill/cloud
+                                             pixel in the aerosol window */
+            int nearest_pix = center_pix; /* nearest non-fill/cloud pixel in
+                                             the aerosol window */
 
             /* If this pixel is fill */
-            if (level1_qa_is_fill (qaband[curr_pix]))
+            if (level1_qa_is_fill (qaband[nearest_pix]))
             {
                 /* Look for other non-fill pixels in the window */
-                if (find_closest_non_fill (qaband, nlines, nsamps, center_line,
-                    center_samp, &nearest_line, &nearest_samp))
+                if (find_closest_non_fill (qaband, nlines, nsamps, i, j,
+                                           &nearest_line, &nearest_samp))
                 {
                     /* Use the line/sample location of the non-fill pixel for
                        further processing of aerosols. However we will still
                        write to the center of the aerosol window for the
                        current window. */
-                    i = nearest_line;
-                    j = nearest_samp;
-                    curr_pix = i * nsamps + j;
+                    nearest_pix = nearest_line*nsamps + nearest_samp;
                 }
                 else
                 {
@@ -1468,19 +1461,17 @@ int compute_sr_refl
             /* If this non-fill pixel is water, then look for a pixel which is
                not water.  If none are found then the whole window is fill or
                water.  Flag this pixel as water. */
-            if (is_water (sband[SR_BAND4][curr_pix],
-                          sband[SR_BAND5][curr_pix]))
+            if (is_water (sband[SR_BAND4][nearest_pix],
+                          sband[SR_BAND5][nearest_pix]))
             {
                 /* Look for other non-fill/non-water pixels in the window.
                    Start with the center of the window and search outward. */
                 if (find_closest_non_water (qaband, sband, nlines, nsamps,
-                    center_line, center_samp, &nearest_line, &nearest_samp))
+                                            i, j, &nearest_line, &nearest_samp))
                 {
                     /* Use the line/sample location of the non-fill/non-water
                        pixel for further processing */
-                    i = nearest_line;
-                    j = nearest_samp;
-                    curr_pix = i * nsamps + j;
+                    nearest_pix = nearest_line*nsamps + nearest_samp;
                 }
                 else
                 {
@@ -1488,14 +1479,6 @@ int compute_sr_refl
                     ipflag[center_pix] = (1 << IPFLAG_WATER);
                     taero[center_pix] = DEFAULT_AERO;
                     teps[center_pix] = DEFAULT_EPS;
-
-                    /* Reset the looping variables to the center of the aerosol
-                       window versus the actual non-fill pixel that was
-                       processed so that we get the correct center for the next
-                       aerosol window */
-                    i = center_line;
-                    j = center_samp;
-                    curr_pix = center_pix;
 
                     /* Next window */
                     continue;
@@ -1505,57 +1488,46 @@ int compute_sr_refl
             /* If this non-fill/non-water pixel is cloud or shadow, then look
                for a pixel which is not cloudy, shadow, water, or fill.  If
                none are found, then just use this pixel. */
-            if (is_cloud_or_shadow (qaband[curr_pix]))
+            if (is_cloud_or_shadow (qaband[nearest_pix]))
             {
                 /* Look for other non-fill/non-water/non-cloud/non-shadow
                    pixels in the window.  Start with the center of the window
                    and search outward. */
                 if (find_closest_non_cloud_shadow_water (qaband, sband, nlines,
-                    nsamps, center_line, center_samp, &nearest_line,
-                    &nearest_samp))
+                    nsamps, i, j, &nearest_line, &nearest_samp))
                 {
                     /* Use the line/sample location of the non-fill/non-cloud
                        pixel for further processing */
-                    i = nearest_line;
-                    j = nearest_samp;
-                    curr_pix = i * nsamps + j;
+                    nearest_pix = nearest_line*nsamps + nearest_samp;
                 }
             }
 
             /* If the pixel selected is a cloud or shadow, then don't mess
                with aerosol interpolation.  Just assign generic aerosol
                values. */
-            if (is_cloud_or_shadow (qaband[curr_pix]))
+            if (is_cloud_or_shadow (qaband[nearest_pix]))
             {
                 /* Assign generic values for the cloud pixel */
-                if (is_cloud (qaband[curr_pix]))
+                if (is_cloud (qaband[nearest_pix]))
                     ipflag[center_pix] = (1 << IPFLAG_CLOUD);
-                else if (is_shadow (qaband[curr_pix]))
+                else if (is_shadow (qaband[nearest_pix]))
                     ipflag[center_pix] = (1 << IPFLAG_SHADOW);
                 taero[center_pix] = DEFAULT_AERO;
                 teps[center_pix] = DEFAULT_EPS;
-
-                /* Reset the looping variables to the center of the aerosol
-                   window versus the actual non-fill/non-cloud pixel that
-                   was processed so that we get the correct center for the
-                   next aerosol window */
-                i = center_line;
-                j = center_samp;
-                curr_pix = center_pix;
 
                 /* Next window */
                 continue;
             }
 
-            /* Get the lat/long for the current pixel (which may not be the
-               center of the aerosol window), for the center of that pixel */
-            img.l = i - 0.5;
-            img.s = j + 0.5;
+            /* Get the lat/long for the center of the current pixel
+               (which may not be the center of the aerosol window). */
+            img.l = nearest_line - 0.5;
+            img.s = nearest_samp + 0.5;
             img.is_fill = false;
             if (!from_space (space, &img, &geo))
             {
                 sprintf (errmsg, "Mapping line/sample (%d, %d) to "
-                    "geolocation coords", i, j);
+                    "geolocation coords", nearest_line, nearest_samp);
                 error_handler (true, FUNC_NAME, errmsg);
                 exit (ERROR);
             }
@@ -1766,10 +1738,10 @@ int compute_sr_refl
             intrb7 *= 0.001;   /* vs / 1000 */
 
             /* Calculate NDWI variables for the band ratios */
-            xndwi = ((double) sband[SR_BAND5][curr_pix] -
-                     (double) (sband[SR_BAND7][curr_pix] * 0.5)) /
-                    ((double) sband[SR_BAND5][curr_pix] +
-                     (double) (sband[SR_BAND7][curr_pix] * 0.5));
+            xndwi = ((double) sband[SR_BAND5][nearest_pix] -
+                     (double) (sband[SR_BAND7][nearest_pix] * 0.5)) /
+                    ((double) sband[SR_BAND5][nearest_pix] +
+                     (double) (sband[SR_BAND7][nearest_pix] * 0.5));
 
             if (xndwi > ndwi_th1)
                 xndwi = ndwi_th1;
@@ -1790,10 +1762,10 @@ int compute_sr_refl
             erelc[DN_BAND7] = (xndwi * slprb7 + intrb7);
 
             /* Retrieve the TOA reflectance values for the current pixel */
-            troatm[DN_BAND1] = aerob1[curr_pix] * scale_refl + offset_refl;
-            troatm[DN_BAND2] = aerob2[curr_pix] * scale_refl + offset_refl;
-            troatm[DN_BAND4] = aerob4[curr_pix] * scale_refl + offset_refl;
-            troatm[DN_BAND7] = aerob7[curr_pix] * scale_refl + offset_refl;
+            troatm[DN_BAND1] = aerob1[nearest_pix] * scale_refl + offset_refl;
+            troatm[DN_BAND2] = aerob2[nearest_pix] * scale_refl + offset_refl;
+            troatm[DN_BAND4] = aerob4[nearest_pix] * scale_refl + offset_refl;
+            troatm[DN_BAND7] = aerob7[nearest_pix] * scale_refl + offset_refl;
 
             /* Retrieve the aerosol information for eps 1.0 */
             iband1 = DN_BAND4;
@@ -1862,7 +1834,7 @@ int compute_sr_refl
             {
                 /* Test if band 5 makes sense */
                 iband = DN_BAND5;
-                rotoa = aerob5[curr_pix] * scale_refl + offset_refl;
+                rotoa = aerob5[nearest_pix] * scale_refl + offset_refl;
                 atmcorlamb2_new (tgo_arr[iband], xrorayp_arr[iband],
                     aot550nm[roatm_iaMax[iband]], &roatm_coef[iband][0],
                     &ttatmg_coef[iband][0], &satm_coef[iband][0], raot,
@@ -1871,7 +1843,7 @@ int compute_sr_refl
 
                 /* Test if band 4 makes sense */
                 iband = DN_BAND4;
-                rotoa = aerob4[curr_pix] * scale_refl + offset_refl;
+                rotoa = aerob4[nearest_pix] * scale_refl + offset_refl;
                 atmcorlamb2_new (tgo_arr[iband], xrorayp_arr[iband],
                     aot550nm[roatm_iaMax[iband]], &roatm_coef[iband][0],
                     &ttatmg_coef[iband][0], &satm_coef[iband][0], raot,
@@ -1900,13 +1872,6 @@ int compute_sr_refl
                 taero[center_pix] = DEFAULT_AERO;
                 teps[center_pix] = DEFAULT_EPS;
             }
-
-            /* Reset the looping variables to the center of the aerosol window
-               versus the actual non-fill/non-cloud pixel that was processed
-               so that we get the correct center for the next aerosol window */
-            i = center_line;
-            j = center_samp;
-            curr_pix = center_pix;
         }  /* end for j */
     }  /* end for i */
 

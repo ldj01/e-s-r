@@ -1389,7 +1389,7 @@ int compute_sr_refl
             float lat, lon;   /* pixel lat, long location */
             float xcmg, ycmg; /* x/y location for climate modeling grid (CMG) */
             int lcmg, scmg;   /* line/sample index for the CMG */
-            int cmg_index, cmg_index1;    /* CMG array indices */
+            int lcmg1;        /* line+1 index for the CMG */
             float u, v;       /* line/sample index for the CMG */
             float u_x_v;      /* u * v */
             int ratio_pix11;  /* pixel loc for ratio products [lcmg][scmg] */
@@ -1564,15 +1564,13 @@ int compute_sr_refl
             else if (scmg >= CMG_NBLON)
                 scmg = CMG_NBLON;
 
-            cmg_index = lcmg*RATIO_NBLON;
-            
             /* If the current CMG pixel is at the edge of the CMG array, then
                allow the next pixel for interpolation to wrap around the
                array */
             if (lcmg >= CMG_NBLAT - 1)  /* -90 degrees so wrap around */
-                cmg_index1 = 0;
+                lcmg1 = 0;
             else
-                cmg_index1 = cmg_index + RATIO_NBLON;
+                lcmg1 = lcmg + 1;
 
             /* Determine the fractional difference between the integer location
                and floating point pixel location to be used for interpolation */
@@ -1581,9 +1579,9 @@ int compute_sr_refl
             u_x_v = u * v;
 
             /* Determine the band ratios and slope/intercept */
-            ratio_pix11 = cmg_index + scmg;
+            ratio_pix11 = lcmg*RATIO_NBLON + scmg;
             ratio_pix12 = ratio_pix11 + 1;
-            ratio_pix21 = cmg_index1 + scmg;
+            ratio_pix21 = lcmg1*RATIO_NBLON + scmg;
             ratio_pix22 = ratio_pix21 + 1;
 
             if (ratiob2[ratio_pix11] > 1000 || ratiob1[ratio_pix11] > 1000 ||

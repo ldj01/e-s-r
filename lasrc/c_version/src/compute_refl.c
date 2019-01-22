@@ -1392,21 +1392,21 @@ int compute_sr_refl
             int lcmg1;        /* line+1 index for the CMG */
             float u, v;       /* line/sample index for the CMG */
             float u_x_v;      /* u * v */
-            int ratio_pix11;  /* pixel loc for ratio products [lcmg][scmg] */
-            int ratio_pix12;  /* pixel loc for ratio products [lcmg][scmg+1] */
-            int ratio_pix21;  /* pixel loc for ratio products [lcmg+1][scmg] */
-            int ratio_pix22;  /* pixel loc for ratio products [lcmg+1][scmg+1]*/
-            float slpr11, slpr12, slpr21, slpr22;
-                              /* band ratio slope at (line,samp), (line,samp+1),
-                                 (line+1,samp), and (line+1,samp+1) */
-            float intr11, intr12, intr21, intr22;
-                              /* band ratio intercept at (line,samp),
-                                 (line,samp+1), (line+1,samp), and
-                                 (line+1,samp+1) */
-            float slprb1, slprb2, slprb7; /* interpolated band ratio slope
-                                             values for band ratios 1, 2, 7 */
-            float intrb1, intrb2, intrb7; /* interpolated band ratio intercept
-                                             values for band ratios 1, 2, 7 */
+            int ratio_pix[4]; /* pixel loc for ratio products [lcmg][scmg],
+                                 [lcmg][scmg+1], [lcmg+1][scmg],
+                                 [lcmg+1][scmg+1] */
+            float slpr[3][4];    /* band ratio slopes at (line,samp),
+                                    (line,samp+1), (line+1,samp), and
+                                    (line+1,samp+1) for bands 1, 2, and 7 */
+            float intr[3][4];    /* band ratio intercepts at (line,samp),
+                                    (line,samp+1), (line+1,samp), and
+                                    (line+1,samp+1) for bands 1, 2, and 7 */
+            int ratio_index;  /* index for ratio arrays */
+            float slprb[3];   /* interpolated band ratio slope values for
+                                 band ratios 1, 2, 7 */
+            float intrb[3];   /* interpolated band ratio intercept values for
+                                 band ratios 1, 2, 7 */
+            int band_index;   /* index for band arrays */
             float xndwi;      /* calculated NDWI value */
             float ndwi_th1, ndwi_th2;     /* values for NDWI calculations */
             int iband;        /* current band */
@@ -1579,158 +1579,69 @@ int compute_sr_refl
             u_x_v = u * v;
 
             /* Determine the band ratios and slope/intercept */
-            ratio_pix11 = lcmg*RATIO_NBLON + scmg;
-            ratio_pix12 = ratio_pix11 + 1;
-            ratio_pix21 = lcmg1*RATIO_NBLON + scmg;
-            ratio_pix22 = ratio_pix21 + 1;
+            ratio_pix[0] = lcmg*RATIO_NBLON + scmg;
+            ratio_pix[1] = ratio_pix[0] + 1;
+            ratio_pix[2] = lcmg1*RATIO_NBLON + scmg;
+            ratio_pix[3] = ratio_pix[2] + 1;
 
-            if (ratiob2[ratio_pix11] > 1000 || ratiob1[ratio_pix11] > 1000 ||
-                ratiob2[ratio_pix11] < 100 || ratiob1[ratio_pix11] < 100)
-                                                   /* values scaled by 1000 */
+            for (ratio_index = 0; ratio_index < 4; ratio_index++)
             {
-                slpratiob1[ratio_pix11] = 0;
-                slpratiob2[ratio_pix11] = 0;
-                slpratiob7[ratio_pix11] = 0;
-                intratiob1[ratio_pix11] = 550;
-                intratiob2[ratio_pix11] = 600;
-                intratiob7[ratio_pix11] = 2000;
-            }
-            else if (sndwi[ratio_pix11] < 200)
-            {
-                slpratiob1[ratio_pix11] = 0;
-                slpratiob2[ratio_pix11] = 0;
-                slpratiob7[ratio_pix11] = 0;
-                intratiob1[ratio_pix11] = ratiob1[ratio_pix11];
-                intratiob2[ratio_pix11] = ratiob2[ratio_pix11];
-                intratiob7[ratio_pix11] = ratiob7[ratio_pix11];
-            }
+                int rindex = ratio_pix[ratio_index]; /* convenience variable */
 
-            if (ratiob2[ratio_pix12] > 1000 || ratiob1[ratio_pix12] > 1000 ||
-                ratiob2[ratio_pix12] < 100 || ratiob1[ratio_pix12] < 100)
+                if (ratiob2[rindex] > 1000 || ratiob1[rindex] > 1000 ||
+                    ratiob2[rindex] < 100 || ratiob1[rindex] < 100)
                                                    /* values scaled by 1000 */
-            {
-                slpratiob1[ratio_pix12] = 0;
-                slpratiob2[ratio_pix12] = 0;
-                slpratiob7[ratio_pix12] = 0;
-                intratiob1[ratio_pix12] = 550;
-                intratiob2[ratio_pix12] = 600;
-                intratiob7[ratio_pix12] = 2000;
-            }
-            else if (sndwi[ratio_pix12] < 200)
-            {
-                slpratiob1[ratio_pix12] = 0;
-                slpratiob2[ratio_pix12] = 0;
-                slpratiob7[ratio_pix12] = 0;
-                intratiob1[ratio_pix12] = ratiob1[ratio_pix12];
-                intratiob2[ratio_pix12] = ratiob2[ratio_pix12];
-                intratiob7[ratio_pix12] = ratiob7[ratio_pix12];
+                {
+                    slpr[0][ratio_index] = 0;
+                    slpr[1][ratio_index] = 0;
+                    slpr[2][ratio_index] = 0;
+                    intr[0][ratio_index] = 550;
+                    intr[1][ratio_index] = 600;
+                    intr[2][ratio_index] = 2000;
+                }
+                else if (sndwi[rindex] < 200)
+                {
+                    slpr[0][ratio_index] = 0;
+                    slpr[1][ratio_index] = 0;
+                    slpr[2][ratio_index] = 0;
+                    intr[0][ratio_index] = ratiob1[rindex];
+                    intr[1][ratio_index] = ratiob2[rindex];
+                    intr[2][ratio_index] = ratiob7[rindex];
+                }
+                else
+                {
+                    slpr[0][ratio_index] = slpratiob1[rindex];
+                    slpr[1][ratio_index] = slpratiob2[rindex];
+                    slpr[2][ratio_index] = slpratiob7[rindex];
+                    intr[0][ratio_index] = intratiob1[rindex];
+                    intr[1][ratio_index] = intratiob2[rindex];
+                    intr[2][ratio_index] = intratiob7[rindex];
+                }
             }
 
-            if (ratiob2[ratio_pix21] > 1000 || ratiob1[ratio_pix21] > 1000 ||
-                ratiob2[ratio_pix21] < 100 || ratiob1[ratio_pix21] < 100)
-                                                   /* values scaled by 1000 */
+            /* Interpolate the slope/intercept for each band, and unscale */
+            for (band_index = 0; band_index < 3; band_index++)
             {
-                slpratiob1[ratio_pix21] = 0;
-                slpratiob2[ratio_pix21] = 0;
-                slpratiob7[ratio_pix21] = 0;
-                intratiob1[ratio_pix21] = 550;
-                intratiob2[ratio_pix21] = 600;
-                intratiob7[ratio_pix21] = 2000;
-            }
-            else if (sndwi[ratio_pix21] < 200)
-            {
-                slpratiob1[ratio_pix21] = 0;
-                slpratiob2[ratio_pix21] = 0;
-                slpratiob7[ratio_pix21] = 0;
-                intratiob1[ratio_pix21] = ratiob1[ratio_pix21];
-                intratiob2[ratio_pix21] = ratiob2[ratio_pix21];
-                intratiob7[ratio_pix21] = ratiob7[ratio_pix21];
-            }
+                slprb[band_index] = slpr[band_index][0]
+                    + u*(slpr[band_index][2] - slpr[band_index][0])
+                    + v*(slpr[band_index][1] - slpr[band_index][0])
+                    + u_x_v*(slpr[band_index][0] - slpr[band_index][1]
+                             - slpr[band_index][2] + slpr[band_index][3]);
+                slprb[band_index] *= 0.001;   /* vs / 1000 */
 
-            if (ratiob2[ratio_pix22] > 1000 || ratiob1[ratio_pix22] > 1000 ||
-                ratiob2[ratio_pix22] < 100 || ratiob1[ratio_pix22] < 100)
-                                                   /* values scaled by 1000 */
-            {
-                slpratiob1[ratio_pix22] = 0;
-                slpratiob2[ratio_pix22] = 0;
-                slpratiob7[ratio_pix22] = 0;
-                intratiob1[ratio_pix22] = 550;
-                intratiob2[ratio_pix22] = 600;
-                intratiob7[ratio_pix22] = 2000;
-            }
-            else if (sndwi[ratio_pix22] < 200)
-            {
-                slpratiob1[ratio_pix22] = 0;
-                slpratiob2[ratio_pix22] = 0;
-                slpratiob7[ratio_pix22] = 0;
-                intratiob1[ratio_pix22] = ratiob1[ratio_pix22];
-                intratiob2[ratio_pix22] = ratiob2[ratio_pix22];
-                intratiob7[ratio_pix22] = ratiob7[ratio_pix22];
+                intrb[band_index] = intr[band_index][0]
+                    + u*(intr[band_index][2] - intr[band_index][0])
+                    + v*(intr[band_index][1] - intr[band_index][0])
+                    + u_x_v*(intr[band_index][0] - intr[band_index][1]
+                             - intr[band_index][2] + intr[band_index][3]);
+                intrb[band_index] *= 0.001;   /* vs / 1000 */
             }
 
             /* Compute the NDWI variables */
-            ndwi_th1 = (andwi[ratio_pix11] + 2.0 *
-                        sndwi[ratio_pix11]) * 0.001;
-            ndwi_th2 = (andwi[ratio_pix11] - 2.0 *
-                        sndwi[ratio_pix11]) * 0.001;
-
-            /* Interpolate the slope/intercept for each band, and unscale */
-            slpr11 = slpratiob1[ratio_pix11];
-            intr11 = intratiob1[ratio_pix11];
-            slpr12 = slpratiob1[ratio_pix12];
-            intr12 = intratiob1[ratio_pix12];
-            slpr21 = slpratiob1[ratio_pix21];
-            intr21 = intratiob1[ratio_pix21];
-            slpr22 = slpratiob1[ratio_pix22];
-            intr22 = intratiob1[ratio_pix22];
-            slprb1 = slpr11
-                   + u*(slpr21 - slpr11)
-                   + v*(slpr12 - slpr11)
-                   + u_x_v*(slpr11 - slpr12 - slpr21 + slpr22);
-            slprb1 *= 0.001;   /* vs / 1000 */
-            intrb1 = intr11
-                   + u*(intr21 - intr11)
-                   + v*(intr12 - intr11)
-                   + u_x_v*(intr11 - intr12 - intr21 + intr22);
-            intrb1 *= 0.001;   /* vs / 1000 */
-
-            slpr11 = slpratiob2[ratio_pix11];
-            intr11 = intratiob2[ratio_pix11];
-            slpr12 = slpratiob2[ratio_pix12];
-            intr12 = intratiob2[ratio_pix12];
-            slpr21 = slpratiob2[ratio_pix21];
-            intr21 = intratiob2[ratio_pix21];
-            slpr22 = slpratiob2[ratio_pix22];
-            intr22 = intratiob2[ratio_pix22];
-            slprb2 = slpr11
-                   + u*(slpr21 - slpr11)
-                   + v*(slpr12 - slpr11)
-                   + u_x_v*(slpr11 - slpr12 - slpr21 + slpr22);
-            slprb2 *= 0.001;   /* vs / 1000 */
-            intrb2 = intr11
-                   + u*(intr21 - intr11)
-                   + v*(intr12 - intr11)
-                   + u_x_v*(intr11 - intr12 - intr21 + intr22);
-            intrb2 *= 0.001;   /* vs / 1000 */
-
-            slpr11 = slpratiob7[ratio_pix11];
-            intr11 = intratiob7[ratio_pix11];
-            slpr12 = slpratiob7[ratio_pix12];
-            intr12 = intratiob7[ratio_pix12];
-            slpr21 = slpratiob7[ratio_pix21];
-            intr21 = intratiob7[ratio_pix21];
-            slpr22 = slpratiob7[ratio_pix22];
-            intr22 = intratiob7[ratio_pix22];
-            slprb7 = slpr11
-                   + u*(slpr21 - slpr11)
-                   + v*(slpr12 - slpr11)
-                   + u_x_v*(slpr11 - slpr12 - slpr21 + slpr22);
-            slprb7 *= 0.001;   /* vs / 1000 */
-            intrb7 = intr11
-                   + u*(intr21 - intr11)
-                   + v*(intr12 - intr11)
-                   + u_x_v*(intr11 - intr12 - intr21 + intr22);
-            intrb7 *= 0.001;   /* vs / 1000 */
+            ndwi_th1 = (andwi[ratio_pix[0]] + 2.0 *
+                        sndwi[ratio_pix[0]]) * 0.001;
+            ndwi_th2 = (andwi[ratio_pix[0]] - 2.0 *
+                        sndwi[ratio_pix[0]]) * 0.001;
 
             /* Calculate NDWI variables for the band ratios */
             xndwi = ((double) sband[SR_BAND5][nearest_pix] -
@@ -1744,17 +1655,17 @@ int compute_sr_refl
                 xndwi = ndwi_th2;
 
             /* Initialize the band ratios */
-            for (ib = 0; ib < NSR_BANDS; ib++)
+            for (band_index = 0; band_index < NSR_BANDS; band_index++)
             {
-                erelc[ib] = -1.0;
-                troatm[ib] = 0.0;
+                erelc[band_index] = -1.0;
+                troatm[band_index] = 0.0;
             }
 
             /* Compute the band ratio */
-            erelc[DN_BAND1] = (xndwi * slprb1 + intrb1);
-            erelc[DN_BAND2] = (xndwi * slprb2 + intrb2);
+            erelc[DN_BAND1] = xndwi * slprb[0] + intrb[0];
+            erelc[DN_BAND2] = xndwi * slprb[1] + intrb[1];
             erelc[DN_BAND4] = 1.0;
-            erelc[DN_BAND7] = (xndwi * slprb7 + intrb7);
+            erelc[DN_BAND7] = xndwi * slprb[2] + intrb[2];
 
             /* Retrieve the TOA reflectance values for the current pixel */
             troatm[DN_BAND1] = aerob1[nearest_pix] * scale_refl + offset_refl;

@@ -1902,7 +1902,7 @@ int readluts
                     return (ERROR);
                 }
 
-                if (fabs (tts[i] - ttsr[i]) > 1.0E-5)
+                if (fabsf(tts[i] - ttsr[i]) > 1.0E-5)
                 {
                     sprintf (errmsg, "Problem with transmission LUT: %s",
                         transmnm);

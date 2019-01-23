@@ -1586,7 +1586,7 @@ int memory_allocation_main
     int i;                   /* looping variables */
     int npixels = nlines*nsamps;
 
-    *sza = calloc (npixels, sizeof (int16));
+    *sza = malloc(npixels*sizeof(int16));
     if (*sza == NULL)
     {
         sprintf (errmsg, "Error allocating memory for sza");
@@ -1594,7 +1594,7 @@ int memory_allocation_main
         return (ERROR);
     }
 
-    *saa = calloc (npixels, sizeof (int16));
+    *saa = malloc(npixels*sizeof(int16));
     if (*saa == NULL)
     {
         sprintf (errmsg, "Error allocating memory for saa");
@@ -1602,7 +1602,7 @@ int memory_allocation_main
         return (ERROR);
     }
 
-    *vza = calloc (npixels, sizeof (int16));
+    *vza = malloc(npixels*sizeof(int16));
     if (*vza == NULL)
     {
         sprintf (errmsg, "Error allocating memory for vza");
@@ -1610,7 +1610,7 @@ int memory_allocation_main
         return (ERROR);
     }
 
-    *vaa = calloc (npixels, sizeof (int16));
+    *vaa = malloc(npixels*sizeof(int16));
     if (*vaa == NULL)
     {
         sprintf (errmsg, "Error allocating memory for vaa");
@@ -1618,7 +1618,7 @@ int memory_allocation_main
         return (ERROR);
     }
 
-    *qaband = calloc (npixels, sizeof (uint16));
+    *qaband = malloc(npixels*sizeof(uint16));
     if (*qaband == NULL)
     {
         sprintf (errmsg, "Error allocating memory for qaband");
@@ -1626,7 +1626,7 @@ int memory_allocation_main
         return (ERROR);
     }
 
-    *radsat = calloc (npixels, sizeof (uint16));
+    *radsat = malloc(npixels*sizeof(uint16));
     if (*radsat == NULL)
     {
         sprintf (errmsg, "Error allocating memory for radsat");
@@ -1636,7 +1636,7 @@ int memory_allocation_main
 
     /* Given that the QA band is its own separate array of uint16s, we need
        one less band for the signed image data */
-    *sband = calloc (NBAND_TTL_OUT-1, sizeof (uint16*));
+    *sband = malloc((NBAND_TTL_OUT - 1)*sizeof(uint16*));
     if (*sband == NULL)
     {
         sprintf (errmsg, "Error allocating memory for sband");
@@ -1645,7 +1645,7 @@ int memory_allocation_main
     }
     for (i = 0; i < NBAND_TTL_OUT-1; i++)
     {
-        (*sband)[i] = calloc (npixels, sizeof (uint16));
+        (*sband)[i] = malloc(npixels*sizeof(uint16));
         if ((*sband)[i] == NULL)
         {
             sprintf (errmsg, "Error allocating memory for sband");

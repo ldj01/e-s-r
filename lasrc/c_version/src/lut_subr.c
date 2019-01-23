@@ -464,6 +464,78 @@ static void comptrans
 }
 
 
+/* Interpolate the reflectance as a function of the scattering angle given
+   four points in the scattering grid. */
+static float interp_wrt_scattering_angle
+(
+    int its,          /* I: index for the sun angle table */
+    int itv,          /* I: index for the view angle table */
+    float *xtsmax,    /* I: tsmax[itv][its], tsmax[itv][its+1],
+                            tsmax[itv+1][its], tsmax[itv+1][its+1] */
+    float *xtsmin,    /* I: tsmin[itv][its], tsmin[itv][its+1],
+                            tsmin[itv+1][its], tsmin[itv+1][its+1] */
+    float scaa,       /* I: scattering angle */
+    float *nbfic,     /* I: nbfic values (4) */
+    float *nbfi,      /* I: nbfi values (4) */
+    int32 *indts,     /* I: index for the sun angle table */
+    float *rolutt,    /* I: intrinsic reflectance table
+                            [NSR_BANDS x NPRES_VALS x NAOT_VALS x NSOLAR_VALS]*/
+    int rolutt_indx,  /* I: index into rolutt array */
+    float t,          /* I: Sun angle interpolation parameter */
+    float u           /* I: View angle interpolation parameter */
+)
+{
+    int i;           /* loop counter */
+    int j;           /* rolutt array index adjustment */
+    int isca;        /* rolutt array index adjustment */
+    float sca1;
+    float sca2;
+    float roinf;
+    float rosup;
+    float ro[4];     /* reflectance at four points */
+    float ro_interp; /* interpolated value */
+
+    for (i = 0; i < 4; i++)
+    {
+        int is = its + i%2; /* its or its + 1 array index */
+        int iv = (i < 2) ? itv : itv + 1; /* itv or itv + 1 array index */
+        j = indts[is] + nbfic[i] - nbfi[i];
+
+        if (is != 0 && iv != 0)
+        {
+            isca = (int) ((xtsmax[i] - scaa) * 0.25 + 1); /* * 0.25 vs / 4.0 */
+            if (isca <= 0)
+                isca = 1;
+            if (isca + 1 < nbfi[i])
+            {
+                sca1 = xtsmax[i] - (isca - 1) * 4.0;
+                sca2 = sca1 - 4;
+            }
+            else
+            {
+                isca = nbfi[i] - 1;
+                sca1 = xtsmax[i] - (isca - 1) * 4.0;
+                sca2 = xtsmin[i];
+            }
+
+            roinf = rolutt[rolutt_indx + j + isca - 1];
+            rosup = rolutt[rolutt_indx + j + isca];
+            ro[i] = roinf + (rosup - roinf) * (scaa - sca1) / (sca2 - sca1);
+        }
+        else
+        {
+            ro[i] = rolutt[rolutt_indx + j];
+        }
+    }
+
+    ro_interp = ro[3]
+              + u*(ro[1] - ro[3])
+              + t*(ro[2] - ro[3])
+              + u*t*(ro[0] - ro[1] - ro[2] + ro[3]);
+    return ro_interp;
+}
+
+
 /******************************************************************************
 MODULE:  comproatm
 
@@ -512,7 +584,6 @@ static void comproatm
     float *ttv,       /* I: view angle table
                             [NVIEW_ZEN_VALS x NSOLAR_ZEN_VALS] */
     float xtsstep,    /* I: solar zenith step value */
-    float xtsmin,     /* I: minimum solar zenith value */
     float xtvstep,    /* I: observation step value */
     float xtvmin,     /* I: minimum observation value */
     int its,          /* I: index for the sun angle table */
@@ -520,29 +591,17 @@ static void comproatm
     float *roatm      /* O: intrinsic atmospheric reflectance */
 )
 {
-    int isca;
-    int iindex;
-    float nbfic1, nbfic2, nbfic3, nbfic4;
-    float nbfi1, nbfi2, nbfi3, nbfi4;
-    float ro, rop1, rop2;           /* reflectance at p1 and p2 */
-    float xtsmax;
-    float xtsmax00;                 /* tsmax[itv][its] */
-    float xtsmax01;                 /* tsmax[itv][its+1] */
-    float xtsmax10;                 /* tsmax[itv+1][its] */
-    float xtsmax11;                 /* tsmax[itv+1][its+1] */
-    float xtsmin00;                 /* tsmin[itv][its] */
-    float xtsmin01;                 /* tsmin[itv][its+1] */
-    float xtsmin10;                 /* tsmin[itv+1][its] */
-    float xtsmin11;                 /* tsmin[itv+1][its+1] */
+    float nbficl[4];      /* local array of nbfic values */
+    float nbfil[4];       /* local array of nbfi values */
+    float rop1, rop2;     /* reflectance at p1 and p2 */
+    float xtsmax[4];      /* tsmax[itv][its], tsmax[itv][its+1],
+                             tsmax[itv+1][its], tsmax[itv+1][its+1] */
+    float xtsmin[4];      /* tsmin[itv][its], tsmin[itv][its+1],
+                             tsmin[itv+1][its], tsmin[itv+1][its+1] */
     float cscaa;
     float scaa;                     /* scattering angle */
-    float sca1;
-    float sca2;
     float dpres;                    /* pressure ratio */
     float deltaaot;                 /* AOT ratio */
-    float roinf;
-    float rosup;
-    float ro1, ro2, ro3, ro4;
     float roiaot1, roiaot2;
     float t, u;
     float logaot550nm[22] =
@@ -559,12 +618,7 @@ static void comproatm
     int ip2_indx;    /* index of the current ip2 (without the band) */
     int iaot1_indx;  /* index of the current iaot1 (without the band & ip) */
     int iaot2_indx;  /* index of the current iaot2 (without the band & ip) */
-    int iband_ip1_iaot1_indx;  /* index for current band, ip1, iaot1 */
-    int iband_ip1_iaot2_indx;  /* index for current band, ip1, iaot2 */
-    int iband_ip2_iaot1_indx;  /* index for current band, ip2, iaot1 */
-    int iband_ip2_iaot2_indx;  /* index for current band, ip2, iaot2 */
-    int itv_indx;              /* index for current itv */
-    int itv1_indx;             /* index for current itv+1 */
+    int iband_ip_iaot_indx;  /* index for current band, ip, iaot */
     int itv_its_indx;          /* index for [itv][its] */
     int itv1_its_indx;         /* index for [itv+1][its] */
 
@@ -573,576 +627,67 @@ static void comproatm
         sqrt(1.0 - xmuv * xmuv);
     scaa = acos(cscaa) * RAD2DEG;    /* vs / DEG2RAD */
 
-    itv_indx = itv * NSOLAR_ZEN_VALS;
-    itv1_indx = (itv+1) * NSOLAR_ZEN_VALS;
-    itv_its_indx = itv_indx + its;
-    itv1_its_indx = itv1_indx + its;
+    itv_its_indx = itv*NSOLAR_ZEN_VALS + its;
+    itv1_its_indx = itv_its_indx + NSOLAR_ZEN_VALS;
 
-    nbfic1 = nbfic[itv_its_indx];
-    nbfi1 = nbfi[itv_its_indx];
-    nbfic2 = nbfic[itv_its_indx + 1];
-    nbfi2 = nbfi[itv_its_indx + 1];
-    nbfic3 = nbfic[itv1_its_indx];
-    nbfi3 = nbfi[itv1_its_indx];
-    nbfic4 = nbfic[itv1_its_indx + 1];
-    nbfi4 = nbfi[itv1_its_indx + 1];
+    nbficl[0] = nbfic[itv_its_indx];
+    nbfil[0] = nbfi[itv_its_indx];
+    nbficl[1] = nbfic[itv_its_indx + 1];
+    nbfil[1] = nbfi[itv_its_indx + 1];
+    nbficl[2] = nbfic[itv1_its_indx];
+    nbfil[2] = nbfi[itv1_its_indx];
+    nbficl[3] = nbfic[itv1_its_indx + 1];
+    nbfil[3] = nbfi[itv1_its_indx + 1];
 
-    /* Compute for ip1, iaot1 */
+    xtsmax[0] = tsmax[itv_its_indx];
+    xtsmin[0] = tsmin[itv_its_indx];
+    xtsmax[1] = tsmax[itv_its_indx + 1];
+    xtsmin[1] = tsmin[itv_its_indx + 1];
+    xtsmax[2] = tsmax[itv1_its_indx];
+    xtsmin[2] = tsmin[itv1_its_indx];
+    xtsmax[3] = tsmax[itv1_its_indx + 1];
+    xtsmin[3] = tsmin[itv1_its_indx + 1];
+
     iband_indx = iband * NPRES_VALS * NAOT_VALS * NSOLAR_VALS;
     ip1_indx = ip1 * NAOT_VALS * NSOLAR_VALS;
+    ip2_indx = ip2 * NAOT_VALS * NSOLAR_VALS;
     iaot1_indx = iaot1 * NSOLAR_VALS;
-    iband_ip1_iaot1_indx = iband_indx + ip1_indx + iaot1_indx;
+    iaot2_indx = iaot2 * NSOLAR_VALS;
 
-    /* Interpolate point 1 (itv,its) vs scattering angle */
-    xtsmax = tsmax[itv_its_indx];
-    xtsmax00 = xtsmax;
-    xtsmin00 = tsmin[itv_its_indx];
-    if ((its != 0) && (itv != 0))
-    {
-        isca = (int) ((xtsmax - scaa) * 0.25 + 1);   /* * 0.25 vs / 4.0 */
-        if (isca <= 0)
-            isca = 1;
-        if (isca + 1 < nbfi1)
-        {
-            sca1 = xtsmax - (isca - 1) * 4.0;
-            sca2 = xtsmax - isca * 4.0;
-        }
-        else
-        {
-            isca = nbfi1 - 1;
-            sca1 = xtsmax - (isca - 1) * 4.0;
-            sca2 = xtsmin00;
-        }
-
-        iindex = indts[its] + nbfic1 - nbfi1 + isca - 1;
-        roinf = rolutt[iband_ip1_iaot1_indx + iindex];
-        rosup = rolutt[iband_ip1_iaot1_indx + iindex + 1];
-        ro1 = roinf + (rosup - roinf) * (scaa - sca1) / (sca2 - sca1);
-    }
-    else
-    {
-        sca1 = xtsmax;
-        sca2 = xtsmax;
-        iindex = indts[its] + nbfic1 - nbfi1;
-        roinf = rolutt[iband_ip1_iaot1_indx + iindex];
-        rosup = roinf;
-        ro1 = roinf;
-    }
-
-    /* Interpolate point 2 (itv, its+1) vs scattering angle */
-    xtsmax = tsmax[itv_its_indx + 1];
-    xtsmax01 = xtsmax;
-    xtsmin01 = tsmin[itv_its_indx + 1];
-    if (itv != 0)
-    {
-        isca = (int) ((xtsmax - scaa) * 0.25 + 1);   /* * 0.25 vs / 4.0 */
-        if (isca <= 0)
-            isca = 1;
-        if (isca + 1 < nbfi2)
-        {
-            sca1 = xtsmax - (isca - 1) * 4.0;
-            sca2 = xtsmax - isca * 4.0;
-        }
-        else
-        {
-            isca = nbfi2 - 1;
-            sca1 = xtsmax - (isca - 1) * 4.0;
-            sca2 = xtsmin01;
-        }
-
-        iindex = indts[its+1] + nbfic2 - nbfi2 + isca - 1;
-        roinf = rolutt[iband_ip1_iaot1_indx + iindex];
-        rosup = rolutt[iband_ip1_iaot1_indx + iindex + 1];
-        ro2 = roinf + (rosup - roinf) * (scaa - sca1) / (sca2 - sca1);
-    }
-    else
-    {
-        sca1 = xtsmax;
-        sca2 = xtsmax;
-        iindex = indts[its+1] + nbfic2 - nbfi2;
-        roinf = rolutt[iband_ip1_iaot1_indx + iindex];
-        rosup = roinf;
-        ro2 = roinf;
-    }
-
-    /* Interpolate point 3 (itv+1, its) vs scattering angle */
-    xtsmax = tsmax[itv1_its_indx];
-    xtsmax10 = xtsmax;
-    xtsmin10 = tsmin[itv1_its_indx];
-    if (its != 0)
-    {
-        isca = (int) ((xtsmax - scaa) * 0.25 + 1);   /* * 0.25 vs / 4.0 */
-        if (isca <= 0)
-            isca = 1;
-        if (isca + 1 < nbfi3)
-        {
-            sca1 = xtsmax - (isca - 1) * 4.0;
-            sca2 = xtsmax - isca * 4.0;
-        }
-        else
-        {
-            isca = nbfi3 - 1;
-            sca1 = xtsmax - (isca - 1) * 4.0;
-            sca2 = xtsmin10;
-        }
-
-        iindex = indts[its] + nbfic3 - nbfi3 + isca - 1;
-        roinf = rolutt[iband_ip1_iaot1_indx + iindex];
-        rosup = rolutt[iband_ip1_iaot1_indx + iindex + 1];
-        ro3 = roinf + (rosup - roinf) * (scaa - sca1) / (sca2 - sca1);
-    }
-    else
-    {
-        sca1 = xtsmax;
-        sca2 = xtsmax;
-        iindex = indts[its] + nbfic3 - nbfi3;
-        roinf = rolutt[iband_ip1_iaot1_indx + iindex];
-        rosup = roinf;
-        ro3 = roinf;
-    }
-
-    /* Interpolate point 4 (itv+1, its+1) vs scattering angle */
-    xtsmax = tsmax[itv1_its_indx + 1];
-    xtsmax11 = xtsmax;
-    xtsmin11 = tsmin[itv1_its_indx + 1];
-    isca = (int) ((xtsmax - scaa) * 0.25 + 1);   /* * 0.25 vs / 4.0 */
-    if (isca <= 0)
-        isca = 1;
-    if (isca + 1 < nbfi4)
-    {
-        sca1 = xtsmax - (isca - 1) * 4.0;
-        sca2 = xtsmax - isca * 4.0;
-    }
-    else
-    {
-        isca = nbfi4 - 1;
-        sca1 = xtsmax - (isca - 1) * 4.0;
-        sca2 = xtsmin11;
-    }
-
-    iindex = indts[its+1] + nbfic4 - nbfi4 + isca - 1;
-    roinf = rolutt[iband_ip1_iaot1_indx + iindex];
-    rosup = rolutt[iband_ip1_iaot1_indx + iindex + 1];
-    ro4 = roinf + (rosup - roinf) * (scaa - sca1) / (sca2 - sca1);
-
-    /* Note: t and u are used elsewhere through this function */
     t = (tts[its+1] - xts) / (tts[its+1] - tts[its]);
     u = (ttv[itv1_its_indx] - xtv) / (ttv[itv1_its_indx] - ttv[itv_its_indx]);
 
-    roiaot1 = ro4
-            + u*(ro2 - ro4)
-            + t*(ro3 - ro4)
-            + u*t*(ro1 - ro2 - ro3 + ro4);
+    /* Interpolate points vs scattering angle for ip1, iaot1. */
+    iband_ip_iaot_indx = iband_indx + ip1_indx + iaot1_indx;
+    roiaot1 = interp_wrt_scattering_angle(its, itv, xtsmax, xtsmin, scaa,
+                                          nbficl, nbfil, indts, rolutt,
+                                          iband_ip_iaot_indx, t, u);
 
-    /* Compute for ip1, iaot2 */
-    iaot2_indx = iaot2 * NSOLAR_VALS;
-    iband_ip1_iaot2_indx = iband_indx + ip1_indx + iaot2_indx;
-
-    /* Interpolate point 1 (itv,its) vs scattering angle */
-    xtsmax = xtsmax00;
-    if ((its != 0) && (itv != 0))
-    {
-        isca = (int) ((xtsmax - scaa) * 0.25 + 1);   /* * 0.25 vs / 4.0 */
-        if (isca <= 0)
-            isca = 1;
-        if (isca + 1 < nbfi1)
-        {
-            sca1 = xtsmax - (isca - 1) * 4.0;
-            sca2 = xtsmax - isca * 4.0;
-        }
-        else
-        {
-            isca = nbfi1 - 1;
-            sca1 = xtsmax - (isca - 1) * 4.0;
-            sca2 = xtsmin00;
-        }
-
-        iindex = indts[its] + nbfic1 - nbfi1 + isca - 1;
-        roinf = rolutt[iband_ip1_iaot2_indx + iindex];
-        rosup = rolutt[iband_ip1_iaot2_indx + iindex + 1];
-        ro1 = roinf + (rosup - roinf) * (scaa - sca1) / (sca2 - sca1);
-    }
-    else
-    {
-        sca1 = xtsmax;
-        sca2 = xtsmax;
-        iindex = indts[its] + nbfic1 - nbfi1;
-        roinf = rolutt[iband_ip1_iaot2_indx + iindex];
-        rosup = roinf;
-        ro1 = roinf;
-    }
-
-    /* Interpolate point 2 (itv, its+1) vs scattering angle */
-    xtsmax = xtsmax01;
-    if (itv != 0)
-    {
-        isca = (int) ((xtsmax - scaa) * 0.25 + 1);   /* * 0.25 vs / 4.0 */
-        if (isca <= 0)
-            isca = 1;
-        if (isca + 1 < nbfi2)
-        {
-            sca1 = xtsmax - (isca - 1) * 4.0;
-            sca2 = xtsmax - isca * 4.0;
-        }
-        else
-        {
-            isca = nbfi2 - 1;
-            sca1 = xtsmax - (isca - 1) * 4.0;
-            sca2 = xtsmin01;
-        }
-
-        iindex = indts[its+1] + nbfic2 - nbfi2 + isca - 1;
-        roinf = rolutt[iband_ip1_iaot2_indx + iindex];
-        rosup = rolutt[iband_ip1_iaot2_indx + iindex + 1];
-        ro2 = roinf + (rosup - roinf) * (scaa - sca1) / (sca2 - sca1);
-    }
-    else
-    {
-        sca1 = xtsmax;
-        sca2 = xtsmax;
-        iindex = indts[its+1] + nbfic2 - nbfi2;
-        roinf = rolutt[iband_ip1_iaot2_indx + iindex];
-        rosup = roinf;
-        ro2 = roinf;
-    }
-
-    /* Interpolate point 3 (itv+1, its) vs scattering angle */
-    xtsmax = xtsmax10;
-    if (its != 0)
-    {
-        isca = (int) ((xtsmax - scaa) * 0.25 + 1);   /* * 0.25 vs / 4.0 */
-        if (isca <= 0)
-            isca = 1;
-        if (isca + 1 < nbfi3)
-        {
-            sca1 = xtsmax - (isca - 1) * 4.0;
-            sca2 = xtsmax - isca * 4.0;
-        }
-        else
-        {
-            isca = nbfi3 - 1;
-            sca1 = xtsmax - (isca - 1) * 4.0;
-            sca2 = xtsmin10;
-        }
-
-        iindex = indts[its] + nbfic3 - nbfi3 + isca - 1;
-        roinf = rolutt[iband_ip1_iaot2_indx + iindex];
-        rosup = rolutt[iband_ip1_iaot2_indx + iindex + 1];
-        ro3 = roinf + (rosup - roinf) * (scaa - sca1) / (sca2 - sca1);
-    }
-    else
-    {
-        sca1 = xtsmax;
-        sca2 = xtsmax;
-        iindex = indts[its] + nbfic3 - nbfi3;
-        roinf = rolutt[iband_ip1_iaot2_indx + iindex];
-        rosup = roinf;
-        ro3 = roinf;
-    }
-
-    /* Interpolate point 4 (itv+1, its+1) vs scattering angle */
-    xtsmax = xtsmax11;
-    isca = (int) ((xtsmax - scaa) * 0.25 + 1);   /* * 0.25 vs / 4.0 */
-    if (isca <= 0)
-        isca = 1;
-    if (isca + 1 < nbfi4)
-    {
-        sca1 = xtsmax - (isca - 1) * 4.0;
-        sca2 = xtsmax - isca * 4.0;
-    }
-    else
-    {
-        isca = nbfi4 - 1;
-        sca1 = xtsmax - (isca - 1) * 4.0;
-        sca2 = xtsmin11;
-    }
-
-    iindex = indts[its+1] + nbfic4 - nbfi4 + isca - 1;
-    roinf = rolutt[iband_ip1_iaot2_indx + iindex];
-    rosup = rolutt[iband_ip1_iaot2_indx + iindex + 1];
-    ro4 = roinf + (rosup - roinf) * (scaa - sca1) / (sca2 - sca1);
-
-    roiaot2 = ro4
-            + u*(ro2 - ro4)
-            + t*(ro3 - ro4)
-            + u*t*(ro1 - ro2 - ro3 + ro4);
+    /* Interpolate points vs scattering angle for ip1, iaot2. */
+    iband_ip_iaot_indx = iband_indx + ip1_indx + iaot2_indx;
+    roiaot2 = interp_wrt_scattering_angle(its, itv, xtsmax, xtsmin, scaa,
+                                          nbficl, nbfil, indts, rolutt,
+                                          iband_ip_iaot_indx, t, u);
 
     /* Interpolation as log of tau */
-    /* Note: delaaot is calculated here and used later in this function */
     deltaaot = logaot550nm[iaot2] - logaot550nm[iaot1];
     deltaaot = (log (raot550nm) - logaot550nm[iaot1]) / deltaaot;
-    ro = roiaot1 + (roiaot2 - roiaot1) * deltaaot;
-    rop1 = ro;
+    rop1 = roiaot1 + (roiaot2 - roiaot1) * deltaaot;
 
-    /* Compute for ip2, iaot1 */
-    ip2_indx = ip2 * NAOT_VALS * NSOLAR_VALS;
-    iband_ip2_iaot1_indx = iband_indx + ip2_indx + iaot1_indx;
+    /* Interpolate points vs scattering angle for ip2, iaot1. */
+    iband_ip_iaot_indx = iband_indx + ip2_indx + iaot1_indx;
+    roiaot1 = interp_wrt_scattering_angle(its, itv, xtsmax, xtsmin, scaa,
+                                          nbficl, nbfil, indts, rolutt,
+                                          iband_ip_iaot_indx, t, u);
 
-    /* Interpolate point 1 (itv,its) vs scattering angle */
-    xtsmax = xtsmax00;
-    if ((its != 0) && (itv != 0))
-    {
-        isca = (int) ((xtsmax - scaa) * 0.25 + 1);   /* * 0.25 vs / 4.0 */
-        if (isca <= 0)
-            isca = 1;
-        if (isca + 1 < nbfi1)
-        {
-            sca1 = xtsmax - (isca - 1) * 4.0;
-            sca2 = xtsmax - isca * 4.0;
-        }
-        else
-        {
-            isca = nbfi1 - 1;
-            sca1 = xtsmax - (isca - 1) * 4.0;
-            sca2 = xtsmin00;
-        }
-
-        iindex = indts[its] + nbfic1 - nbfi1 + isca - 1;
-        roinf = rolutt[iband_ip2_iaot1_indx + iindex];
-        rosup = rolutt[iband_ip2_iaot1_indx + iindex + 1];
-        ro1 = roinf + (rosup - roinf) * (scaa - sca1) / (sca2 - sca1);
-    }
-    else
-    {
-        sca1 = xtsmax;
-        sca2 = xtsmax;
-        iindex = indts[its] + nbfic1 - nbfi1;
-        roinf = rolutt[iband_ip2_iaot1_indx + iindex];
-        rosup = roinf;
-        ro1 = roinf;
-    }
-
-    /* Interpolate point 2 (itv, its+1) vs scattering angle */
-    xtsmax = xtsmax01;
-    if (itv != 0)
-    {
-        isca = (int) ((xtsmax - scaa) * 0.25 + 1);   /* * 0.25 vs / 4.0 */
-        if (isca <= 0)
-            isca = 1;
-        if (isca + 1 < nbfi2)
-        {
-            sca1 = xtsmax - (isca - 1) * 4.0;
-            sca2 = xtsmax - isca * 4.0;
-        }
-        else
-        {
-            isca = nbfi2 - 1;
-            sca1 = xtsmax - (isca - 1) * 4.0;
-            sca2 = xtsmin01;
-        }
-
-        iindex = indts[its+1] + nbfic2 - nbfi2 + isca - 1;
-        roinf = rolutt[iband_ip2_iaot1_indx + iindex];
-        rosup = rolutt[iband_ip2_iaot1_indx + iindex + 1];
-        ro2 = roinf + (rosup - roinf) * (scaa - sca1) / (sca2 - sca1);
-    }
-    else
-    {
-        sca1 = xtsmax;
-        sca2 = xtsmax;
-        iindex = indts[its+1] + nbfic2 - nbfi2;
-        roinf = rolutt[iband_ip2_iaot1_indx + iindex];
-        rosup = roinf;
-        ro2 = roinf;
-    }
-
-    /* Interpolate point 3 (itv+1, its) vs scattering angle */
-    xtsmax = xtsmax10;
-    if (its != 0)
-    {
-        isca = (int) ((xtsmax - scaa) * 0.25 + 1);   /* * 0.25 vs / 4.0 */
-        if (isca <= 0)
-            isca = 1;
-        if (isca + 1 < nbfi3)
-        {
-            sca1 = xtsmax - (isca - 1) * 4.0;
-            sca2 = xtsmax - isca * 4.0;
-        }
-        else
-        {
-            isca = nbfi3 - 1;
-            sca1 = xtsmax - (isca - 1) * 4.0;
-            sca2 = xtsmin10;
-        }
-
-        iindex = indts[its] + nbfic3 - nbfi3 + isca - 1;
-        roinf = rolutt[iband_ip2_iaot1_indx + iindex];
-        rosup = rolutt[iband_ip2_iaot1_indx + iindex + 1];
-        ro3 = roinf + (rosup - roinf) * (scaa - sca1) / (sca2 - sca1);
-    }
-    else
-    {
-        sca1 = xtsmax;
-        sca2 = xtsmax;
-        iindex = indts[its] + nbfic3 - nbfi3;
-        roinf = rolutt[iband_ip2_iaot1_indx + iindex];
-        rosup = roinf;
-        ro3 = roinf;
-    }
-
-    /* Interpolate point 4 (itv+1, its+1) vs scattering angle */
-    xtsmax = xtsmax11;
-    isca = (int) ((xtsmax - scaa) * 0.25 + 1);   /* * 0.25 vs / 4.0 */
-    if (isca <= 0)
-        isca = 1;
-    if (isca + 1 < nbfi4)
-    {
-        sca1 = xtsmax - (isca - 1) * 4.0;
-        sca2 = xtsmax - isca * 4.0;
-    }
-    else
-    {
-        isca = nbfi4 - 1;
-        sca1 = xtsmax - (isca - 1) * 4.0;
-        sca2 = xtsmin11;
-    }
-
-    iindex = indts[its+1] + nbfic4 - nbfi4 + isca - 1;
-    roinf = rolutt[iband_ip2_iaot1_indx + iindex];
-    rosup = rolutt[iband_ip2_iaot1_indx + iindex + 1];
-    ro4 = roinf + (rosup - roinf) * (scaa - sca1) / (sca2 - sca1);
-
-    roiaot1 = ro4
-            + u*(ro2 - ro4)
-            + t*(ro3 - ro4)
-            + u*t*(ro1 - ro2 - ro3 + ro4);
-
-    /* Compute for ip2, iaot2 */
-    iaot2_indx = iaot2 * NSOLAR_VALS;
-    iband_ip2_iaot2_indx = iband_indx + ip2_indx + iaot2_indx;
-
-    /* Interpolate point 1 (itv,its) vs scattering angle */
-    xtsmax = xtsmax00;
-    if ((its != 0) && (itv != 0))
-    {
-        isca = (int) ((xtsmax - scaa) * 0.25 + 1);   /* * 0.25 vs / 4.0 */
-        if (isca <= 0)
-            isca = 1;
-        if (isca + 1 < nbfi1)
-        {
-            sca1 = xtsmax - (isca - 1) * 4.0;
-            sca2 = xtsmax - isca * 4.0;
-        }
-        else
-        {
-            isca = nbfi1 - 1;
-            sca1 = xtsmax - (isca - 1) * 4.0;
-            sca2 = xtsmin00;
-        }
-
-        iindex = indts[its] + nbfic1 - nbfi1 + isca - 1;
-        roinf = rolutt[iband_ip2_iaot2_indx + iindex];
-        rosup = rolutt[iband_ip2_iaot2_indx + iindex + 1];
-        ro1 = roinf + (rosup - roinf) * (scaa - sca1) / (sca2 - sca1);
-    }
-    else
-    {
-        sca1 = xtsmax;
-        sca2 = xtsmax;
-        iindex = indts[its] + nbfic1 - nbfi1;
-        roinf = rolutt[iband_ip2_iaot2_indx + iindex];
-        rosup = roinf;
-        ro1 = roinf;
-    }
-
-    /* Interpolate point 2 (itv, its+1) vs scattering angle */
-    xtsmax = xtsmax01;
-    if (itv != 0)
-    {
-        isca = (int) ((xtsmax - scaa) * 0.25 + 1);   /* * 0.25 vs / 4.0 */
-        if (isca <= 0)
-            isca = 1;
-        if (isca + 1 < nbfi2)
-        {
-            sca1 = xtsmax - (isca - 1) * 4.0;
-            sca2 = xtsmax - isca * 4.0;
-        }
-        else
-        {
-            isca = nbfi2 - 1;
-            sca1 = xtsmax - (isca - 1) * 4.0;
-            sca2 = xtsmin01;
-        }
-
-        iindex = indts[its+1] + nbfic2 - nbfi2 + isca - 1;
-        roinf = rolutt[iband_ip2_iaot2_indx + iindex];
-        rosup = rolutt[iband_ip2_iaot2_indx + iindex + 1];
-        ro2 = roinf + (rosup - roinf) * (scaa - sca1) / (sca2 - sca1);
-    }
-    else
-    {
-        sca1 = xtsmax;
-        sca2 = xtsmax;
-        iindex = indts[its+1] + nbfic2 - nbfi2;
-        roinf = rolutt[iband_ip2_iaot2_indx + iindex];
-        rosup = roinf;
-        ro2 = roinf;
-    }
-
-    /* Interpolate point 3 (itv+1, its) vs scattering angle */
-    xtsmax = xtsmax10;
-    if (its != 0)
-    {
-        isca = (int) ((xtsmax - scaa) * 0.25 + 1);   /* * 0.25 vs / 4.0 */
-        if (isca <= 0)
-            isca = 1;
-        if (isca + 1 < nbfi3)
-        {
-            sca1 = xtsmax - (isca - 1) * 4.0;
-            sca2 = xtsmax - isca * 4.0;
-        }
-        else
-        {
-            isca = nbfi3 - 1;
-            sca1 = xtsmax - (isca - 1) * 4.0;
-            sca2 = xtsmin10;
-        }
-
-        iindex = indts[its] + nbfic3 - nbfi3 + isca - 1;
-        roinf = rolutt[iband_ip2_iaot2_indx + iindex];
-        rosup = rolutt[iband_ip2_iaot2_indx + iindex + 1];
-        ro3 = roinf + (rosup - roinf) * (scaa - sca1) / (sca2 - sca1);
-    }
-    else
-    {
-        sca1 = xtsmax;
-        sca2 = xtsmax;
-        iindex = indts[its] + nbfic3 - nbfi3;
-        roinf = rolutt[iband_ip2_iaot2_indx + iindex];
-        rosup = roinf;
-        ro3 = roinf;
-    }
-
-    /* Interpolate point 4 (itv+1, its+1) vs scattering angle */
-    xtsmax = tsmax[itv1_its_indx + 1];
-    isca = (int) ((xtsmax - scaa) * 0.25 + 1);   /* * 0.25 vs / 4.0 */
-    if (isca <= 0)
-        isca = 1;
-    if (isca + 1 < nbfi4)
-    {
-        sca1 = xtsmax - (isca - 1) * 4.0;
-        sca2 = xtsmax - isca * 4.0;
-    }
-    else
-    {
-        isca = nbfi4 - 1;
-        sca1 = xtsmax - (isca - 1) * 4.0;
-        sca2 = xtsmin11;
-    }
-
-    iindex = indts[its+1] + nbfic4 - nbfi4 + isca - 1;
-    roinf = rolutt[iband_ip2_iaot2_indx + iindex];
-    rosup = rolutt[iband_ip2_iaot2_indx + iindex + 1];
-    ro4 = roinf + (rosup - roinf) * (scaa - sca1) / (sca2 - sca1);
-
-    roiaot2 = ro4
-            + u*(ro2 - ro4)
-            + t*(ro3 - ro4)
-            + u*t*(ro1 - ro2 - ro3 + ro4);
+    /* Interpolate points vs scattering angle for ip2, iaot2. */
+    iband_ip_iaot_indx = iband_indx + ip2_indx + iaot2_indx;
+    roiaot2 = interp_wrt_scattering_angle(its, itv, xtsmax, xtsmin, scaa,
+                                          nbficl, nbfil, indts, rolutt,
+                                          iband_ip_iaot_indx, t, u);
 
     /* Interpolation as log of tau */
-    ro = roiaot1 + (roiaot2 - roiaot1) * deltaaot;
-    rop2 = ro;
+    rop2 = roiaot1 + (roiaot2 - roiaot1) * deltaaot;
 
     dpres = (pres - tpres[ip1]) / (tpres[ip2] - tpres[ip1]);
     *roatm = rop1 + (rop2 - rop1) * dpres;
@@ -1322,8 +867,7 @@ int atmcorlamb2
     /* This routine returns variables for calculating roslamb */
     comproatm (ip1, ip2, iaot1, iaot2, xts, xtv, xmus, xmuv, cosxfi,
         mraot550nm, iband, pres, tpres, aot550nm, rolutt, tsmax, tsmin, nbfic,
-        nbfi, tts, indts, ttv, xtsstep, xtsmin, xtvstep, xtvmin, its, itv,
-        roatm);
+        nbfi, tts, indts, ttv, xtsstep, xtvstep, xtvmin, its, itv, roatm);
 
     /* Compute the transmission for the solar zenith angle */
     comptrans (ip1, ip2, iaot1, iaot2, xts, mraot550nm, iband, pres, tpres,

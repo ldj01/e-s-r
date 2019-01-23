@@ -1586,7 +1586,7 @@ int memory_allocation_main
     int i;                   /* looping variables */
     int npixels = nlines*nsamps;
 
-    *sza = malloc(npixels*sizeof(int16));
+    *sza = malloc(npixels * sizeof(int16));
     if (*sza == NULL)
     {
         sprintf (errmsg, "Error allocating memory for sza");
@@ -1594,7 +1594,7 @@ int memory_allocation_main
         return (ERROR);
     }
 
-    *saa = malloc(npixels*sizeof(int16));
+    *saa = malloc(npixels * sizeof(int16));
     if (*saa == NULL)
     {
         sprintf (errmsg, "Error allocating memory for saa");
@@ -1602,7 +1602,7 @@ int memory_allocation_main
         return (ERROR);
     }
 
-    *vza = malloc(npixels*sizeof(int16));
+    *vza = malloc(npixels * sizeof(int16));
     if (*vza == NULL)
     {
         sprintf (errmsg, "Error allocating memory for vza");
@@ -1610,7 +1610,7 @@ int memory_allocation_main
         return (ERROR);
     }
 
-    *vaa = malloc(npixels*sizeof(int16));
+    *vaa = malloc(npixels * sizeof(int16));
     if (*vaa == NULL)
     {
         sprintf (errmsg, "Error allocating memory for vaa");
@@ -1618,7 +1618,7 @@ int memory_allocation_main
         return (ERROR);
     }
 
-    *qaband = malloc(npixels*sizeof(uint16));
+    *qaband = malloc(npixels * sizeof(uint16));
     if (*qaband == NULL)
     {
         sprintf (errmsg, "Error allocating memory for qaband");
@@ -1626,7 +1626,7 @@ int memory_allocation_main
         return (ERROR);
     }
 
-    *radsat = malloc(npixels*sizeof(uint16));
+    *radsat = malloc(npixels * sizeof(uint16));
     if (*radsat == NULL)
     {
         sprintf (errmsg, "Error allocating memory for radsat");
@@ -1636,7 +1636,7 @@ int memory_allocation_main
 
     /* Given that the QA band is its own separate array of uint16s, we need
        one less band for the signed image data */
-    *sband = malloc((NBAND_TTL_OUT - 1)*sizeof(uint16*));
+    *sband = malloc((NBAND_TTL_OUT - 1) * sizeof(uint16*));
     if (*sband == NULL)
     {
         sprintf (errmsg, "Error allocating memory for sband");
@@ -1645,7 +1645,7 @@ int memory_allocation_main
     }
     for (i = 0; i < NBAND_TTL_OUT-1; i++)
     {
-        (*sband)[i] = malloc(npixels*sizeof(uint16));
+        (*sband)[i] = malloc(npixels * sizeof(uint16));
         if ((*sband)[i] == NULL)
         {
             sprintf (errmsg, "Error allocating memory for sband");
@@ -1736,7 +1736,7 @@ int memory_allocation_sr
     char errmsg[STR_SIZE];   /* error message */
     int npixels = nlines*nsamps;
 
-    *aerob1 = calloc (npixels, sizeof (uint16));
+    *aerob1 = malloc(npixels * sizeof(uint16));
     if (*aerob1 == NULL)
     {
         sprintf (errmsg, "Error allocating memory for aerob1");
@@ -1744,7 +1744,7 @@ int memory_allocation_sr
         return (ERROR);
     }
 
-    *aerob2 = calloc (npixels, sizeof (uint16));
+    *aerob2 = malloc(npixels * sizeof(uint16));
     if (*aerob2 == NULL)
     {
         sprintf (errmsg, "Error allocating memory for aerob2");
@@ -1752,7 +1752,7 @@ int memory_allocation_sr
         return (ERROR);
     }
 
-    *aerob4 = calloc (npixels, sizeof (uint16));
+    *aerob4 = malloc(npixels * sizeof(uint16));
     if (*aerob4 == NULL)
     {
         sprintf (errmsg, "Error allocating memory for aerob4");
@@ -1760,7 +1760,7 @@ int memory_allocation_sr
         return (ERROR);
     }
 
-    *aerob5 = calloc (npixels, sizeof (uint16));
+    *aerob5 = malloc(npixels * sizeof(uint16));
     if (*aerob5 == NULL)
     {
         sprintf (errmsg, "Error allocating memory for aerob5");
@@ -1768,7 +1768,7 @@ int memory_allocation_sr
         return (ERROR);
     }
 
-    *aerob7 = calloc (npixels, sizeof (uint16));
+    *aerob7 = malloc(npixels * sizeof(uint16));
     if (*aerob7 == NULL)
     {
         sprintf (errmsg, "Error allocating memory for aerob7");
@@ -1801,7 +1801,7 @@ int memory_allocation_sr
     }
 
     /* Allocate memory for all the climate modeling grid files */
-    *dem = calloc (DEM_NBLAT * DEM_NBLON, sizeof (int16*));
+    *dem = malloc(DEM_NBLAT * DEM_NBLON * sizeof(int16*));
     if (*dem == NULL)
     {
         sprintf (errmsg, "Error allocating memory for the DEM");
@@ -1809,7 +1809,7 @@ int memory_allocation_sr
         return (ERROR);
     }
 
-    *andwi = calloc (RATIO_NBLAT * RATIO_NBLON, sizeof (int16));
+    *andwi = malloc(RATIO_NBLAT * RATIO_NBLON * sizeof(int16));
     if (*andwi == NULL)
     {
         sprintf (errmsg, "Error allocating memory for the andwi");
@@ -1817,7 +1817,7 @@ int memory_allocation_sr
         return (ERROR);
     }
 
-    *sndwi = calloc (RATIO_NBLAT * RATIO_NBLON, sizeof (int16));
+    *sndwi = malloc(RATIO_NBLAT * RATIO_NBLON * sizeof(int16));
     if (*sndwi == NULL)
     {
         sprintf (errmsg, "Error allocating memory for the sndwi");
@@ -1825,7 +1825,7 @@ int memory_allocation_sr
         return (ERROR);
     }
 
-    *ratiob1 = calloc (RATIO_NBLAT * RATIO_NBLON, sizeof (int16));
+    *ratiob1 = malloc(RATIO_NBLAT * RATIO_NBLON * sizeof(int16));
     if (*ratiob1 == NULL)
     {
         sprintf (errmsg, "Error allocating memory for the ratiob1");
@@ -1833,7 +1833,7 @@ int memory_allocation_sr
         return (ERROR);
     }
 
-    *ratiob2 = calloc (RATIO_NBLAT * RATIO_NBLON, sizeof (int16));
+    *ratiob2 = malloc(RATIO_NBLAT * RATIO_NBLON * sizeof(int16));
     if (*ratiob2 == NULL)
     {
         sprintf (errmsg, "Error allocating memory for the ratiob2");
@@ -1841,7 +1841,7 @@ int memory_allocation_sr
         return (ERROR);
     }
 
-    *ratiob7 = calloc (RATIO_NBLAT * RATIO_NBLON, sizeof (int16));
+    *ratiob7 = malloc(RATIO_NBLAT * RATIO_NBLON * sizeof(int16));
     if (*ratiob7 == NULL)
     {
         sprintf (errmsg, "Error allocating memory for the ratiob7");
@@ -1849,7 +1849,7 @@ int memory_allocation_sr
         return (ERROR);
     }
 
-    *intratiob1 = calloc (RATIO_NBLAT * RATIO_NBLON, sizeof (int16));
+    *intratiob1 = malloc(RATIO_NBLAT * RATIO_NBLON * sizeof(int16));
     if (*intratiob1 == NULL)
     {
         sprintf (errmsg, "Error allocating memory for the intratiob1");
@@ -1857,7 +1857,7 @@ int memory_allocation_sr
         return (ERROR);
     }
 
-    *intratiob2 = calloc (RATIO_NBLAT * RATIO_NBLON, sizeof (int16));
+    *intratiob2 = malloc(RATIO_NBLAT * RATIO_NBLON * sizeof(int16));
     if (*intratiob2 == NULL)
     {
         sprintf (errmsg, "Error allocating memory for the intratiob2");
@@ -1865,7 +1865,7 @@ int memory_allocation_sr
         return (ERROR);
     }
 
-    *intratiob7 = calloc (RATIO_NBLAT * RATIO_NBLON, sizeof (int16));
+    *intratiob7 = malloc(RATIO_NBLAT * RATIO_NBLON * sizeof(int16));
     if (*intratiob7 == NULL)
     {
         sprintf (errmsg, "Error allocating memory for the intratiob7");
@@ -1873,7 +1873,7 @@ int memory_allocation_sr
         return (ERROR);
     }
 
-    *slpratiob1 = calloc (RATIO_NBLAT * RATIO_NBLON, sizeof (int16));
+    *slpratiob1 = malloc(RATIO_NBLAT * RATIO_NBLON * sizeof(int16));
     if (*slpratiob1 == NULL)
     {
         sprintf (errmsg, "Error allocating memory for the slpratiob1");
@@ -1881,7 +1881,7 @@ int memory_allocation_sr
         return (ERROR);
     }
 
-    *slpratiob2 = calloc (RATIO_NBLAT * RATIO_NBLON, sizeof (int16));
+    *slpratiob2 = malloc(RATIO_NBLAT * RATIO_NBLON * sizeof(int16));
     if (*slpratiob2 == NULL)
     {
         sprintf (errmsg, "Error allocating memory for the slpratiob2");
@@ -1889,7 +1889,7 @@ int memory_allocation_sr
         return (ERROR);
     }
 
-    *slpratiob7 = calloc (RATIO_NBLAT * RATIO_NBLON, sizeof (int16));
+    *slpratiob7 = malloc(RATIO_NBLAT * RATIO_NBLON * sizeof(int16));
     if (*slpratiob7 == NULL)
     {
         sprintf (errmsg, "Error allocating memory for the slpratiob7");
@@ -1897,7 +1897,7 @@ int memory_allocation_sr
         return (ERROR);
     }
 
-    *wv = calloc (CMG_NBLAT * CMG_NBLON, sizeof (int16));
+    *wv = malloc(CMG_NBLAT * CMG_NBLON * sizeof(int16));
     if (*wv == NULL)
     {
         sprintf (errmsg, "Error allocating memory for the wv");
@@ -1905,7 +1905,7 @@ int memory_allocation_sr
         return (ERROR);
     }
 
-    *oz = calloc (CMG_NBLAT * CMG_NBLON, sizeof (uint8));
+    *oz = malloc(CMG_NBLAT * CMG_NBLON * sizeof(uint8));
     if (*oz == NULL)
     {
         sprintf (errmsg, "Error allocating memory for the oz");
@@ -1914,8 +1914,7 @@ int memory_allocation_sr
     }
 
     /* rolutt, transt, sphalbt, and normext */
-    *rolutt = calloc (NSR_BANDS*NPRES_VALS*NAOT_VALS*NSOLAR_VALS,
-        sizeof (float));
+    *rolutt = malloc(NSR_BANDS*NPRES_VALS*NAOT_VALS*NSOLAR_VALS*sizeof(float));
     if (*rolutt == NULL)
     {
         sprintf (errmsg, "Error allocating memory for rolutt");
@@ -1923,8 +1922,8 @@ int memory_allocation_sr
         return (ERROR);
     }
 
-    *transt = calloc (NSR_BANDS*NPRES_VALS*NAOT_VALS*NSUNANGLE_VALS,
-        sizeof (float));
+    *transt = malloc(NSR_BANDS*NPRES_VALS*NAOT_VALS*NSUNANGLE_VALS*
+                     sizeof(float));
     if (*transt == NULL)
     {
         sprintf (errmsg, "Error allocating memory for transt");
@@ -1932,7 +1931,7 @@ int memory_allocation_sr
         return (ERROR);
     }
 
-    *sphalbt = calloc (NSR_BANDS*NPRES_VALS*NAOT_VALS, sizeof (float));
+    *sphalbt = malloc(NSR_BANDS*NPRES_VALS*NAOT_VALS*sizeof(float));
     if (*sphalbt == NULL)
     {
         sprintf (errmsg, "Error allocating memory for sphalbt");
@@ -1940,7 +1939,7 @@ int memory_allocation_sr
         return (ERROR);
     }
 
-    *normext = calloc (NSR_BANDS*NPRES_VALS*NAOT_VALS, sizeof (float));
+    *normext = malloc(NSR_BANDS*NPRES_VALS*NAOT_VALS*sizeof(float));
     if (*normext == NULL)
     {
         sprintf (errmsg, "Error allocating memory for normext");
@@ -1949,7 +1948,7 @@ int memory_allocation_sr
     }
 
     /* float tsmax, tsmin, nbfic, nbfi, and ttv */
-    *tsmax = calloc (NVIEW_ZEN_VALS*NSOLAR_ZEN_VALS, sizeof (float));
+    *tsmax = malloc(NVIEW_ZEN_VALS*NSOLAR_ZEN_VALS*sizeof(float));
     if (*tsmax == NULL)
     {
         sprintf (errmsg, "Error allocating memory for tsmax");
@@ -1957,7 +1956,7 @@ int memory_allocation_sr
         return (ERROR);
     }
 
-    *tsmin = calloc (NVIEW_ZEN_VALS*NSOLAR_ZEN_VALS, sizeof (float));
+    *tsmin = malloc(NVIEW_ZEN_VALS*NSOLAR_ZEN_VALS*sizeof(float));
     if (*tsmin == NULL)
     {
         sprintf (errmsg, "Error allocating memory for tsmin");
@@ -1965,7 +1964,7 @@ int memory_allocation_sr
         return (ERROR);
     }
 
-    *nbfic = calloc (NVIEW_ZEN_VALS*NSOLAR_ZEN_VALS, sizeof (float));
+    *nbfic = malloc(NVIEW_ZEN_VALS*NSOLAR_ZEN_VALS*sizeof(float));
     if (*nbfic == NULL)
     {
         sprintf (errmsg, "Error allocating memory for nbfic");
@@ -1973,7 +1972,7 @@ int memory_allocation_sr
         return (ERROR);
     }
 
-    *nbfi = calloc (NVIEW_ZEN_VALS*NSOLAR_ZEN_VALS, sizeof (float));
+    *nbfi = malloc(NVIEW_ZEN_VALS*NSOLAR_ZEN_VALS*sizeof(float));
     if (*nbfi == NULL)
     {
         sprintf (errmsg, "Error allocating memory for nbfi");
@@ -1981,7 +1980,7 @@ int memory_allocation_sr
         return (ERROR);
     }
 
-    *ttv = calloc (NVIEW_ZEN_VALS*NSOLAR_ZEN_VALS, sizeof (float));
+    *ttv = malloc(NVIEW_ZEN_VALS*NSOLAR_ZEN_VALS*sizeof(float));
     if (*ttv == NULL)
     {
         sprintf (errmsg, "Error allocating memory for ttv");

@@ -49,25 +49,18 @@ void atmcorlamb2_new
     float mraot550nm_sq;   /* mraot550nm squared */
     float mraot550nm_cube; /* mraot550nm cubed */
     const float lambda[] = {0.443, 0.480, 0.585, 0.655, 0.865, 1.61, 2.2};
-    static float lambda_scaled[7] = {0};
+    static const float lambda_sf = 1/0.55; /* lambda scale factor */
     float roatm;           /* intrinsic atmospheric reflectance */
     float ttatmg;          /* total atmospheric transmission */
     float satm;            /* spherical albedo */
-
-    /* Set the scaled lambda array the first time in. */
-    if (lambda_scaled[0] == 0)
-    {
-        int i;
-        for (i=0; i<7; i++)
-            lambda_scaled[i] = lambda[i]/0.55;
-    }
 
     /* Modifiy the AOT value based on the angstroem coefficient and lambda
        values */
     if  (eps < 0.0 || iband > DN_BAND7)
         mraot550nm = raot550nm;
     else
-        mraot550nm = raot550nm/normext_ib_0_3*pow(lambda_scaled[iband], -eps);
+        mraot550nm = raot550nm/normext_ib_0_3
+                   * pow(lambda[iband]*lambda_sf, -eps);
 
     /* Check the upper limit of the modified AOT value */
     if (mraot550nm >= roatm_upper)
@@ -796,15 +789,7 @@ int atmcorlamb2
     int indx;           /* index for normext array */
     const float lambda[] = {0.443, 0.480, 0.585, 0.655, 0.865, 1.61, 2.2, 4.0,
                             4.0, 4.0, 4.0, 4.0, 4.0, 4.0, 4.0, 4.0};
-    static float lambda_scaled[7] = {0};
-
-    /* Set the scaled lambda array the first time in. */
-    if (lambda_scaled[0] == 0)
-    {
-        int i;
-        for (i=0; i<7; i++)
-            lambda_scaled[i] = lambda[i]/0.55;
-    }
+    static const float lambda_sf = 1/0.55; /* lambda scale factor */
 
     /* Modifiy the AOT value based on the angstroem coefficient and lambda
        values */
@@ -815,8 +800,8 @@ int atmcorlamb2
         if (iband <= DN_BAND7)
         {
             indx = iband * NPRES_VALS * NAOT_VALS + 3;
-            mraot550nm = raot550nm/normext[indx]*pow(lambda_scaled[iband],
-                                                     -eps);
+            mraot550nm = raot550nm/normext[indx]
+                       * pow(lambda[iband]*lambda_sf, -eps);
         }
         else
             mraot550nm = raot550nm;

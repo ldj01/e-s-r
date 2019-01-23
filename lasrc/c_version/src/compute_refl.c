@@ -1201,7 +1201,8 @@ int compute_sr_refl
         "band ... %s", ctime(&mytime));
     for (ib = 0; ib <= SR_BAND7; ib++)
     {
-        uint16 *band_ptr = sband[ib];  /* convenience pointer */
+        uint16 *source_ptr = sband[ib];/* TOA band pointer pointer */
+        uint16 *band_ptr;              /* convenience pointer */
         float rotoa;                   /* top of atmosphere reflectance */
         float roslamb;                 /* lambertian surface reflectance */
 
@@ -1233,21 +1234,37 @@ int compute_sr_refl
         bttatmg[ib] = ttatmg;
         bsatm[ib] = satm;
 
-        /* Perform atmospheric corrections for bands 1-7 */
-
-        /* Store the TOA scaled TOA reflectance values for later
-           use before completing atmospheric corrections */
+        /* Before completing atmospheric corrections, swap the band pointers
+           in order to retain the TOA scaled reflectance values for later
+           use. */
         if (ib == DN_BAND1)
-            memcpy(aerob1, band_ptr, nlines*nsamps*sizeof(uint16));
+        {
+            sband[ib] = aerob1;
+            aerob1 = source_ptr;
+        }
         else if (ib == DN_BAND2)
-            memcpy(aerob2, band_ptr, nlines*nsamps*sizeof(uint16));
+        {
+            sband[ib] = aerob2;
+            aerob2 = source_ptr;
+        }
         else if (ib == DN_BAND4)
-            memcpy(aerob4, band_ptr, nlines*nsamps*sizeof(uint16));
+        {
+            sband[ib] = aerob4;
+            aerob4 = source_ptr;
+        }
         else if (ib == DN_BAND5)
-            memcpy(aerob5, band_ptr, nlines*nsamps*sizeof(uint16));
+        {
+            sband[ib] = aerob5;
+            aerob5 = source_ptr;
+        }
         else if (ib == DN_BAND7)
-            memcpy(aerob7, band_ptr, nlines*nsamps*sizeof(uint16));
+        {
+            sband[ib] = aerob7;
+            aerob7 = source_ptr;
+        }
+        band_ptr = sband[ib];
 
+        /* Perform atmospheric corrections for bands 1-7 */
 #ifdef _OPENMP
         #pragma omp parallel for private (i)
 #endif
@@ -1265,7 +1282,7 @@ int compute_sr_refl
                scattering component and water vapor), and store the
                scaled value for further corrections.  (NOTE: the full
                computations are in atmcorlamb2) */
-            rotoa = band_ptr[i] * scale_refl + offset_refl;
+            rotoa = source_ptr[i] * scale_refl + offset_refl;
             roslamb = rotoa - tgo*roatm;
             roslamb /= tgo*ttatmg + satm*roslamb;
             band_ptr[i] = (roslamb - offset_refl)*output_mult_refl;

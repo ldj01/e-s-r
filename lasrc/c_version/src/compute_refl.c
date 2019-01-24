@@ -493,9 +493,6 @@ static bool find_closest_non_fill
 )
 {
     int line, samp;          /* looping variables for lines and samples */
-    int start_line, end_line;
-    int start_samp, end_samp;
-    int top_cropped, bottom_cropped, left_cropped, right_cropped;
     int aero_window;         /* looping variable for the aerosol window */
     uint16 *band_ptr;        /* band data pointer */
 
@@ -503,54 +500,18 @@ static bool find_closest_non_fill
        for a pixel that is not of the QA type specified and is not fill */
     for (aero_window = 1; aero_window <= HALF_AERO_WINDOW; aero_window++)
     {
-        if (center_line - aero_window >= 0)
-        {
-            start_line = center_line - aero_window;
-            top_cropped = 0;
-        }
-        else
-        {
-            start_line = 0;
-            top_cropped = 1;
-        }
-        if (center_line + aero_window < nlines)
-        {
-            end_line = center_line + aero_window;
-            bottom_cropped = 0;
-        }
-        else
-        {
-            end_line = nlines - 1;
-            bottom_cropped = 1;
-        }
-        if (center_samp - aero_window >= 0)
-        {
-            start_samp = center_samp - aero_window;
-            left_cropped = 0;
-        }
-        else
-        {
-            start_samp = 0;
-            left_cropped = 1;
-        }
-        if (center_samp + aero_window < nsamps)
-        {
-            end_samp = center_samp + aero_window;
-            right_cropped = 0;
-        }
-        else
-        {
-            end_samp = nsamps - 1;
-            right_cropped = 1;
-        }
-
         /* Check top line of current window. */
-        line = start_line;
-        band_ptr = &qaband[line*nsamps];
-        if (!top_cropped)
+        line = center_line - aero_window;
+        if (line >= 0)
         {
-            for (samp = start_samp; samp <= end_samp; samp++)
+            band_ptr = &qaband[line*nsamps];
+            for (samp = center_samp - aero_window;
+                 samp <= center_samp + aero_window; samp++)
             {
+                /* Make sure the sample is valid. */
+                if (samp < 0 || samp >= nsamps)
+                    continue;
+
                 if (!level1_qa_is_fill(band_ptr[samp]))
                 {
                     *nearest_line = line;
@@ -561,30 +522,47 @@ static bool find_closest_non_fill
             line++;
             band_ptr += nsamps;
         }
+        else
+        {
+            line = 0;
+            band_ptr = qaband;
+        }
 
         /* Check first and last samples of the sides of the current window. */
-        for (; line < end_line; line++, band_ptr+=nsamps)
+        for (; line < center_line + aero_window; line++, band_ptr+=nsamps)
         {
-            if (!left_cropped && !level1_qa_is_fill(band_ptr[start_samp]))
+            /* If we hit the end of the image, we're done checking the
+               sides. */
+            if (line >= nlines)
+                break;
+
+            samp = center_samp - aero_window;
+            if (samp >= 0 && !level1_qa_is_fill(band_ptr[samp]))
             {
                 *nearest_line = line;
-                *nearest_samp = start_samp;
+                *nearest_samp = samp;
                 return true;
             }
 
-            if (!right_cropped && !level1_qa_is_fill(band_ptr[end_samp]))
+            samp = center_samp + aero_window;
+            if (samp < nsamps && !level1_qa_is_fill(band_ptr[samp]))
             {
                 *nearest_line = line;
-                *nearest_samp = end_samp;
+                *nearest_samp = samp;
                 return true;
             }
         }
 
         /* Check the bottom line of the current window. */
-        if (!bottom_cropped)
+        if (line < nlines)
         {
-            for (samp = start_samp; samp <= end_samp; samp++)
+            for (samp = center_samp - aero_window;
+                 samp <= center_samp + aero_window; samp++)
             {
+                /* Make sure the sample is valid. */
+                if (samp < 0 || samp >= nsamps)
+                    continue;
+
                 if (!level1_qa_is_fill(band_ptr[samp]))
                 {
                     *nearest_line = line;
@@ -631,9 +609,6 @@ static bool find_closest_non_cloud_shadow_water
 )
 {
     int line, samp;          /* looping variables for lines and samples */
-    int start_line, end_line;
-    int start_samp, end_samp;
-    int top_cropped, bottom_cropped, left_cropped, right_cropped;
     int line_index;
     int aero_window;         /* looping variable for the aerosol window */
     uint16 *qband_ptr, *s4band_ptr, *s5band_ptr;  /* band data pointers */
@@ -642,57 +617,21 @@ static bool find_closest_non_cloud_shadow_water
        for a pixel that is not of the QA type specified and is not fill */
     for (aero_window = 1; aero_window <= HALF_AERO_WINDOW; aero_window++)
     {
-        if (center_line - aero_window >= 0)
-        {
-            start_line = center_line - aero_window;
-            top_cropped = 0;
-        }
-        else
-        {
-            start_line = 0;
-            top_cropped = 1;
-        }
-        if (center_line + aero_window < nlines)
-        {
-            end_line = center_line + aero_window;
-            bottom_cropped = 0;
-        }
-        else
-        {
-            end_line = nlines - 1;
-            bottom_cropped = 1;
-        }
-        if (center_samp - aero_window >= 0)
-        {
-            start_samp = center_samp - aero_window;
-            left_cropped = 0;
-        }
-        else
-        {
-            start_samp = 0;
-            left_cropped = 1;
-        }
-        if (center_samp + aero_window < nsamps)
-        {
-            end_samp = center_samp + aero_window;
-            right_cropped = 0;
-        }
-        else
-        {
-            end_samp = nsamps - 1;
-            right_cropped = 1;
-        }
-
         /* Check top line of current window. */
-        line = start_line;
-        line_index = line*nsamps;
-        qband_ptr = &qaband[line_index];
-        s4band_ptr = &sband[SR_BAND4][line_index];
-        s5band_ptr = &sband[SR_BAND5][line_index];
-        if (!top_cropped)
+        line = center_line - aero_window;
+        if (line >= 0)
         {
-            for (samp = start_samp; samp <= end_samp; samp++)
+            line_index = line*nsamps;
+            qband_ptr = &qaband[line_index];
+            s4band_ptr = &sband[SR_BAND4][line_index];
+            s5band_ptr = &sband[SR_BAND5][line_index];
+            for (samp = center_samp - aero_window;
+                 samp <= center_samp + aero_window; samp++)
             {
+                /* Make sure the sample is valid. */
+                if (samp < 0 || samp >= nsamps)
+                    continue;
+
                 if (!level1_qa_is_fill(qband_ptr[samp]) &&
                     !is_cloud_or_shadow(qband_ptr[samp]) &&
                     !is_water(s4band_ptr[samp], s5band_ptr[samp]))
@@ -707,37 +646,56 @@ static bool find_closest_non_cloud_shadow_water
             s4band_ptr += nsamps;
             s5band_ptr += nsamps;
         }
+        else
+        {
+            line = 0;
+            qband_ptr = qaband;
+            s4band_ptr = sband[SR_BAND4];
+            s5band_ptr = sband[SR_BAND5];
+        }
 
         /* Check first and last samples of the sides of the current window. */
-        for (; line < end_line;
+        for (; line < center_line + aero_window;
              line++, qband_ptr+=nsamps, s4band_ptr+=nsamps, s5band_ptr+=nsamps)
         {
-            if (!left_cropped &&
-                !level1_qa_is_fill(qband_ptr[start_samp]) &&
-                !is_cloud_or_shadow(qband_ptr[start_samp]) &&
-                !is_water(s4band_ptr[start_samp], s5band_ptr[start_samp]))
+            /* If we hit the end of the image, we're done checking the
+               sides. */
+            if (line >= nlines)
+                break;
+
+            samp = center_samp - aero_window;
+            if (samp >= 0 &&
+                !level1_qa_is_fill(qband_ptr[samp]) &&
+                !is_cloud_or_shadow(qband_ptr[samp]) &&
+                !is_water(s4band_ptr[samp], s5band_ptr[samp]))
             {
                 *nearest_line = line;
-                *nearest_samp = start_samp;
+                *nearest_samp = samp;
                 return true;
             }
 
-            if (!right_cropped &&
-                !level1_qa_is_fill(qband_ptr[end_samp]) &&
-                !is_cloud_or_shadow(qband_ptr[end_samp]) &&
-                !is_water(s4band_ptr[end_samp], s5band_ptr[end_samp]))
+            samp = center_samp + aero_window;
+            if (samp < nsamps &&
+                !level1_qa_is_fill(qband_ptr[samp]) &&
+                !is_cloud_or_shadow(qband_ptr[samp]) &&
+                !is_water(s4band_ptr[samp], s5band_ptr[samp]))
             {
                 *nearest_line = line;
-                *nearest_samp = end_samp;
+                *nearest_samp = samp;
                 return true;
             }
         }
 
         /* Check the bottom line of the current window. */
-        if (!bottom_cropped)
+        if (line < nlines)
         {
-            for (samp = start_samp; samp <= end_samp; samp++)
+            for (samp = center_samp - aero_window;
+                 samp <= center_samp + aero_window; samp++)
             {
+                /* Make sure the sample is valid. */
+                if (samp < 0 || samp >= nsamps)
+                    continue;
+
                 if (!level1_qa_is_fill(qband_ptr[samp]) &&
                     !is_cloud_or_shadow(qband_ptr[samp]) &&
                     !is_water(s4band_ptr[samp], s5band_ptr[samp]))
@@ -785,9 +743,6 @@ static bool find_closest_non_water
 )
 {
     int line, samp;          /* looping variables for lines and samples */
-    int start_line, end_line;
-    int start_samp, end_samp;
-    int top_cropped, bottom_cropped, left_cropped, right_cropped;
     int line_index;
     int aero_window;         /* looping variable for the aerosol window */
     uint16 *qband_ptr, *s4band_ptr, *s5band_ptr;  /* band data pointers */
@@ -796,57 +751,20 @@ static bool find_closest_non_water
        for a pixel that is not of the QA type specified and is not fill */
     for (aero_window = 1; aero_window <= HALF_AERO_WINDOW; aero_window++)
     {
-        if (center_line - aero_window >= 0)
-        {
-            start_line = center_line - aero_window;
-            top_cropped = 0;
-        }
-        else
-        {
-            start_line = 0;
-            top_cropped = 1;
-        }
-        if (center_line + aero_window < nlines)
-        {
-            end_line = center_line + aero_window;
-            bottom_cropped = 0;
-        }
-        else
-        {
-            end_line = nlines - 1;
-            bottom_cropped = 1;
-        }
-        if (center_samp - aero_window >= 0)
-        {
-            start_samp = center_samp - aero_window;
-            left_cropped = 0;
-        }
-        else
-        {
-            start_samp = 0;
-            left_cropped = 1;
-        }
-        if (center_samp + aero_window < nsamps)
-        {
-            end_samp = center_samp + aero_window;
-            right_cropped = 0;
-        }
-        else
-        {
-            end_samp = nsamps - 1;
-            right_cropped = 1;
-        }
-
         /* Check top line of current window. */
-        line = start_line;
-        line_index = line*nsamps;
-        qband_ptr = &qaband[line_index];
-        s4band_ptr = &sband[SR_BAND4][line_index];
-        s5band_ptr = &sband[SR_BAND5][line_index];
-        if (!top_cropped)
+        line = center_line - aero_window;
+        if (line >= 0)
         {
-            for (samp = start_samp; samp <= end_samp; samp++)
+            line_index = line*nsamps;
+            qband_ptr = &qaband[line_index];
+            s4band_ptr = &sband[SR_BAND4][line_index];
+            s5band_ptr = &sband[SR_BAND5][line_index];
+            for (samp = center_samp - aero_window;
+                 samp <= center_samp + aero_window; samp++)
             {
+                if (samp < 0 || samp >= nsamps)
+                    continue;
+
                 if (!level1_qa_is_fill(qband_ptr[samp]) &&
                     !is_water(s4band_ptr[samp], s5band_ptr[samp]))
                 {
@@ -860,35 +778,54 @@ static bool find_closest_non_water
             s4band_ptr += nsamps;
             s5band_ptr += nsamps;
         }
+        else
+        {
+            line = 0;
+            qband_ptr = qaband;
+            s4band_ptr = sband[SR_BAND4];
+            s5band_ptr = sband[SR_BAND5];
+        }
 
         /* Check first and last samples of the sides of the current window. */
-        for (; line < end_line;
+        for (; line < center_line + aero_window;
              line++, qband_ptr+=nsamps, s4band_ptr+=nsamps, s5band_ptr+=nsamps)
         {
-            if (!left_cropped &&
-                !level1_qa_is_fill(qband_ptr[start_samp]) &&
-                !is_water(s4band_ptr[start_samp], s5band_ptr[start_samp]))
+            /* If we hit the end of the image, we're done checking the
+               sides. */
+            if (line >= nlines)
+                break;
+
+            samp = center_samp - aero_window;
+            if (samp >= 0 &&
+                !level1_qa_is_fill(qband_ptr[samp]) &&
+                !is_water(s4band_ptr[samp], s5band_ptr[samp]))
             {
                 *nearest_line = line;
-                *nearest_samp = start_samp;
+                *nearest_samp = samp;
                 return true;
             }
 
-            if (!right_cropped &&
-                !level1_qa_is_fill(qband_ptr[end_samp]) &&
-                !is_water(s4band_ptr[end_samp], s5band_ptr[end_samp]))
+            samp = center_samp + aero_window;
+            if (samp < nsamps &&
+                !level1_qa_is_fill(qband_ptr[samp]) &&
+                !is_water(s4band_ptr[samp], s5band_ptr[samp]))
             {
                 *nearest_line = line;
-                *nearest_samp = end_samp;
+                *nearest_samp = samp;
                 return true;
             }
         }
 
         /* Check the bottom line of the current window. */
-        if (!bottom_cropped)
+        if (line < nlines)
         {
-            for (samp = start_samp; samp <= end_samp; samp++)
+            for (samp = center_samp - aero_window;
+                 samp <= center_samp + aero_window; samp++)
             {
+                /* Make sure the sample is valid. */
+                if (samp < 0 || samp >= nsamps)
+                    continue;
+
                 if (!level1_qa_is_fill(qband_ptr[samp]) &&
                     !is_water(s4band_ptr[samp], s5band_ptr[samp]))
                 {

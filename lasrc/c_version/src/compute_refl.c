@@ -65,6 +65,9 @@ int compute_toa_refl
                               nlines x nsamps */
     time_t mytime;       /* time variable */
 
+    double angband_scale = 1,   /* solar angle band scale factor */
+           angband_offset = 0; /* solar angle band offset */
+
     /* Start the processing */
     mytime = time(NULL);
     printf ("Start TOA reflectance corrections: %s", ctime(&mytime));
@@ -76,6 +79,26 @@ int compute_toa_refl
         sprintf (errmsg, "Error allocating memory for uband");
         error_handler (true, FUNC_NAME, errmsg);
         return (ERROR);
+    }
+
+    /* Get the solar angle band scale and offset factors. */
+    for (iband = 0; iband < xml_metadata->nbands; iband++)
+    {
+        Espa_band_meta_t *b = &xml_metadata->band[iband];
+        if (strcmp(b->name, "solar_zenith_band4") == 0)
+        {
+            if (b->scale_factor != ESPA_FLOAT_META_FILL)
+                angband_scale = b->scale_factor;
+            if (b->add_offset != ESPA_FLOAT_META_FILL)
+                angband_offset = b->add_offset;
+            break;
+        }
+    }
+    if (iband == xml_metadata->nbands)
+    {
+        error_handler(true, FUNC_NAME,
+                      "Error: Unable to locate solar angle band in metadata.");
+        return ERROR;
     }
 
     /* Loop through all the bands (except the pan band) and compute the TOA
@@ -129,8 +152,10 @@ int compute_toa_refl
                     if (!level1_qa_is_fill (qaband[i]))
                     {
                         /* Compute the TOA reflectance based on the per-pixel
-                           sun angle (need to unscale the input) */
-                        xmus = cos(sza[i] * 0.01 * DEG2RAD);
+                           sun angle (need to unscale). Scale the TOA value for
+                           output. */
+                        xmus = cos((sza[i]*angband_scale + angband_offset)
+                                   * DEG2RAD);
                         rotoa = (uband[i] * refl_mult) + refl_add;
                         rotoa = rotoa / xmus;
 
@@ -308,14 +333,6 @@ int compute_sr_refl
     int nsamps,         /* I: number of samps in reflectance, thermal bands */
     float pixsize,      /* I: pixel size for the reflectance bands */
     float **sband,      /* I/O: input TOA and output surface reflectance */
-    int16 *sza,         /* I: scaled per-pixel solar zenith angles (degrees),
-                              nlines x nsamps */
-    int16 *saa,         /* I: scaled per-pixel solar azimuth angles (degrees),
-                              nlines x nsamps */
-    int16 *vza,         /* I: scaled per-pixel view zenith angles (degrees),
-                              nlines x nsamps */
-    int16 *vaa,         /* I: scaled per-pixel view azimuth angles (degrees),
-                              nlines x nsamps */
     float xts,          /* I: scene center solar zenith angle (deg) */
     float xmus,         /* I: cosine of solar zenith angle */
     char *anglehdf,     /* I: angle HDF filename */
@@ -361,7 +378,7 @@ int compute_sr_refl
 
     int iband1, iband3; /* band indices (zero-based) */
     float raot;         /* AOT reflectance */
-    float sraot1, sraot2, sraot3;
+    float sraot1, sraot3;
                         /* raot values for three different eps values */
     float residual;     /* model residual */
     float residual1, residual2, residual3;
@@ -1002,18 +1019,7 @@ int compute_sr_refl
         AERO_WINDOW, AERO_WINDOW, ctime(&mytime));
     tmp_percent = 0;
 #ifdef _OPENMP
-    #pragma omp parallel for private (i, j, center_line, center_samp, \
-    nearest_line, nearest_samp, curr_pix, center_pix, img, geo, lat, lon, \
-    xcmg, ycmg, lcmg, scmg, lcmg1, scmg1, u, v, one_minus_u, one_minus_v, \
-    one_minus_u_x_one_minus_v, one_minus_u_x_v, u_x_one_minus_v, u_x_v, \
-    ratio_pix11, ratio_pix12, ratio_pix21, ratio_pix22, rb1, rb2, slpr11, \
-    slpr12, slpr21, slpr22, intr11, intr12, intr21, intr22, slprb1, slprb2, \
-    slprb7, intrb1, intrb2, intrb7, xndwi, ndwi_th1, ndwi_th2, iband, iband1, \
-    iband3, iaots, retval, eps, eps1, eps2, eps3, residual, residual1, \
-    residual2, residual3, raot, sraot1, sraot2, sraot3, xa, xb, xc, xd, xe, \
-    xf, coefa, coefb, epsmin, corf, next, rotoa, raot550nm, roslamb, tgo, \
-    roatm, ttatmg, satm, xrorayp, ros5, ros4, erelc, troatm) \
-    num_threads(get_num_threads())
+    #pragma omp parallel for private (i, j, center_line, center_samp, nearest_line, nearest_samp, curr_pix, center_pix, img, geo, lat, lon, xcmg, ycmg, lcmg, scmg, lcmg1, scmg1, u, v, one_minus_u, one_minus_v, one_minus_u_x_one_minus_v, one_minus_u_x_v, u_x_one_minus_v, u_x_v, ratio_pix11, ratio_pix12, ratio_pix21, ratio_pix22, rb1, rb2, slpr11, slpr12, slpr21, slpr22, intr11, intr12, intr21, intr22, slprb1, slprb2, slprb7, intrb1, intrb2, intrb7, xndwi, ndwi_th1, ndwi_th2, iband, iband1, iband3, iaots, retval, eps, eps1, eps2, eps3, residual, residual1, residual2, residual3, raot, sraot1, sraot3, xa, xb, xc, xd, xe, xf, coefa, coefb, epsmin, corf, next, rotoa, raot550nm, roslamb, tgo, roatm, ttatmg, satm, xrorayp, ros5, ros4, erelc, troatm)
 #endif
     for (i = HALF_AERO_WINDOW; i < nlines; i += AERO_WINDOW)
     {
@@ -1419,7 +1425,6 @@ int compute_sr_refl
             /* Save the data */
             eps2 = eps;
             residual2 = residual;
-            sraot2 = raot;
 
             /* Retrieve the aerosol information for eps 2.5 */
             eps = 2.5;

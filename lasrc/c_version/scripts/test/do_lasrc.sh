@@ -1,28 +1,47 @@
 #!/bin/bash
 #
-# Test lasrc.
+# Test the lasrc Python script.
+#
+# Arguments:
+#   L1 angle band flag:   0 = don't use L1 angle bands (i.e., create angle
+#                             bands)
+#                         1 = use L1 angle bands
+#  path to ledaps script
 
 base_scene="LC08_L1TP_040036_20141219_20160822_01_T1"
 aux_file="L8ANC2014353.hdf_fused"
 
-if [ "$#" -ne 1 ]; then
-    echo "Usage:  $0 <path_to_lasrc>"
+if [ "$#" -ne 2 ]; then
+    echo "Usage:  $0 <l1_angle_band_flag> <path_to_lasrc>"
     exit 1
 fi
-bin_dir=$1
+angle_band_flag=$1
+bin_dir=$2
 
 data_files=(${ESPA_UNIT_TEST_DATA_DIR}/espa-surface-reflectance/lasrc_ref/*)
 input_dir=$ESPA_UNIT_TEST_DATA_DIR/espa-surface-reflectance/input_l8
 
-rm -rf lasrc
-mkdir lasrc && cd lasrc
+rm -rf lasrc_$angle_band_flag
+mkdir lasrc_$angle_band_flag && cd lasrc_$angle_band_flag
 
 ln -s $input_dir/*.img .
 ln -s $input_dir/*.hdr .
-cp $input_dir/*.xml .
-chmod u+w *.xml
 
-$bin_dir/lasrc --xml=${base_scene}.xml --aux=${aux_file} --num_threads 6
+# If the test creates angle bands, remove the links to the L1 angle bands
+# in the input data dir.  Also remove L1 angle bands from the input XML file.
+if [ $1 -eq 0 ]; then
+    angle_band_opt=""
+    ln -s $input_dir/*_ANG.txt .
+    rm *solar* *sensor*
+    sed_remove_angles='/product=.angle_bands/,/<.band>/ d'
+else
+    angle_band_opt="--use_l1_angle_bands"
+    sed_remove_angles=''
+fi
+
+sed -e "$sed_remove_angles" \
+    ${input_dir}/${base_scene}.xml > ${base_scene}.xml
+$bin_dir/do_lasrc.py --xml=${base_scene}.xml $angle_band_opt
 if [ $? -ne 0 ]; then
     echo "Error: lasrc processing failed."
     exit 1
@@ -40,9 +59,12 @@ for i in "${data_files[@]}"; do
     # a binary file, and use cmp to dump the octal differences.
     ext="${i##*.}"
     if [ "$ext" = "xml" ]; then
-        sed -e 's%<production_date>.*<%<production_date><%' $i > tmp1.xml
-        sed -e 's%<production_date>.*<%<production_date><%' $base_name > \
-                                                                      tmp2.xml
+        sed -e 's%<production_date>.*<%<production_date><%' \
+            -e "$sed_remove_angles" \
+            $i > tmp1.xml
+        sed -e 's%<production_date>.*<%<production_date><%' \
+            -e "$sed_remove_angles" \
+            $base_name > tmp2.xml
         diff tmp1.xml tmp2.xml
         if [ $? -ne 0 ]; then
             echo "${base_name} differs from reference version."
@@ -79,7 +101,7 @@ if [ $status -ne 0 ]; then
 fi
 
 cd ..
-rm -rf lasrc
+rm -rf lasrc_$angle_band_flag
 
 echo "Test completed successfully."
 exit 0

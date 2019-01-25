@@ -52,7 +52,7 @@ void atmcorlamb2_new
     float ttatmg;          /* total atmospheric transmission */
     float satm;            /* spherical albedo */
 
-    /* Modifiy the AOT value based on the angstroem coefficient and lambda
+    /* Modify the AOT value based on the angstroem coefficient and lambda
        values */
     if  (eps < 0.0)
         mraot550nm = raot550nm;
@@ -204,7 +204,7 @@ int atmcorlamb2
     float lambda[] = {0.443, 0.480, 0.585, 0.655, 0.865, 1.61, 2.2, 4.0, 4.0,
                       4.0, 4.0, 4.0, 4.0, 4.0, 4.0, 4.0};
 
-    /* Modifiy the AOT value based on the angstroem coefficient and lambda
+    /* Modify the AOT value based on the angstroem coefficient and lambda
        values */
     if  (eps < 0.0)
         mraot550nm = raot550nm;
@@ -284,7 +284,7 @@ int atmcorlamb2
         sphalbt, normext, satm, next);
 
     atm_pres = pres * ONE_DIV_1013;
-    comptg (iband, xts, xtv, xmus, xmuv, uoz, uwv, atm_pres, ogtransa1,
+    comptg (iband, xmus, xmuv, uoz, uwv, atm_pres, ogtransa1,
         ogtransb0, ogtransb1, wvtransa, wvtransb, oztransa, &tgoz, &tgwv,
         &tgwvhalf, &tgog);
 
@@ -426,8 +426,6 @@ NOTES:
 void comptg
 (
     int iband,                   /* I: band index (0-based) */
-    float xts,                   /* I: solar zenith angle */
-    float xtv,                   /* I: view zenith angle */
     float xmus,                  /* I: cosine of solar zenith angle */
     float xmuv,                  /* I: cosine of view zenith angle */
     float uoz,                   /* I: total column ozone */
@@ -2023,9 +2021,6 @@ int memory_allocation_main
     int nlines,          /* I: number of lines in the scene */
     int nsamps,          /* I: number of samples in the scene */
     int16 **sza,         /* O: solar zenith angle, nlines x nsamps  */
-    int16 **saa,         /* O: solar azimuth angle table, nlines x nsamps */
-    int16 **vza,         /* O: view zenith angle, nlines x nsamps  */
-    int16 **vaa,         /* O: view azimuth angle table, nlines x nsamps */
     uint16 **qaband,     /* O: QA band for the input image, nlines x nsamps */
     uint16 **radsat,     /* O: radiometric saturation band for the input image,
                                nlines x nsamps */
@@ -2042,30 +2037,6 @@ int memory_allocation_main
     if (*sza == NULL)
     {
         sprintf (errmsg, "Error allocating memory for sza");
-        error_handler (true, FUNC_NAME, errmsg);
-        return (ERROR);
-    }
-
-    *saa = calloc (nlines*nsamps, sizeof (int16));
-    if (*saa == NULL)
-    {
-        sprintf (errmsg, "Error allocating memory for saa");
-        error_handler (true, FUNC_NAME, errmsg);
-        return (ERROR);
-    }
-
-    *vza = calloc (nlines*nsamps, sizeof (int16));
-    if (*vza == NULL)
-    {
-        sprintf (errmsg, "Error allocating memory for vza");
-        error_handler (true, FUNC_NAME, errmsg);
-        return (ERROR);
-    }
-
-    *vaa = calloc (nlines*nsamps, sizeof (int16));
-    if (*vaa == NULL)
-    {
-        sprintf (errmsg, "Error allocating memory for vaa");
         error_handler (true, FUNC_NAME, errmsg);
         return (ERROR);
     }

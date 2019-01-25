@@ -131,8 +131,6 @@ void local_chand
 void comptg
 (
     int iband,                   /* I: band index (0-based) */
-    float xts,                   /* I: solar zenith angle */
-    float xtv,                   /* I: observation zenith angle */
     float xmus,                  /* I: cosine of solar zenith angle */
     float xmuv,                  /* I: cosine of observation zenith angle */
     float uoz,                   /* I: total column ozone */
@@ -325,9 +323,6 @@ int memory_allocation_main
     int nlines,          /* I: number of lines in the scene */
     int nsamps,          /* I: number of samples in the scene */
     int16 **sza,         /* O: solar zenith angle, nlines x nsamps  */
-    int16 **saa,         /* O: solar azimuth angle table, nlines x nsamps */
-    int16 **vza,         /* O: view zenith angle, nlines x nsamps  */
-    int16 **vaa,         /* O: view azimuth angle table, nlines x nsamps */
     uint16 **qaband,     /* O: QA band for the input image, nlines x nsamps */
     uint16 **radsat,     /* O: radiometric saturation band for the input image,
                                nlines x nsamps */

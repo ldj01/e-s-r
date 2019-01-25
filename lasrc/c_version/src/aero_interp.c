@@ -55,8 +55,6 @@ void aerosol_interp
                               [lcmg2][scmg2] */
     float xaero, yaero;    /* x/y location for aerosol pixel within the overall
                               larger aerosol window grid */
-    float pixel_size_x;    /* x pixel size */
-    float pixel_size_y;    /* y pixel size */
     float aero11;          /* aerosol value at window line, samp */
     float aero12;          /* aerosol value at window line, samp+1 */
     float aero21;          /* aerosol value at window line+1, samp */
@@ -84,10 +82,6 @@ void aerosol_interp
     }
     if (refl_indx == -99)
         refl_indx = 0;
-
-    /* Copy the information from the XML file */
-    pixel_size_x = xml_metadata->band[refl_indx].pixel_size[0];
-    pixel_size_y = xml_metadata->band[refl_indx].pixel_size[1];
 
     /* Interpolate the aerosol data for each pixel location */
     tmp_percent = 0;

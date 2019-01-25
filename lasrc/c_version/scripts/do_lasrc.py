@@ -90,13 +90,17 @@ class SurfaceReflectance():
                 type="int", help="number of threads used for processing")
             parser.add_option("--verbose", dest="verbose", default=False,
                 action="store_true", help="Turn verbose logging on")
+            parser.add_option("--use_l1_angle_bands", action="store_true",
+                              dest="use_l1_angle_bands", default=False,
+                              help=("flag to use level 1 angle bands rather"
+                                    " than create them"))
 
             (options, args) = parser.parse_args()
 
             # XML input file
             xml_infile = options.xml
             if xml_infile == None:
-                parser.error ('missing input XML file command-line argument');
+                parser.error ('missing input XML file command-line argument')
                 return ERROR
 
             # surface reflectance options
@@ -108,13 +112,14 @@ class SurfaceReflectance():
             offset_therm = options.offset_therm
             num_threads = options.num_threads
             verbose = options.verbose
+            use_l1_angle_bands = options.use_l1_angle_bands
 
         # get the logger
         logger = logging.getLogger(__name__)
         msg = ('Surface reflectance processing of Landsat file: {}'
                .format(xml_infile))
         logger.info (msg)
-        
+
         # make sure the XML file exists
         if not os.path.isfile(xml_infile):
             msg = ('XML file does not exist or is not accessible: {}'
@@ -126,7 +131,7 @@ class SurfaceReflectance():
         base_xmlfile = os.path.basename (xml_infile)
         msg = 'Processing XML file: {}'.format(base_xmlfile)
         logger.info (msg)
-        
+
         # get the path of the XML file and change directory to that location
         # for running this script.  save the current working directory for
         # return to upon error or when processing is complete.  Note: use
@@ -168,28 +173,31 @@ class SurfaceReflectance():
             os.chdir (mydir)
             return ERROR
 
-        # generate per-pixel angle bands for band 4 (representative band)
-        cmdstr = 'create_l8_angle_bands --xml {}'.format(base_xmlfile)
-        logger.debug('per-pixel angles command: {0}'.format(cmdstr))
-        (status, output) = commands.getstatusoutput(cmdstr)
-        logger.info(output)
-        exit_code = status >> 8
-        if exit_code != 0:
-            logger.error('Error running create_l8_angle_bands. Processing '
-                         'will terminate.')
-            os.chdir(mydir)
-            return ERROR
+        # Generate per-pixel angle bands for band 4 (representative band)
+        # if directed to do so.  Otherwise, it's assumed the angle bands
+        # are available with the level 1 data.
+        if not use_l1_angle_bands:
+            cmdstr = 'create_l8_angle_bands --xml {}'.format(base_xmlfile)
+            logger.debug('per-pixel angles command: {0}'.format(cmdstr))
+            (status, output) = commands.getstatusoutput(cmdstr)
+            logger.info(output)
+            exit_code = status >> 8
+            if exit_code != 0:
+                logger.error('Error running create_l8_angle_bands. Processing '
+                             'will terminate.')
+                os.chdir(mydir)
+                return ERROR
 
-        # Mask the angle bands to match the band quality band
-        cmdstr = ('mask_per_pixel_angles.py --xml {}'
-                  .format(base_xmlfile))
-        (status, output) = commands.getstatusoutput(cmdstr)
-        logger.info(output)
-        exit_code = status >> 8
-        if exit_code != 0:
-            logger.error('Error masking angle bands with the band '
-                         'quality band. Processing will terminate.')
-            return ERROR
+            # Mask the angle bands to match the band quality band
+            cmdstr = ('mask_per_pixel_angles.py --xml {}'
+                      .format(base_xmlfile))
+            (status, output) = commands.getstatusoutput(cmdstr)
+            logger.info(output)
+            exit_code = status >> 8
+            if exit_code != 0:
+                logger.error('Error masking angle bands with the band '
+                             'quality band. Processing will terminate.')
+                return ERROR
 
         # run surface reflectance algorithm, checking the return status.  exit
         # if any errors occur.
@@ -235,7 +243,7 @@ class SurfaceReflectance():
             logger.error (msg)
             os.chdir (mydir)
             return ERROR
-        
+
         # successful completion.  return to the original directory.
         os.chdir (mydir)
         msg = 'Completion of surface reflectance.'

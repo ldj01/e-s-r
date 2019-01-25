@@ -70,6 +70,10 @@ void csalbr(float *tau_ray,float *actual_S_r);
 static void update_atmos_coefs(atmos_t *atmos_coef, Ar_gridcell_t *ar_gridcell,
                                sixs_tables_t *sixs_tables, int ***line_ar,
                                Lut_t *lut, int nband, int bkgd_aerosol);
+void update_gridcell_atmos_coefs(int ipt, atmos_t *atmos_coef,
+                                Ar_gridcell_t *ar_gridcell, 
+                                sixs_tables_t *sixs_tables, int line_ar,
+                                Lut_t *lut, int nband, int bkgd_aerosol);
 float calcuoz(short jday,float flat);
 float get_dem_spres(short *dem,float lat,float lon);
 

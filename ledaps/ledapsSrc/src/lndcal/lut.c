@@ -114,13 +114,10 @@ Lut_t *GetLut(Param_t *param, int nband, Input_t *input) {
   this->qa_fill = QA_FILL;
   this->qa_satu =  QA_SATU;
 
-  /* Copy some information from the input metadata to the metadata for
-     the look-up table, like path, row, satellite, instrument, gains, biases,
-     K1/K2 consts, bands, etc. */
-  if (!InputMetaCopy(input_meta, nband, &this->meta)) {
-    free(this);
-    RETURN_ERROR("copying input metadata", "GetLut", NULL);
-  }
+  /* Make a copy of the input metadata for the look-up table metadata.
+     Note that if pointers are added to the Input_meta_t structure, their
+     values will need to be copied to the new struct here. */
+  this->meta = *input_meta;
   this->out_fill = OUTPUT_FILL;
   this->out_satu = OUTPUT_SATU;
 

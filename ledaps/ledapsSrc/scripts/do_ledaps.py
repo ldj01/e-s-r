@@ -159,7 +159,7 @@ class Ledaps():
     #######################################################################
     def runLedaps(self, xmlfile=None, process_sr="True", scale_refl=None,
                         offset_refl=None, scale_therm=None, offset_therm=None, 
-                        num_threads=None):
+                        num_threads=None, use_l1_angle_bands="False"):
         # If no parameters were passed then get the info from the command line
         if xmlfile is None:
 
@@ -193,6 +193,10 @@ class Ledaps():
             parser.add_option ("--num_threads", dest="num_threads",
                                type="int",
                                help="number of threads for processing")
+            parser.add_option("--use_l1_angle_bands", action="store_true",
+                              dest="use_l1_angle_bands", default=False,
+                              help=("flag to use level 1 angle bands rather"
+                                    " than create them"))
             (options, args) = parser.parse_args()
 
             # Validate the command-line options
@@ -209,6 +213,7 @@ class Ledaps():
             scale_therm = options.scale_therm
             offset_therm = options.offset_therm
             num_threads = options.num_threads
+            use_l1_angle_bands = options.use_l1_angle_bands
 
         # Obtain logger from logging using the module's name
         logger = logging.getLogger(__name__)
@@ -257,29 +262,30 @@ class Ledaps():
                 logger.error (msg)
                 return ERROR
 
-            # Set up the command-line option for lndsr for processing
-            # collections. The per-pixel angle bands need to be generated for
-            # band 4 (representative band) and the thermal band(s)
-            cmdstr = ('create_landsat_angle_bands --xml {}'
-                      .format(base_xmlfile))
-            (status, output) = commands.getstatusoutput(cmdstr)
-            logger.info(output)
-            exit_code = status >> 8
-            if exit_code != 0:
-                logger.error('Error running create_landsat_angle_bands. '
-                             'Processing will terminate.')
-                return ERROR
+            # Generate per-pixel angle bands for band 4
+            # (representative band) if directed to do so.  Otherwise, it's
+            # assumed the angle bands are available with the level 1 data.
+            if not use_l1_angle_bands:
+                cmdstr = ('create_landsat_angle_bands --xml {}'
+                          .format(base_xmlfile))
+                (status, output) = commands.getstatusoutput(cmdstr)
+                logger.info(output)
+                exit_code = status >> 8
+                if exit_code != 0:
+                    logger.error('Error running create_landsat_angle_bands. '
+                                 'Processing will terminate.')
+                    return ERROR
 
-            # Mask the angle bands to match the band quality band
-            cmdstr = ('mask_per_pixel_angles.py --xml {}'
-                      .format(base_xmlfile))
-            (status, output) = commands.getstatusoutput(cmdstr)
-            logger.info(output)
-            exit_code = status >> 8
-            if exit_code != 0:
-                logger.error('Error masking angle bands with the band '
-                             'quality band. Processing will terminate.')
-                return ERROR
+                # Mask the angle bands to match the band quality band
+                cmdstr = ('mask_per_pixel_angles.py --xml {}'
+                          .format(base_xmlfile))
+                (status, output) = commands.getstatusoutput(cmdstr)
+                logger.info(output)
+                exit_code = status >> 8
+                if exit_code != 0:
+                    logger.error('Error masking angle bands with the band '
+                                 'quality band. Processing will terminate.')
+                    return ERROR
 
             # Set up the command-line option for lndpm if processing surface
             # reflectance

@@ -306,44 +306,6 @@ bool FreeInput(Input_t *this)
   return true;
 }
 
-bool InputMetaCopy(Input_meta_t *this, int nband, Input_meta_t *copy) 
-{
-  int ib;
-
-  if (this == NULL) 
-    RETURN_ERROR("invalid input structure", "InputMetaCopy", false);
-
-  copy->sat = this->sat;
-  copy->inst = this->inst;
-  if (!DateCopy(&this->acq_date, &copy->acq_date)) 
-    RETURN_ERROR("copying acquisition date/time", "InputMetaCopy", false);
-  if (!DateCopy(&this->prod_date, &copy->prod_date)) 
-    RETURN_ERROR("copying production date/time", "InputMetaCopy", false);
-  copy->time_fill = this->time_fill;
-  copy->sun_zen = this->sun_zen;
-  copy->sun_az = this->sun_az;
-  copy->earth_sun_dist = this->earth_sun_dist;
-  copy->wrs_sys = this->wrs_sys;
-  copy->ipath = this->ipath;
-  copy->irow = this->irow;
-  copy->fill = this->fill;
-
-  copy->iband_th = this->iband_th;
-  for (ib = 0; ib < nband; ib++) {
-    copy->iband[ib] = this->iband[ib];
-    copy->rad_gain[ib] = this->rad_gain[ib];
-    copy->rad_bias[ib] = this->rad_bias[ib];
-    copy->refl_gain[ib] = this->refl_gain[ib];
-    copy->refl_bias[ib] = this->refl_bias[ib];
-  }
-  copy->rad_gain_th = this->rad_gain_th;
-  copy->rad_bias_th = this->rad_bias_th;
-  copy->k1_const = this->k1_const;
-  copy->k2_const = this->k2_const;
-  copy->use_toa_refl_consts = this->use_toa_refl_consts;
-  return true;
-}
-
 
 #define DATE_STRING_LEN (50)
 #define TIME_STRING_LEN (50)
@@ -395,6 +357,8 @@ bool GetXMLInput(Input_t *this, Espa_internal_meta_t *metadata)
     this->meta.prod_date.fill = true;
     this->meta.sun_zen = ANGLE_FILL;
     this->meta.sun_az = ANGLE_FILL;
+    this->meta.szen_scale = 1.0;
+    this->meta.szen_offset = 0.0;
     this->meta.wrs_sys = (Wrs_t)WRS_FILL;
     this->meta.ipath = -1;
     this->meta.irow = -1;
@@ -650,6 +614,10 @@ bool GetXMLInput(Input_t *this, Espa_internal_meta_t *metadata)
         {
             /* get the solar zenith representative band info */
             this->file_name_sun_zen = strdup (metadata->band[i].file_name);
+            if (metadata->band[i].scale_factor != ESPA_FLOAT_META_FILL)
+                this->meta.szen_scale = metadata->band[i].scale_factor;
+            if (metadata->band[i].add_offset != ESPA_FLOAT_META_FILL)
+                this->meta.szen_offset = metadata->band[i].add_offset;
         }
     }  /* for i */
 
@@ -716,18 +684,18 @@ bool GetXMLInput(Input_t *this, Espa_internal_meta_t *metadata)
             this->meta.sat != SAT_LANDSAT_3 &&
             this->meta.sat != SAT_LANDSAT_4 &&
             this->meta.sat != SAT_LANDSAT_5)
-            error_string = "invalid insturment/satellite combination";
+            error_string = "invalid instrument/satellite combination";
     }
     else if (this->meta.inst == INST_TM)
     {
         if (this->meta.sat != SAT_LANDSAT_4 &&
             this->meta.sat != SAT_LANDSAT_5)
-            error_string = "invalid insturment/satellite combination";
+            error_string = "invalid instrument/satellite combination";
     }
     else if (this->meta.inst == INST_ETM)
     {
         if (this->meta.sat != SAT_LANDSAT_7)
-            error_string = "invalid insturment/satellite combination";
+            error_string = "invalid instrument/satellite combination";
     }
     else
         error_string = "invalid instrument type";

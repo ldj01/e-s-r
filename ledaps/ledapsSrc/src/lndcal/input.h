@@ -70,6 +70,8 @@ typedef struct {
   Date_t prod_date;        /* Production date (must be available for ETM) */
   float sun_zen;           /* Solar zenith angle (radians; scene center) */
   float sun_az;            /* Solar azimuth angle (radians; scene center) */
+  double szen_scale;       /* solar zenith angle scale factor */
+  double szen_offset;      /* solar zenith angle offset */
   float earth_sun_dist;    /* Earth-sun distance */
   Wrs_t wrs_sys;           /* WRS system */
   int ipath;               /* WRS path number */
@@ -124,7 +126,6 @@ bool GetInputLineTh(Input_t *this, int iline, unsigned char *line);
 bool GetInputLineSunZen(Input_t *this, int iline, int16 *line);
 bool CloseInput(Input_t *this);
 bool FreeInput(Input_t *this);
-bool InputMetaCopy(Input_meta_t *this, int nband, Input_meta_t *copy);
 bool GetXMLInput(Input_t *this, Espa_internal_meta_t *metadata);
 
 #endif

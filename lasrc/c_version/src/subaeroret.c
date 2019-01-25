@@ -99,7 +99,7 @@ void subaeroret_new
     /* Atmospheric correction for each band */
     nbval = 0;
     *residual = 0.0;
-    for (ib = DN_BAND1; ib < DN_BAND8; ib++)
+    for (ib = DN_BAND1; ib <= DN_BAND7; ib++)
     {
         /* Don't reprocess iband1 */
         if ((erelc[ib] > 0.0) && (ib != iband1))
@@ -146,7 +146,7 @@ void subaeroret_new
         /* Atmospheric correction for each band */
         nbval = 0;
         *residual = 0.0;
-        for (ib = DN_BAND1; ib < DN_BAND8; ib++)
+        for (ib = DN_BAND1; ib <= DN_BAND7; ib++)
         {
             /* Don't reprocess iband1 */
             if ((erelc[ib] > 0.0) && (ib != iband1))
@@ -210,7 +210,7 @@ void subaeroret_new
         /* Atmospheric correction for each band */
         nbval = 0;
         residualm = 0.0;
-        for (ib = DN_BAND1; ib < DN_BAND8; ib++)
+        for (ib = DN_BAND1; ib <= DN_BAND7; ib++)
         {
             /* Don't reprocess iband1 */
             if ((erelc[ib] > 0.0) && (ib != iband1))
@@ -393,7 +393,7 @@ int subaeroret
     /* Atmospheric correction for each band */
     nbval = 0;
     *residual = 0.0;
-    for (ib = DN_BAND1; ib < DN_BAND8; ib++)
+    for (ib = DN_BAND1; ib <= DN_BAND7; ib++)
     {
         /* Don't reprocess iband1 */
         if ((erelc[ib] > 0.0) && (ib != iband1))
@@ -458,7 +458,7 @@ int subaeroret
         /* Atmospheric correction for each band */
         nbval = 0;
         *residual = 0.0;
-        for (ib = DN_BAND1; ib < DN_BAND8; ib++)
+        for (ib = DN_BAND1; ib <= DN_BAND7; ib++)
         {
             /* Don't reprocess iband1 */
             if ((erelc[ib] > 0.0) && (ib != iband1))
@@ -541,7 +541,7 @@ int subaeroret
         /* Atmospheric correction for each band */
         nbval = 0;
         residualm = 0.0;
-        for (ib = DN_BAND1; ib < DN_BAND8; ib++)
+        for (ib = DN_BAND1; ib <= DN_BAND7; ib++)
         {
             /* Don't reprocess iband1 */
             if ((erelc[ib] > 0.0) && (ib != iband1))

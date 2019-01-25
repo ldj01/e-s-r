@@ -33,7 +33,12 @@ status=0
 for i in "${data_files[@]}"; do
     base_name=`basename $i`
 
-    echo "Comparing $base_name..."
+    echo "Comparing $base_name... "
+
+    if [ ! -f $base_name ]; then
+        echo "Warn ${base_name} does not exist."
+        continue;
+    fi
 
     # For the XML file, ignore the records that vary from one run to the next.
     # If the file is an ASCII header file, use diff.  Otherwise, assume it's

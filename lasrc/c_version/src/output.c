@@ -201,7 +201,7 @@ Output_t *open_output
         if ((output_type == OUTPUT_TOA) && (ib == SR_AEROSOL))
             continue;
         else if ((output_type == OUTPUT_SR) &&
-            ((ib == SR_BAND9) || (ib == SR_BAND10) || (ib == SR_BAND11)))
+            ((ib == SR_BAND10) || (ib == SR_BAND11)))
             continue;
         else if ((output_type == OUTPUT_SR) && (ib == SR_AEROSOL))
         {
@@ -336,17 +336,11 @@ Output_t *open_output
                         ib+1);
                 }
             }
-            else if (ib == SR_BAND9)  /* cirrus band */
-            {  /* band 9 is only atmospherically corrected */
-                sprintf (bmeta[ib].name, "toa_band%d", ib+2);
-                sprintf (bmeta[ib].long_name, "band %d top-of-atmosphere "
-                    "reflectance", ib+2);
-            }
             else if (ib == SR_BAND10 || ib == SR_BAND11)  /* thermal bands */
             {
-                sprintf (bmeta[ib].name, "bt_band%d", ib+2);
+                sprintf (bmeta[ib].name, "bt_band%d", ib+3);
                 sprintf (bmeta[ib].long_name, "band %d top-of-atmosphere "
-                    "brightness temperature", ib+2);
+                    "brightness temperature", ib+3);
                 sprintf (bmeta[ib].data_units, "temperature (kelvin)");
             }
         }
@@ -354,7 +348,8 @@ Output_t *open_output
         /* Set up the filename with the scene name and band name and open the
            file for read/write access.  Don't open if this is OLI-only and
            these are the thermal bands. */
-        if ((ib != SR_BAND10 && ib != SR_BAND11) || output->inst != INST_OLI)
+        if ((ib != SR_BAND10 && ib != SR_BAND11) ||
+            output->inst != INST_OLI)
         {
             sprintf (bmeta[ib].file_name, "%s_%s.img", scene_name,
                 bmeta[ib].name);
@@ -415,7 +410,7 @@ int close_output
         if ((output_type == OUTPUT_TOA) && (ib == SR_AEROSOL))
             continue;
         else if ((output_type == OUTPUT_SR) &&
-            ((ib == SR_BAND9) || (ib == SR_BAND10) || (ib == SR_BAND11)))
+            ((ib == SR_BAND10) || (ib == SR_BAND11)))
             continue;
         else
         {

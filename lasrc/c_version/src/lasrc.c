@@ -236,7 +236,7 @@ int main (int argc, char *argv[])
         exit (ERROR);
     }
 
-    /* Read the scaled solar zenith per-pixel angle band (in degrees). */
+    /* Read the scaled solar zenith per pixel angle band which is in degrees */
     if (get_input_ppa_lines (input, 0, nlines, sza) != SUCCESS)
     {
         sprintf (errmsg, "Reading per-pixel solar and view angle bands");
@@ -406,27 +406,23 @@ int main (int argc, char *argv[])
         }
     }
 
-    /* Write bands 9-11 (cirrus and thermals), which don't get any further
-       processing. */
-    for (ib = SR_BAND9; ib <= SR_BAND11; ib++)
+    /* Write bands 10-11 (thermals) which don't get any further processing. */
+    for (ib = SR_BAND10; ib <= SR_BAND11; ib++)
     {
         /* If processing OLI-only, then bands 10 and 11 don't exist */
         if (!strcmp (gmeta->instrument, "OLI") &&
             (ib == SR_BAND10 || ib == SR_BAND11))
             continue;
         
-        printf ("  Band %d: %s\n", ib+2,
+        printf ("  Band %d: %s\n", ib+3,
             toa_output->metadata.band[ib].file_name);
 
-        if (ib == SR_BAND9)
-            convert_output (sband, ib, out_band, nlines, nsamps, false);
-        else 
-            convert_output (sband, ib, out_band, nlines, nsamps, true); 
+        convert_output (sband, ib, out_band, nlines, nsamps, true);
 
         if (put_output_lines (toa_output, out_band, ib, 0, nlines,
             sizeof (uint16)) != SUCCESS)
         {
-            sprintf (errmsg, "Writing output TOA data for band %d", ib+2);
+            sprintf (errmsg, "Writing output TOA data for band %d", ib+3);
             error_handler (true, FUNC_NAME, errmsg);
             exit (ERROR);
         }

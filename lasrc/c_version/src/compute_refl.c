@@ -105,26 +105,15 @@ int compute_toa_refl
        reflectance and TOA brightness temp */
     for (ib = DN_BAND1; ib <= DN_BAND11; ib++)
     {
-        /* Don't process the pan band */
-        if (ib == DN_BAND8)
-            continue;
         printf ("%d ... ", ib+1);
 
-        /* Read the current band and calibrate bands 1-9 (except pan) to
-           obtain TOA reflectance. Bands are corrected for the sun angle at
-           the center of the scene. */
-        if (ib <= DN_BAND9)
-        {
+        /* Read the current band and calibrate bands 1-7 to obtain TOA
+           reflectance. Bands are corrected for the sun angle at the center
+           of the scene. */
             if (ib <= DN_BAND7)
             {
                 iband = ib;
                 sband_ib = ib;
-            }
-            else
-            {  /* don't count the pan band */
-                iband = ib - 1;
-                sband_ib = ib - 1;
-            }
 
             if (get_input_refl_lines (input, iband, 0, nlines, uband) !=
                 SUCCESS)
@@ -181,7 +170,7 @@ int compute_toa_refl
                     }
                 }  /* for samp */
             }  /* for line */
-        }  /* end if band <= band 9 */
+        }  /* end if band <= band 7 */
 
         /* Read the current band and calibrate thermal bands.  Not available
            for OLI-only scenes. */
@@ -189,7 +178,7 @@ int compute_toa_refl
         {
             if (get_input_th_lines (input, 0, 0, nlines, uband) != SUCCESS)
             {
-                sprintf (errmsg, "Reading band %d", ib+1);
+                sprintf (errmsg, "Reading band %d", ib+3);
                 error_handler (true, FUNC_NAME, errmsg);
                 return (ERROR);
             }
@@ -222,7 +211,7 @@ int compute_toa_refl
 
                     /* Check for saturation */
                     if (uband[i] == L1_SATURATED)
-                        radsat[i] |= 1 << (ib+1);
+                        radsat[i] |= 1 << (ib+3);
                 }
                 else
                 {
@@ -236,7 +225,7 @@ int compute_toa_refl
         {
             if (get_input_th_lines (input, 1, 0, nlines, uband) != SUCCESS)
             {
-                sprintf (errmsg, "Reading band %d", ib+1);
+                sprintf (errmsg, "Reading band %d", ib+3);
                 error_handler (true, FUNC_NAME, errmsg);
                 return (ERROR);
             }
@@ -269,7 +258,7 @@ int compute_toa_refl
 
                     /* Check for saturation only */
                     if (uband[i] == L1_SATURATED)
-                        radsat[i] |= 1 << (ib+1);
+                        radsat[i] |= 1 << (ib+3);
                 }
                 else
                 {
@@ -649,7 +638,7 @@ int compute_sr_refl
     mytime = time(NULL);
     printf ("Performing atmospheric corrections for each reflectance "
         "band ... %s", ctime(&mytime));
-    for (ib = 0; ib <= SR_BAND7; ib++)
+    for (ib = SR_BAND1; ib <= SR_BAND7; ib++)
     {
         printf (" %d ...", ib+1);
 
@@ -727,7 +716,7 @@ int compute_sr_refl
     mytime = time(NULL);
     printf ("Starting retrieval of atmospheric correction parameters ... %s",
         ctime(&mytime));
-    for (ib = 0; ib <= SR_BAND7; ib++)
+    for (ib = SR_BAND1; ib <= SR_BAND7; ib++)
     {
         /* Get the parameters for the atmospheric correction */
         /* rotoa is not defined for this call, which is ok, but the
@@ -768,7 +757,7 @@ int compute_sr_refl
         xrorayp_arr[ib] = xrorayp;
     }
 
-    for (ib = 0; ib <= SR_BAND7; ib++)
+    for (ib = SR_BAND1; ib <= SR_BAND7; ib++)
     {
         /* Get the polynomial coefficients for roatm */
         for (ia = 0; ia < NAOT_VALS; ia++)
@@ -1640,7 +1629,7 @@ int compute_sr_refl
 
     /* 0 .. DN_BAND7 is the same as 0 .. SR_BAND7 here, since the pan band
        isn't spanned */
-    for (ib = 0; ib <= DN_BAND7; ib++)
+    for (ib = DN_BAND1; ib <= DN_BAND7; ib++)
     {
         printf ("  Band %d\n", ib+1);
 #ifdef _OPENMP
@@ -1727,7 +1716,7 @@ int compute_sr_refl
     }
 
     /* Loop through the reflectance bands and write the data */
-    for (ib = 0; ib <= DN_BAND7; ib++)
+    for (ib = DN_BAND1; ib <= DN_BAND7; ib++)
     {
         printf ("  Band %d: %s\n", ib+1,
             sr_output->metadata.band[ib].file_name);

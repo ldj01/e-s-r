@@ -199,7 +199,7 @@ def main():
     try:
         args = System.get_command_line_arguments(description, start_date, True)
     except Exception as e:
-        print('Argument error: ', e)
+        print(('Argument error: ', e))
         return ERROR
 
 

@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 from osgeo import gdal
 from osgeo import ogr
 from osgeo import osr
@@ -13,7 +13,7 @@ def list_gdal_drivers():
     """
 
     return [gdal.GetDriver(index).ShortName
-            for index in xrange(gdal.GetDriverCount())]
+            for index in range(gdal.GetDriverCount())]
 
 
 def delete_gdal_drivers(exclusions=list()):

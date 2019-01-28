@@ -1,8 +1,8 @@
-#! /usr/bin/env python
+#! /usr/bin/env python3
 import sys
 import os
 import re
-import commands
+import subprocess
 import datetime
 from optparse import OptionParser
 import logging
@@ -62,7 +62,7 @@ class SurfaceReflectance():
         if xml_infile == None:
             # Get version number
             cmdstr = ('lasrc --version')
-            (status, self.version) = commands.getstatusoutput(cmdstr)
+            (exit_code, self.version) = subprocess.getstatusoutput(cmdstr)
 
             # get the command line argument for the XML file
             parser = OptionParser(version = self.version)
@@ -179,9 +179,8 @@ class SurfaceReflectance():
         if not use_l1_angle_bands:
             cmdstr = 'create_l8_angle_bands --xml {}'.format(base_xmlfile)
             logger.debug('per-pixel angles command: {0}'.format(cmdstr))
-            (status, output) = commands.getstatusoutput(cmdstr)
+            (exit_code, output) = subprocess.getstatusoutput(cmdstr)
             logger.info(output)
-            exit_code = status >> 8
             if exit_code != 0:
                 logger.error('Error running create_l8_angle_bands. Processing '
                              'will terminate.')
@@ -191,9 +190,8 @@ class SurfaceReflectance():
             # Mask the angle bands to match the band quality band
             cmdstr = ('mask_per_pixel_angles.py --xml {}'
                       .format(base_xmlfile))
-            (status, output) = commands.getstatusoutput(cmdstr)
+            (exit_code, output) = subprocess.getstatusoutput(cmdstr)
             logger.info(output)
-            exit_code = status >> 8
             if exit_code != 0:
                 logger.error('Error masking angle bands with the band '
                              'quality band. Processing will terminate.')
@@ -235,9 +233,8 @@ class SurfaceReflectance():
                           num_threads_opt_str))
         msg = 'Executing lasrc command: {}'.format(cmdstr)
         logger.debug (msg)
-        (status, output) = commands.getstatusoutput (cmdstr)
+        (exit_code, output) = subprocess.getstatusoutput (cmdstr)
         logger.info (output)
-        exit_code = status >> 8
         if exit_code != 0:
             msg = 'Error running lasrc.  Processing will terminate.'
             logger.error (msg)

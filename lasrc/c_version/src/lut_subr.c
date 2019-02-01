@@ -479,7 +479,6 @@ static float interp_scattering_angle
 )
 {
     int i;           /* loop counter */
-    int j;           /* rolutt array index adjustment */
     int isca;        /* rolutt array index adjustment */
     float sca1;
     float sca2;
@@ -492,7 +491,8 @@ static float interp_scattering_angle
     {
         int is = its + i%2; /* its or its + 1 array index */
         int iv = (i < 2) ? itv : itv + 1; /* itv or itv + 1 array index */
-        j = indts[is] + nbfic[i] - nbfi[i];
+        int j = indts[is] + nbfic[i] - nbfi[i]; /* convenience rolutt array
+                                                   index offset */
 
         if (is != 0 && iv != 0)
         {

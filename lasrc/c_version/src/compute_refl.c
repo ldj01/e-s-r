@@ -502,18 +502,25 @@ static bool find_closest_non_fill
        for a pixel that is not of the QA type specified and is not fill */
     for (aero_window = 1; aero_window <= HALF_AERO_WINDOW; aero_window++)
     {
+        /* Find the starting and ending samples of the window, clamping to
+           the image boundaries. */
+        int start_samp, end_samp;
+        if (center_samp - aero_window > 0)
+            start_samp = center_samp - aero_window;
+        else
+            start_samp = 0;
+        if (center_samp + aero_window < nsamps)
+            end_samp = center_samp + aero_window;
+        else
+            end_samp = nsamps - 1;
+
         /* Check top line of current window. */
         line = center_line - aero_window;
         if (line >= 0)
         {
             band_ptr = &qaband[line*nsamps];
-            for (samp = center_samp - aero_window;
-                 samp <= center_samp + aero_window; samp++)
+            for (samp = start_samp; samp <= end_samp; samp++)
             {
-                /* Make sure the sample is valid. */
-                if (samp < 0 || samp >= nsamps)
-                    continue;
-
                 if (!level1_qa_is_fill(band_ptr[samp]))
                 {
                     *nearest_line = line;
@@ -558,13 +565,8 @@ static bool find_closest_non_fill
         /* Check the bottom line of the current window. */
         if (line < nlines)
         {
-            for (samp = center_samp - aero_window;
-                 samp <= center_samp + aero_window; samp++)
+            for (samp = start_samp; samp <= end_samp; samp++)
             {
-                /* Make sure the sample is valid. */
-                if (samp < 0 || samp >= nsamps)
-                    continue;
-
                 if (!level1_qa_is_fill(band_ptr[samp]))
                 {
                     *nearest_line = line;
@@ -619,6 +621,18 @@ static bool find_closest_non_cloud_shadow_water
        for a pixel that is not of the QA type specified and is not fill */
     for (aero_window = 1; aero_window <= HALF_AERO_WINDOW; aero_window++)
     {
+        /* Find the starting and ending samples of the window, clamping to
+           the image boundaries. */
+        int start_samp, end_samp;
+        if (center_samp - aero_window > 0)
+            start_samp = center_samp - aero_window;
+        else
+            start_samp = 0;
+        if (center_samp + aero_window < nsamps)
+            end_samp = center_samp + aero_window;
+        else
+            end_samp = nsamps - 1;
+
         /* Check top line of current window. */
         line = center_line - aero_window;
         if (line >= 0)
@@ -627,13 +641,8 @@ static bool find_closest_non_cloud_shadow_water
             qband_ptr = &qaband[line_index];
             s4band_ptr = &sband[SR_BAND4][line_index];
             s5band_ptr = &sband[SR_BAND5][line_index];
-            for (samp = center_samp - aero_window;
-                 samp <= center_samp + aero_window; samp++)
+            for (samp = start_samp; samp <= end_samp; samp++)
             {
-                /* Make sure the sample is valid. */
-                if (samp < 0 || samp >= nsamps)
-                    continue;
-
                 if (!level1_qa_is_fill(qband_ptr[samp]) &&
                     !is_cloud_or_shadow(qband_ptr[samp]) &&
                     !is_water(s4band_ptr[samp], s5band_ptr[samp]))
@@ -691,13 +700,8 @@ static bool find_closest_non_cloud_shadow_water
         /* Check the bottom line of the current window. */
         if (line < nlines)
         {
-            for (samp = center_samp - aero_window;
-                 samp <= center_samp + aero_window; samp++)
+            for (samp = start_samp; samp <= end_samp; samp++)
             {
-                /* Make sure the sample is valid. */
-                if (samp < 0 || samp >= nsamps)
-                    continue;
-
                 if (!level1_qa_is_fill(qband_ptr[samp]) &&
                     !is_cloud_or_shadow(qband_ptr[samp]) &&
                     !is_water(s4band_ptr[samp], s5band_ptr[samp]))
@@ -753,6 +757,18 @@ static bool find_closest_non_water
        for a pixel that is not of the QA type specified and is not fill */
     for (aero_window = 1; aero_window <= HALF_AERO_WINDOW; aero_window++)
     {
+        /* Find the starting and ending samples of the window, clamping to
+           the image boundaries. */
+        int start_samp, end_samp;
+        if (center_samp - aero_window > 0)
+            start_samp = center_samp - aero_window;
+        else
+            start_samp = 0;
+        if (center_samp + aero_window < nsamps)
+            end_samp = center_samp + aero_window;
+        else
+            end_samp = nsamps - 1;
+
         /* Check top line of current window. */
         line = center_line - aero_window;
         if (line >= 0)
@@ -761,12 +777,8 @@ static bool find_closest_non_water
             qband_ptr = &qaband[line_index];
             s4band_ptr = &sband[SR_BAND4][line_index];
             s5band_ptr = &sband[SR_BAND5][line_index];
-            for (samp = center_samp - aero_window;
-                 samp <= center_samp + aero_window; samp++)
+            for (samp = start_samp; samp <= end_samp; samp++)
             {
-                if (samp < 0 || samp >= nsamps)
-                    continue;
-
                 if (!level1_qa_is_fill(qband_ptr[samp]) &&
                     !is_water(s4band_ptr[samp], s5band_ptr[samp]))
                 {
@@ -821,13 +833,8 @@ static bool find_closest_non_water
         /* Check the bottom line of the current window. */
         if (line < nlines)
         {
-            for (samp = center_samp - aero_window;
-                 samp <= center_samp + aero_window; samp++)
+            for (samp = start_samp; samp <= end_samp; samp++)
             {
-                /* Make sure the sample is valid. */
-                if (samp < 0 || samp >= nsamps)
-                    continue;
-
                 if (!level1_qa_is_fill(qband_ptr[samp]) &&
                     !is_water(s4band_ptr[samp], s5band_ptr[samp]))
                 {

@@ -437,12 +437,12 @@ static int init_sr_refl
     if (lcmg < 0)
         lcmg = 0;
     else if (lcmg >= CMG_NBLAT)
-        lcmg = CMG_NBLAT;
+        lcmg = CMG_NBLAT - 1;
 
     if (scmg < 0)
         scmg = 0;
     else if (scmg >= CMG_NBLON)
-        scmg = CMG_NBLON;
+        scmg = CMG_NBLON - 1;
 
     cmg_pix = lcmg * CMG_NBLON + scmg;
     if (wv[cmg_pix] != 0)
@@ -1330,7 +1330,7 @@ int compute_sr_refl
             float lat, lon;   /* pixel lat, long location */
             float xcmg, ycmg; /* x/y location for climate modeling grid (CMG) */
             int lcmg, scmg;   /* line/sample index for the CMG */
-            int lcmg1;        /* line+1 index for the CMG */
+            int lcmg1, scmg1; /* line+1/sample+1 index for the CMG */
             float u, v;       /* line/sample index for the CMG */
             float u_x_v;      /* u * v */
             int ratio_pix[4]; /* pixel loc for ratio products [lcmg][scmg],
@@ -1501,18 +1501,24 @@ int compute_sr_refl
             if (lcmg < 0)
                 lcmg = 0;
             else if (lcmg >= CMG_NBLAT)
-                lcmg = CMG_NBLAT;
+                lcmg = CMG_NBLAT - 1;
 
             if (scmg < 0)
                 scmg = 0;
             else if (scmg >= CMG_NBLON)
-                scmg = CMG_NBLON;
+                scmg = CMG_NBLON - 1;
 
             /* If the current CMG pixel is at the edge of the CMG array, then
                allow the next pixel for interpolation to wrap around the
                array */
-            if (lcmg >= CMG_NBLAT - 1)  /* -90 degrees so wrap around */
-                lcmg1 = 0;
+            if (scmg >= CMG_NBLON - 1)  /* 180 degrees so wrap around */
+                scmg1 = 0;
+            else
+                scmg1 = scmg + 1;
+
+            if (lcmg >= CMG_NBLAT - 1)  /* -90 degrees, so set the next pixel
+                                           to also use -90. */
+                lcmg1 = lcmg;
             else
                 lcmg1 = lcmg + 1;
 
@@ -1524,9 +1530,9 @@ int compute_sr_refl
 
             /* Determine the band ratios and slope/intercept */
             ratio_pix[0] = lcmg*RATIO_NBLON + scmg;
-            ratio_pix[1] = ratio_pix[0] + 1;
+            ratio_pix[1] = lcmg*RATIO_NBLON + scmg1;
             ratio_pix[2] = lcmg1*RATIO_NBLON + scmg;
-            ratio_pix[3] = ratio_pix[2] + 1;
+            ratio_pix[3] = lcmg1*RATIO_NBLON + scmg1;
 
             for (ratio_index = 0; ratio_index < 4; ratio_index++)
             {

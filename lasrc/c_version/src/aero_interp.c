@@ -45,9 +45,6 @@ void aerosol_interp
     int center_samp;       /* sample for the center of the aerosol window */
     int center_samp1;      /* sample+1 for the center of the aerosol window */
     int refl_indx = -99;   /* index of band 1 or first band */
-    int tmp_percent = 0;   /* current percentage for printing status */
-    int message_line_step; /* 10% of nlines */
-    int next_message_line; /* next 10% nlines count */
     int aero_pix11;        /* pixel location for aerosol window values
                               [lcmg][scmg] */
     int aero_pix12;        /* pixel location for aerosol window values
@@ -86,20 +83,8 @@ void aerosol_interp
         refl_indx = 0;
 
     /* Interpolate the aerosol data for each pixel location */
-    tmp_percent = 10;
-    message_line_step = nlines/tmp_percent;
-    next_message_line = message_line_step;
     for (line = 0, curr_pix = 0; line < nlines; line++)
     {
-        /* update status */
-        if (line > next_message_line)
-        {
-            printf ("%d%% ", tmp_percent);
-            fflush (stdout);
-            next_message_line += message_line_step;
-            tmp_percent += 10;
-        }
-
         /* Determine the line of the representative center pixel in the
            aerosol NxN window array */
         center_line = (int)(line*aero_step)*AERO_WINDOW + HALF_AERO_WINDOW;
@@ -258,10 +243,6 @@ void aerosol_interp
         if (level1_qa_is_fill (qaband[curr_pix]))
             ipflag[curr_pix] = (1 << IPFLAG_FILL);
     }
-
-    /* Update final status */
-    printf ("100%%\n");
-    fflush (stdout);
 }
 
 

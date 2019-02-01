@@ -112,7 +112,6 @@ int compute_toa_refl
         /* Don't process the pan band */
         if (ib == DN_BAND8)
             continue;
-        printf ("%d ... ", ib+1);
 
         /* Read the current band and calibrate bands 1-9 (except pan) to
            obtain TOA reflectance. Bands are corrected for the sun angle. */
@@ -258,7 +257,6 @@ int compute_toa_refl
             } /* pixel loop */
         }  /* end if band 10 or 11 */
     }  /* end for ib */
-    printf ("\n");
 
     /* The input data has been read and calibrated. The memory can be freed. */
     free (uband);
@@ -924,12 +922,6 @@ int compute_sr_refl
     float bttatmg[NSR_BANDS];  /* ttatmg for bands 1-7 */
     float bsatm[NSR_BANDS];    /* atmosphere spherical albedo for bands 1-7 */
 
-#ifndef _OPENMP
-    int tmp_percent;      /* current percentage for printing status */
-    int curr_tmp_percent; /* percentage for current line */
-    float percent_term = 100.0/nlines;
-#endif
-
     float median_aerosol; /* median aerosol value for clear pixels */
     uint8 *ipflag = NULL; /* QA flag to assist with aerosol interpolation,
                              nlines x nsamps */
@@ -1139,15 +1131,13 @@ int compute_sr_refl
        corrections based on climatology */
     mytime = time(NULL);
     printf ("Performing atmospheric corrections for each reflectance "
-        "band ... %s", ctime(&mytime));
+            "band.  %s", ctime(&mytime));
     for (ib = 0; ib <= SR_BAND7; ib++)
     {
         uint16 *source_ptr = sband[ib];/* TOA band pointer pointer */
         uint16 *band_ptr;              /* convenience pointer */
         float rotoa;                   /* top of atmosphere reflectance */
         float roslamb;                 /* lambertian surface reflectance */
-
-        printf (" %d ...", ib+1);
 
         /* Get the parameters for the atmospheric correction */
         /* rotoa is not defined for this call, which is ok, but the
@@ -1229,11 +1219,10 @@ int compute_sr_refl
             band_ptr[i] = (roslamb - offset_refl)*output_mult_refl;
         }  /* pixel loop */
     }  /* for ib */
-    printf ("\n");
 
     /* Start the retrieval of atmospheric correction parameters for each band */
     mytime = time(NULL);
-    printf ("Starting retrieval of atmospheric correction parameters ... %s",
+    printf ("Starting retrieval of atmospheric correction parameters.  %s",
         ctime(&mytime));
     for (ib = 0; ib <= SR_BAND7; ib++)
     {
@@ -1312,12 +1301,10 @@ int compute_sr_refl
 
     /* Start the aerosol inversion */
     mytime = time(NULL);
-    printf ("Aerosol Inversion using %d x %d aerosol window ... %s",
+    printf ("Aerosol Inversion using %d x %d aerosol window  %s",
         AERO_WINDOW, AERO_WINDOW, ctime(&mytime));
 #ifdef _OPENMP
     #pragma omp parallel for private (i)
-#else
-    tmp_percent = 0;
 #endif
     for (i = HALF_AERO_WINDOW; i < nlines; i += AERO_WINDOW)
     {
@@ -1326,19 +1313,6 @@ int compute_sr_refl
                /* current pixel in 1D arrays of nlines*nsamps for the center
                   of the aerosol window */
 
-#ifndef _OPENMP
-        /* update status, but not if multi-threaded */
-        curr_tmp_percent = percent_term*i;
-        if (curr_tmp_percent > tmp_percent)
-        {
-            tmp_percent = curr_tmp_percent;
-            if (tmp_percent % 10 == 0)
-            {
-                printf ("%d%% ", tmp_percent);
-                fflush (stdout);
-            }
-        }
-#endif
         for (j = HALF_AERO_WINDOW; j < nsamps;
              j += AERO_WINDOW, center_pix += AERO_WINDOW)
         {
@@ -1740,12 +1714,6 @@ int compute_sr_refl
         }  /* end for j */
     }  /* end for i */
 
-#ifndef _OPENMP
-    /* update status */
-    printf ("100%%\n");
-    fflush (stdout);
-#endif
-
     /* Done with the aerob* arrays */
     free (aerob1);  aerob1 = NULL;
     free (aerob2);  aerob2 = NULL;
@@ -1845,7 +1813,7 @@ int compute_sr_refl
 
     /* Perform the second level of atmospheric correction using the aerosols */
     mytime = time(NULL);
-    printf ("Performing atmospheric correction ... %s", ctime(&mytime));
+    printf ("Performing atmospheric correction.  %s", ctime(&mytime));
 
     /* Create the scaled min/max values */
     min_refl = (MIN_VALID - offset_refl) * output_mult_refl;
@@ -1933,7 +1901,7 @@ int compute_sr_refl
     /* Write the data to the output file */
     mytime = time(NULL);
     printf ("Writing surface reflectance corrected data to the output "
-        "files ... %s", ctime(&mytime));
+            "files.  %s", ctime(&mytime));
 
     /* Open the output file */
     sr_output = open_output (xml_metadata, input, OUTPUT_SR);
@@ -2052,7 +2020,7 @@ int compute_sr_refl
 
     /* Successful completion */
     mytime = time(NULL);
-    printf ("Surface reflectance correction complete ... %s\n", ctime(&mytime));
+    printf ("Surface reflectance correction complete.  %s\n", ctime(&mytime));
     return (SUCCESS);
 }
 

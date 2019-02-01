@@ -917,6 +917,7 @@ int compute_sr_refl
     int retval;          /* return status */
     int i;               /* looping variable for pixels */
     int ib;              /* looping variable for input bands */
+    int center_line;     /* aerosol window center line */
     float tgo;           /* other gaseous transmittance (tgog * tgoz) */
     float roatm;         /* intrinsic atmospheric reflectance */
     float ttatmg;        /* total atmospheric transmission */
@@ -1311,17 +1312,18 @@ int compute_sr_refl
     printf ("Aerosol Inversion using %d x %d aerosol window  %s",
         AERO_WINDOW, AERO_WINDOW, ctime(&mytime));
 #ifdef _OPENMP
-    #pragma omp parallel for private (i)
+    #pragma omp parallel for private (center_line)
 #endif
-    for (i = HALF_AERO_WINDOW; i < nlines; i += AERO_WINDOW)
+    for (center_line = HALF_AERO_WINDOW; center_line < nlines;
+         center_line += AERO_WINDOW)
     {
-        int j; /* sample loop counter */
-        int center_pix = i*nsamps + HALF_AERO_WINDOW;
+        int center_samp; /* aerosol window center sample */
+        int center_pix = center_line*nsamps + HALF_AERO_WINDOW;
                /* current pixel in 1D arrays of nlines*nsamps for the center
                   of the aerosol window */
 
-        for (j = HALF_AERO_WINDOW; j < nsamps;
-             j += AERO_WINDOW, center_pix += AERO_WINDOW)
+        for (center_samp = HALF_AERO_WINDOW; center_samp < nsamps;
+             center_samp += AERO_WINDOW, center_pix += AERO_WINDOW)
         {
             Img_coord_float_t img; /* coordinate in line/sample space */
             Geo_coord_t geo;  /* coordinate in lat/long space */
@@ -1369,10 +1371,10 @@ int compute_sr_refl
             float troatm[NSR_BANDS];      /* atmospheric reflectance table for
                                              bands 1-7 */
             int iaots;        /* index for AOTs */
-            int nearest_line = i;         /* line for nearest non-fill/cloud
-                                             pixel in the aerosol window */
-            int nearest_samp = j;         /* samp for nearest non-fill/cloud
-                                             pixel in the aerosol window */
+            int nearest_line = center_line;  /* line for nearest non-fill/cloud
+                                                pixel in the aerosol window */
+            int nearest_samp = center_samp;  /* samp for nearest non-fill/cloud
+                                                pixel in the aerosol window */
             int nearest_pix = center_pix; /* nearest non-fill/cloud pixel in
                                              the aerosol window */
 
@@ -1380,7 +1382,8 @@ int compute_sr_refl
             if (level1_qa_is_fill (qaband[nearest_pix]))
             {
                 /* Look for other non-fill pixels in the window */
-                if (find_closest_non_fill (qaband, nlines, nsamps, i, j,
+                if (find_closest_non_fill (qaband, nlines, nsamps,
+                                           center_line, center_samp,
                                            &nearest_line, &nearest_samp))
                 {
                     /* Use the line/sample location of the non-fill pixel for
@@ -1406,7 +1409,8 @@ int compute_sr_refl
                 /* Look for other non-fill/non-water pixels in the window.
                    Start with the center of the window and search outward. */
                 if (find_closest_non_water (qaband, sband, nlines, nsamps,
-                                            i, j, &nearest_line, &nearest_samp))
+                                            center_line, center_samp,
+                                            &nearest_line, &nearest_samp))
                 {
                     /* Use the line/sample location of the non-fill/non-water
                        pixel for further processing */
@@ -1433,7 +1437,8 @@ int compute_sr_refl
                    pixels in the window.  Start with the center of the window
                    and search outward. */
                 if (find_closest_non_cloud_shadow_water (qaband, sband, nlines,
-                    nsamps, i, j, &nearest_line, &nearest_samp))
+                    nsamps, center_line, center_samp, &nearest_line,
+                    &nearest_samp))
                 {
                     /* Use the line/sample location of the non-fill/non-cloud
                        pixel for further processing */
@@ -1718,8 +1723,8 @@ int compute_sr_refl
                 taero[center_pix] = DEFAULT_AERO;
                 teps[center_pix] = DEFAULT_EPS;
             }
-        }  /* end for j */
-    }  /* end for i */
+        }  /* center sample loop */
+    }  /* center line loop */
 
     /* Done with the aerob* arrays */
     free (aerob1);  aerob1 = NULL;

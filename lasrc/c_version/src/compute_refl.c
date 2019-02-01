@@ -176,7 +176,9 @@ int compute_toa_refl
                     band_ptr[i] = roundf (rotoa);
 
                 /* Check for saturation. Saturation is when the pixel
-                   reaches the max allowed value. */
+                   reaches the max allowed value.
+                   Clipped (i.e., saturated) TOA pixels computed above are
+                   not included in this check. */
                 if (uband[i] == L1_SATURATED)
                     radsat[i] |= 1 << (ib+1);
             }  /* pixel loop */
@@ -248,7 +250,9 @@ int compute_toa_refl
                 else
                     band_ptr[i] = roundf (tmpf);
 
-                /* Check for saturation */
+                /* Check for saturation.
+                   Clipped (i.e., saturated) BT pixels computed above are
+                   not included in this check. */
                 if (uband[i] == L1_SATURATED)
                     radsat[i] |= 1 << (ib+1);
             } /* pixel loop */

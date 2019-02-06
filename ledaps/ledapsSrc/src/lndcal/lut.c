@@ -7,8 +7,6 @@
 
 #define OUTPUT_FILL (0)
 #define OUTPUT_SATU (USHRT_MAX)
-#define QA_FILL     (1)
-#define QA_SATU     (2)
 #define LONG_NAME_PREFIX_REF ("band %d reflectance")
 #define UNITS_REF            ("reflectance")
 #define LONG_NAME_PREFIX_TH  ("band %d temperature")
@@ -108,11 +106,6 @@ Lut_t *GetLut(Param_t *param, int nband, Input_t *input) {
   this = (Lut_t *)malloc(sizeof(Lut_t));
   if (this == NULL) 
     RETURN_ERROR("allocating Input data structure", "OpenInput", NULL);
-
-  /* Populate the data structure */
-  this->in_fill = 0;
-  this->qa_fill = QA_FILL;
-  this->qa_satu =  QA_SATU;
 
   /* Make a copy of the input metadata for the look-up table metadata.
      Note that if pointers are added to the Input_meta_t structure, their

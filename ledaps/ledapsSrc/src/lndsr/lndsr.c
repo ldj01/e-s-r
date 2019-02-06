@@ -18,7 +18,7 @@
 #include "ar.h"
 #include "error.h"
 #include "clouds.h"
-
+#include "read_level1_qa.h"
 #include "read_grib_tools.h"
 #include "sixs_runs.h"
 
@@ -105,8 +105,10 @@ int main (int argc, char *argv[]) {
     uint16_t** b6_line = NULL;
     uint16_t* b6_line_buf = NULL;
     float *atemp_line = NULL;
-    uint8** qa_line = NULL;
-    uint8* qa_line_buf = NULL;
+    uint16_t** qa_line = NULL;      /* bqa_pixel */
+    uint16_t* qa_line_buf = NULL;
+    uint16_t** qa2_line = NULL;     /* bqa_radsat */
+    uint16_t* qa2_line_buf = NULL;
     char **ddv_line = NULL;
     char *ddv_line_buf = NULL;
     char **rot_cld[3],**ptr_rot_cld[3],**ptr_tmp_cld;
@@ -114,7 +116,6 @@ int main (int argc, char *argv[]) {
     char *rot_cld_buf = NULL;
     char envi_file[STR_SIZE]; /* name of the output ENVI header file */
     char *cptr = NULL;        /* pointer to the file extension */
-    bool refl_is_fill;
 
     Sr_stats_t sr_stats;
     Ar_stats_t ar_stats;
@@ -346,14 +347,21 @@ int main (int argc, char *argv[]) {
     }
 
     /* Allocate memory for qa line */
-    qa_line = calloc(lut->ar_region_size.l,sizeof(uint8 *));
+    qa_line = calloc(lut->ar_region_size.l,sizeof(uint16_t *));
     if (qa_line == NULL) EXIT_ERROR("allocating qa line", "main");
     qa_line_buf = calloc(input->size.s * lut->ar_region_size.l,
-        sizeof(uint8));
+        sizeof(uint16_t));
     if (qa_line_buf == NULL) EXIT_ERROR("allocating qa line buffer", "main");
+    qa2_line = calloc(lut->ar_region_size.l,sizeof(uint16_t *));
+    if (qa2_line == NULL) EXIT_ERROR("allocating qa line", "main");
+    qa2_line_buf = calloc(input->size.s * lut->ar_region_size.l,
+        sizeof(uint16_t));
+    if (qa2_line_buf == NULL) EXIT_ERROR("allocating qa line buffer", "main");
     for (il = 0; il < lut->ar_region_size.l; il++) {
         qa_line[il]=qa_line_buf;
         qa_line_buf += input->size.s;
+        qa2_line[il]=qa2_line_buf;
+        qa2_line_buf += input->size.s;
     }
 
     /* Allocate memory for one band 6 line */
@@ -846,7 +854,7 @@ int main (int argc, char *argv[]) {
             if (!GetInputLine(input, ib, il, line_in[0][ib]))
                 EXIT_ERROR("reading input data for a line (b)", "main");
         }
-        if (!GetInputQALine(input, il, qa_line[0]))
+        if (!GetInputQALine(input, il, qa_line[0], qa2_line[0]))
             EXIT_ERROR("reading input data for qa_line (1)", "main");
         if (param->thermal_band) {
             if (!GetInputLine(input_b6, 0, il, b6_line[0]))
@@ -884,9 +892,8 @@ int main (int argc, char *argv[]) {
            critical section for multi-threading. */
         if (param->thermal_band)
             if (!cloud_detection_pass1(lut, input->size.s, il, line_in[0],
-                                       qa_line[0], b6_line[0], atemp_line,
-                                       &atmos_coef, &atmos_coef_storage,
-                                       &cld_diags))
+                               qa_line[0], qa2_line[0], b6_line[0], atemp_line,
+                               &atmos_coef, &atmos_coef_storage, &cld_diags))
                 EXIT_ERROR("running cloud detection pass 1", "main");
     } /* end for il */
     printf ("\n");
@@ -1024,7 +1031,8 @@ int main (int argc, char *argv[]) {
                     EXIT_ERROR("reading input data for a line (a)", "main");
             }
 
-            if (!GetInputQALine(input, il, qa_line[il_region]))
+            if (!GetInputQALine(input, il, qa_line[il_region],
+                                qa2_line[il_region]))
                 EXIT_ERROR("reading input data for qa_line (2)", "main");
             if (param->thermal_band) {
                 if (!GetInputLine(input_b6, 0, il, b6_line[il_region]))
@@ -1034,6 +1042,7 @@ int main (int argc, char *argv[]) {
                 if (!cloud_detection_pass2(lut, input->size.s, il,
                                            line_in[il_region],
                                            qa_line[il_region],
+                                           qa2_line[il_region],
                                            b6_line[il_region], &atmos_coef,
                                            &atmos_coef_storage, &cld_diags,
                                            ptr_rot_cld[1][il_region]))
@@ -1042,7 +1051,9 @@ int main (int argc, char *argv[]) {
             else {
                 if (!cloud_detection_pass2(lut, input->size.s, il,
                                            line_in[il_region],
-                                           qa_line[il_region], NULL,
+                                           qa_line[il_region], 
+                                           qa2_line[il_region], 
+                                           NULL,
                                            &atmos_coef, &atmos_coef_storage,
                                            &cld_diags,
                                            ptr_rot_cld[1][il_region]))
@@ -1216,9 +1227,12 @@ int main (int argc, char *argv[]) {
         if (!GetInputLine(input_b6, 0, il, b6_line[0]))
             EXIT_ERROR("reading input data for b6_line (1)", "main");
 
+        if (!GetInputQALine(input, il, qa_line[0], NULL))
+            EXIT_ERROR("reading input data for qa_line (3)", "main");
+
         /* Compute the surface reflectance */
         if (!Sr(lut, input->size.s, il, &atmos_coef, &atmos_coef_storage,
-                line_in[0], line_out, &sr_stats))
+                line_in[0], qa_line[0], line_out, &sr_stats))
             EXIT_ERROR("computing surface reflectance for a line", "main");
 
         /***
@@ -1235,17 +1249,9 @@ int main (int argc, char *argv[]) {
             /* Initialize QA band to off */
             line_out[lut->nband+CLOUD][is] = QA_OFF;
 
-            /* Determine if this is a fill pixel -- mark as fill if any
-               reflective band for this pixel is fill */
-            refl_is_fill = false;
-            for (ib = 0; ib < input->nband; ib++) {
-                if (line_in[0][ib][is] == lut->in_fill)
-                    if (!refl_is_fill)
-                        refl_is_fill = true;
-            }
-
-            /* Process QA for each pixel */
-            if (!refl_is_fill) {
+            /* Determine if this is a fill pixel -- mark output band as fill,
+               else process SR QA and atmos opacity for each pixel */
+            if (!level1_qa_is_fill(qa_line[0][is])) {
                 /* AOT / opacity */
                 ArInterp(lut, &loc, line_ar, &inter_aot); 
                 line_out[lut->nband+ATMOS_OPACITY][is] = inter_aot;

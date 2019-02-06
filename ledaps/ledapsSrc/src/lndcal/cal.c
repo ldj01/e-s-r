@@ -1,6 +1,8 @@
 #include "cal.h"
 #include "const.h"
 #include "error.h"
+#include "read_level1_qa.h"
+
 #define nint(A)(A<0?(int)(A-0.5):(int)(A+0.5))
 
 /* Functions */
@@ -17,7 +19,7 @@
 
 bool Cal(Param_t *param, Lut_t *lut, int iband, Input_t *input,
          unsigned char *line_in, int16 *line_in_sun_zen, uint16_t *line_out,
-         unsigned char *line_out_qa, Cal_stats_t *cal_stats, int iy) {
+         uint16_t *line_qa, Cal_stats_t *cal_stats, int iy) {
   int is,val;
   float rad_gain = 0, rad_bias = 0;   /* TOA radiance gain/bias */
   float refl_gain = 0.0,
@@ -31,7 +33,6 @@ bool Cal(Param_t *param, Lut_t *lut, int iband, Input_t *input,
   float temp;
 
   int nsamp= input->size.s;
-  int ifill= (int)lut->in_fill;
 
   /* Get the TOA reflectance gain/bias if they are available, otherwise use
      the TOA reflectance equation from the Landsat handbook. */
@@ -64,13 +65,13 @@ bool Cal(Param_t *param, Lut_t *lut, int iband, Input_t *input,
 
   /* Loop through the samples in the line */
   for (is = 0; is < nsamp; is++) {
-    val = line_in[is];
-    if (val == ifill || line_out_qa[is]==lut->qa_fill ) {
+    if (level1_qa_is_fill(line_qa[is])) {
       line_out[is] = lut->out_fill;
       continue;
     }
 
     /* flag saturated pixels, added by Feng (3/23/09) */
+    val = line_in[is];
     if (val == SATU_VAL[iband]) {
       line_out[is] = lut->out_satu;
       continue;
@@ -154,11 +155,10 @@ bool Cal(Param_t *param, Lut_t *lut, int iband, Input_t *input,
 }
 
 bool Cal6(Lut_t *lut, Input_t *input, unsigned char *line_in, uint16_t *line_out,
-          unsigned char *line_out_qa, Cal_stats6_t *cal_stats, int iy) {
+          uint16_t *line_qa, Cal_stats6_t *cal_stats, int iy) {
   int is, val;
   float rad_gain, rad_bias, rad, temp, temp2;
   int nsamp= input->size_th.s;
-  int ifill= (int)lut->in_fill;
 
   rad_gain = lut->meta.rad_gain_th;
   rad_bias = lut->meta.rad_bias_th;
@@ -168,13 +168,13 @@ bool Cal6(Lut_t *lut, Input_t *input, unsigned char *line_in, uint16_t *line_out
   }
 
   for (is = 0; is < nsamp; is++) {
-    val = line_in[is];
-    if (val == ifill || line_out_qa[is]==lut->qa_fill ) {
+    if (level1_qa_is_fill(line_qa[is])) {
       line_out[is] = lut->out_fill;
       continue;
     }
 
     /* for saturated pixels */
+    val = line_in[is];
     if (val >= SATU_VAL6) {
       line_out[is] = lut->out_satu;
       continue;

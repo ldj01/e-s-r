@@ -1,6 +1,7 @@
 include_directories(${ESPA_INCLUDES})
 include_directories(${XML_INCLUDES})
 include_directories(${HDF4_INCLUDES})
+include_directories(${IAS_INCLUDES})
 
 link_directories(${ESPA_LIBS})
 link_directories(${HDF4_LIBRARY_DIRS})

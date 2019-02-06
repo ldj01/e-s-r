@@ -54,11 +54,8 @@
 
 typedef struct {
   char *file_name;             /* Lookup table file name                    */
-  unsigned char in_fill;       /* Input fill value                          */
   int out_fill;                /* Output fill value                         */
   int out_satu;                /* Output saturation value (Feng, 3/23/09)   */
-  int qa_fill;                 /* QA fill value                             */
-  int qa_satu;                 /* QA saturation value                       */
   Input_meta_t meta;           /* Input metadata                            */
   float cos_sun_zen;           /* Cosine of the solar zenith angle          */
   float esun[NBAND_REFL_MAX];  /* Mean solar exoatmospheric irradiances     */ 

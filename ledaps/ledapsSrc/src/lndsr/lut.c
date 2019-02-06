@@ -32,8 +32,6 @@ Lut_t *GetLut(int nband, Input_meta_t *meta, Input_meta_t *b6_meta,
 
   /* Populate the data structure */
   this->nband = nband;
-  this->in_fill = meta->fill;
-  this->b6_in_fill = b6_meta->fill;
   this->output_fill = OUTPUT_FILL;
   this->output_fill_opacity = OUTPUT_FILL_OPACITY;
   this->in_satu = meta->saturate_value;

@@ -56,7 +56,6 @@
 typedef struct {
   char *file_name;         /* Lookup table file name */
   int nband;               /* Number of bands */
-  int in_fill;             /* Input fill value */
   int output_fill;         /* Output fill value */
   int output_fill_opacity; /* Output fill value for opacity band */
   int aerosol_fill;        /* Aerosol fill value */
@@ -79,7 +78,6 @@ typedef struct {
   double add_offset;       /* add offset */
   double b6_scale_factor;
   double b6_add_offset;
-  int b6_in_fill;          
 } Lut_t;
 
 /* Prototypes */

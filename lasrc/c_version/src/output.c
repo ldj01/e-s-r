@@ -36,8 +36,7 @@ Output_t *open_output
 (
     Espa_internal_meta_t *in_meta,  /* I: input metadata structure */
     Input_t *input,                 /* I: input band data structure */
-    Myoutput_t output_type          /* I: are we processing TOA, SR, RADSAT
-                                          outputs? */
+    Myoutput_t output_type          /* I: are we processing TOA, SR outputs? */
 )
 {
     char FUNC_NAME[] = "open_output";   /* function name */
@@ -100,11 +99,8 @@ Output_t *open_output
     /* Copy the instrument type */
     output->inst = input->meta.inst;
 
-    /* Allocate memory for the total bands; radsat is only one band */
-    if (output_type == OUTPUT_RADSAT)
-        nband = 1;
-    else
-        nband = NBAND_TTL_OUT;
+    /* Allocate memory for the total bands */
+    nband = NBAND_TTL_OUT;
     if (allocate_band_metadata (&output->metadata, nband) != SUCCESS)
     {
         sprintf (errmsg, "Allocating band metadata.");
@@ -178,12 +174,6 @@ Output_t *open_output
             strcat (bmeta[ib].short_name, "SR");
             strcpy (bmeta[ib].product, "sr_refl");
         }
-        else if (output_type == OUTPUT_RADSAT)
-        {
-            strcat (bmeta[ib].short_name, "RADSAT");
-            strcpy (bmeta[ib].product, "toa_refl");
-            strcpy (bmeta[ib].source, "level1");
-        }
 
         bmeta[ib].nlines = output->nlines;
         bmeta[ib].nsamps = output->nsamps;
@@ -196,8 +186,7 @@ Output_t *open_output
 
         /* Handle the aerosol band differently.  If this is only TOA then we
            don't need to process the aerosol mask.  If this is SR, then we
-           don't need to process the cirrus or thermal bands.  If this is
-           RADSAT then we only have one band. */
+           don't need to process the cirrus or thermal bands. */
         if ((output_type == OUTPUT_TOA) && (ib == SR_AEROSOL))
             continue;
         else if ((output_type == OUTPUT_SR) &&
@@ -239,59 +228,6 @@ Output_t *open_output
                 in_meta->band[refl_indx].short_name, 4);
             bmeta[ib].short_name[4] = '\0';
             strcat (bmeta[ib].short_name, "AERO");
-        }
-        else if (output_type == OUTPUT_RADSAT)
-        {
-            /* Common QA band fields */
-            bmeta[ib].data_type = ESPA_UINT16;
-            bmeta[ib].fill_value = RADSAT_FILL_VALUE;
-            strcpy (bmeta[ib].name, "radsat_qa");
-            strcpy (bmeta[ib].long_name, "saturation mask");
-            strcpy (bmeta[ib].category, "qa");
-            strcpy (bmeta[ib].data_units, "bitmap");
-
-            /* Set up radsat bitmap information */
-            if (allocate_bitmap_metadata (&bmeta[ib], 12) != SUCCESS)
-            {
-                sprintf (errmsg, "Allocating radsat bitmap.");
-                error_handler (true, FUNC_NAME, errmsg);
-                return (NULL);
-            }
-
-            /* Identify the bitmap values for the mask */
-            strcpy (bmeta[ib].bitmap_description[0],
-                "Data Fill Flag (0 = valid data, 1 = invalid data)");
-            strcpy (bmeta[ib].bitmap_description[1],
-                "Band 1 Data Saturation Flag (0 = valid data, "
-                    "1 = saturated data)");
-            strcpy (bmeta[ib].bitmap_description[2],
-                "Band 2 Data Saturation Flag (0 = valid data, "
-                    "1 = saturated data)");
-            strcpy (bmeta[ib].bitmap_description[3],
-                "Band 3 Data Saturation Flag (0 = valid data, "
-                    "1 = saturated data)");
-            strcpy (bmeta[ib].bitmap_description[4],
-                "Band 4 Data Saturation Flag (0 = valid data, "
-                    "1 = saturated data)");
-            strcpy (bmeta[ib].bitmap_description[5],
-                "Band 5 Data Saturation Flag (0 = valid data, "
-                    "1 = saturated data)");
-            strcpy (bmeta[ib].bitmap_description[6],
-                "Band 6 Data Saturation Flag (0 = valid data, "
-                    "1 = saturated data)");
-            strcpy (bmeta[ib].bitmap_description[7],
-                "Band 7 Data Saturation Flag (0 = valid data, "
-                    "1 = saturated data)");
-            strcpy (bmeta[ib].bitmap_description[8], "N/A");
-            strcpy (bmeta[ib].bitmap_description[9],
-                "Band 9 Data Saturation Flag (0 = valid data, "
-                    "1 = saturated data)");
-            strcpy (bmeta[ib].bitmap_description[10],
-                "Band 10 Data Saturation Flag (0 = valid data, "
-                    "1 = saturated data)");
-            strcpy (bmeta[ib].bitmap_description[11],
-                "Band 11 Data Saturation Flag (0 = valid data, "
-                    "1 = saturated data)");
         }
         else
         {
@@ -390,7 +326,7 @@ NOTES:
 int close_output
 (
     Output_t *output,       /* I/O: Output data structure to close */
-    Myoutput_t output_type  /* I: are we processing TOA, SR, RADSAT outputs? */
+    Myoutput_t output_type  /* I: are we processing TOA, SR outputs? */
 )
 {
     char FUNC_NAME[] = "close_output";   /* function name */
@@ -443,7 +379,7 @@ NOTES:
 int free_output
 (
     Output_t *output,       /* I/O: Output data structure to free */
-    Myoutput_t output_type  /* I: are we processing TOA, SR, RADSAT outputs? */
+    Myoutput_t output_type  /* I: are we processing TOA, SR outputs? */
 )
 {
     char FUNC_NAME[] = "free_output";   /* function name */
@@ -459,21 +395,13 @@ int free_output
   
     if (output != NULL)
     {
-        /* Free the bitmap data for the aerosol and radsat bands */
+        /* Free the bitmap data for the aerosol bands */
         if (output_type == OUTPUT_SR &&
             output->metadata.band[SR_AEROSOL].nbits > 0)
         {
             for (b = 0; b < output->metadata.band[SR_AEROSOL].nbits; b++)
                 free (output->metadata.band[SR_AEROSOL].bitmap_description[b]);
             free (output->metadata.band[SR_AEROSOL].bitmap_description);
-        }
-
-        if (output_type == OUTPUT_RADSAT &&
-            output->metadata.band[SR_RADSAT].nbits > 0)
-        {
-            for (b = 0; b < output->metadata.band[SR_RADSAT].nbits; b++)
-                free (output->metadata.band[SR_RADSAT].bitmap_description[b]);
-            free (output->metadata.band[SR_RADSAT].bitmap_description);
         }
 
         /* Free the band data */

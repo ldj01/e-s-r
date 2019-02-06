@@ -831,7 +831,7 @@ int get_xml_input
             this->meta.iband_th[1] = 11;
             this->file_name_th[1] = strdup (metadata->band[i].file_name);
         }
-        else if (!strcmp (metadata->band[i].name, "bqa"))
+        else if (!strcmp (metadata->band[i].name, "bqa_pixel"))
         {
             /* this is the index we'll use for qa band info */
             qa_indx = i;

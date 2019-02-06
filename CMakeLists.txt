@@ -130,6 +130,13 @@ endif ()
 set (ESPA_INCLUDES ${ESPA_INCLUDES} CACHE PATH "ESPA header file path" FORCE)
 set (ESPA_LIBS ${ESPA_LIBS} CACHE PATH "ESPA library path" FORCE)
 
+# Set the path for the IAS headers
+if (NOT IAS_INCLUDES)
+    set (IAS_INCLUDES $ENV{IAS_INC})
+endif ()
+set (IAS_INCLUDES ${IAS_INCLUDES} CACHE PATH "IAS library header file path"
+     FORCE)
+
 # Control application threading.
 if (DEFINED ENV{ENABLE_THREADING})
     add_definitions(-fopenmp)

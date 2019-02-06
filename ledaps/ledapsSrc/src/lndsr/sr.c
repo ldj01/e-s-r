@@ -3,6 +3,7 @@
 #include "ar.h"
 #include "const.h"
 #include "sixs_runs.h"
+#include "read_level1_qa.h"
 
 /* !Revision:
  *
@@ -25,6 +26,7 @@ bool Sr
     atmos_t *interpol_atmos_coef, /* I: storage space for interpolated
                                         atmospheric coefficients */
     uint16_t **line_in,   /* I: array of input lines, one for each band */
+    uint16_t *qa_line,    /* I: array of QA data for the current line */
     uint16_t **line_out,  /* O: array of output lines, one for each band */
     Sr_stats_t *sr_stats  /* O: statistics for this line */
 )
@@ -49,7 +51,7 @@ bool Sr
         /* Loop through each band, correcting the pixel.  Fill and saturated
            pixels are skipped and flagged. */
         for (ib = 0; ib < lut->nband; ib++) {
-            if (line_in[ib][is] == lut->in_fill) {
+            if (level1_qa_is_fill(qa_line[is])) {
                 /* fill pixel */
                 line_out[ib][is] = lut->output_fill;
                 sr_stats->nfill[ib]++;

@@ -47,12 +47,6 @@ int get_args
 
 void usage ();
 
-bool btest
-(
-    uint8 byte_val,   /* I: byte value to be tested with the bit n */
-    byte n            /* I: bit number to be tested (0 is rightmost bit) */
-);
-
 int compute_toa_refl
 (
     Input_t *input,     /* I: input structure for the Landsat product */
@@ -64,11 +58,8 @@ int compute_toa_refl
     char *instrument,   /* I: instrument to be processed (OLI, TIRS) */
     int16 *sza,         /* I: scaled per-pixel solar zenith angles (degrees),
                               nlines x nsamps */
-    float **sband,      /* O: output TOA reflectance and brightness temp
+    float **sband       /* O: output TOA reflectance and brightness temp
                               values (scaled) */
-    uint16 *radsat      /* O: radiometric saturation QA band, nlines x nsamps;
-                              array should be all zeros on input to this
-                              routine*/
 );
 
 int compute_sr_refl
@@ -174,12 +165,6 @@ bool is_shadow
     uint16_t l1_qa_pix      /* I: Level-1 QA value for current pixel */
 );
 
-bool is_water
-(
-    float band4_pix,     /* I: Band 4 reflectance for current pixel */
-    float band5_pix      /* I: Band 5 reflectance for current pixel */
-);
-
 bool find_closest_non_fill
 (
     uint16 *qaband,    /* I: QA band for the input image, nlines x nsamps */
@@ -194,7 +179,6 @@ bool find_closest_non_fill
 bool find_closest_non_cloud_shadow_water
 (
     uint16 *qaband,    /* I: QA band for the input image, nlines x nsamps */
-    float **sband,     /* I: input surface reflectance, nlines x nsamps */
     int nlines,        /* I: number of lines in QA band */
     int nsamps,        /* I: number of samps in QA band */
     int center_line,   /* I: line for the center of the aerosol window */
@@ -206,7 +190,6 @@ bool find_closest_non_cloud_shadow_water
 bool find_closest_non_water
 (
     uint16 *qaband,    /* I: QA band for the input image, nlines x nsamps */
-    float **sband,     /* I: input surface reflectance */
     int nlines,        /* I: number of lines in QA band */
     int nsamps,        /* I: number of samps in QA band */
     int center_line,   /* I: line for the center of the aerosol window */
@@ -214,141 +197,5 @@ bool find_closest_non_water
     int *nearest_line, /* O: line for nearest non-cloud pix in aerosol window */
     int *nearest_samp  /* O: samp for nearest non-cloud pix in aerosol window */
 );
-
-void mask_aero_window
-(
-    uint16 *qaband,    /* I: QA band for the input image, nlines x nsamps */
-    float **sband,     /* I: input surface reflectance */
-    int nlines,        /* I: number of lines in QA band */
-    int nsamps,        /* I: number of samps in QA band */
-    int center_line,   /* I: line for the center of the aerosol window */
-    int center_samp,   /* I: sample for the center of the aerosol window */
-    bool *quick_qa     /* O: quick QA for the current aerosol window,
-                             AERO_WINDOW x AERO_WINDOW
-                             (true=not clear, false=clear) */
-);
-
-
-/* Defines for the Level-1 BQA band */
-/* Define the constants used for shifting bits and ANDing with the bits to
-   get to the desire quality bits */
-#define ESPA_L1_SINGLE_BIT 0x01             /* 00000001 */
-#define ESPA_L1_DOUBLE_BIT 0x03             /* 00000011 */
-#define ESPA_L1_DESIGNATED_FILL_BIT 0       /* one bit */
-#define ESPA_L1_TERRAIN_OCCLUSION_BIT 1     /* one bit (L8/OLI) */
-#define ESPA_L1_RAD_SATURATION_BIT 2        /* two bits */
-#define ESPA_L1_CLOUD_BIT 4                 /* one bit */
-#define ESPA_L1_CLOUD_CONF_BIT 5            /* two bits */
-#define ESPA_L1_CLOUD_SHADOW_CONF_BIT 7     /* two bits */
-#define ESPA_L1_SNOW_ICE_CONF_BIT 9         /* two bits */
-#define ESPA_L1_CIRRUS_CONF_BIT 11          /* two bits (L8/OLI) */
-
-/******************************************************************************
-MODULE:  level1_qa_is_fill
-
-PURPOSE: Determines if the current Level-1 QA pixel is fill
-
-RETURN VALUE:
-Type = boolean
-Value           Description
------           -----------
-true            Pixel is fill
-false           Pixel is not fill
-
-NOTES:
-1. This is an inline function so it should be fast as the function call overhead
-   is eliminated by dropping the code inline with the original application.
-******************************************************************************/
-static inline bool level1_qa_is_fill
-(
-    uint16_t l1_qa_pix      /* I: Level-1 QA value for current pixel */
-)
-{
-    if (((l1_qa_pix >> ESPA_L1_DESIGNATED_FILL_BIT) & ESPA_L1_SINGLE_BIT) == 1)
-        return true;
-    else
-        return false;
-}
-
-/******************************************************************************
-MODULE:  level1_qa_cloud_confidence
-
-PURPOSE: Returns the cloud confidence value (0-3) for the current Level-1 QA
-pixel.
-
-RETURN VALUE:
-Type = uint8_t
-Value           Description
------           -----------
-0               Cloud confidence bits are 00
-1               Cloud confidence bits are 01
-2               Cloud confidence bits are 10
-3               Cloud confidence bits are 11
-
-NOTES:
-1. This is an inline function so it should be fast as the function call overhead
-   is eliminated by dropping the code inline with the original application.
-******************************************************************************/
-static inline uint8_t level1_qa_cloud_confidence
-(
-    uint16_t l1_qa_pix      /* I: Level-1 QA value for current pixel */
-)
-{
-    return ((l1_qa_pix >> ESPA_L1_CLOUD_CONF_BIT) & ESPA_L1_DOUBLE_BIT);
-}
-
-/******************************************************************************
-MODULE:  level1_qa_cloud_shadow_confidence
-
-PURPOSE: Returns the cloud shadow value (0-3) for the current Level-1 QA
-pixel.
-
-RETURN VALUE:
-Type = uint8_t
-Value           Description
------           -----------
-0               Cloud shadow bits are 00
-1               Cloud shadow bits are 01
-2               Cloud shadow bits are 10
-3               Cloud shadow bits are 11
-
-NOTES:
-1. This is an inline function so it should be fast as the function call overhead
-   is eliminated by dropping the code inline with the original application.
-******************************************************************************/
-static inline uint8_t level1_qa_cloud_shadow_confidence
-(
-    uint16_t l1_qa_pix      /* I: Level-1 QA value for current pixel */
-)
-{
-    return ((l1_qa_pix >> ESPA_L1_CLOUD_SHADOW_CONF_BIT) & ESPA_L1_DOUBLE_BIT);
-}
-
-/******************************************************************************
-MODULE:  level1_qa_cirrus_confidence
-
-PURPOSE: Returns the cirrus confidence value (0-3) for the current Level-1 QA
-pixel.
-
-RETURN VALUE:
-Type = uint8_t
-Value           Description
------           -----------
-0               Cirrus confidence bits are 00
-1               Cirrus confidence bits are 01
-2               Cirrus confidence bits are 10
-3               Cirrus confidence bits are 11
-
-NOTES:
-1. This is an inline function so it should be fast as the function call overhead
-   is eliminated by dropping the code inline with the original application.
-******************************************************************************/
-static inline uint8_t level1_qa_cirrus_confidence
-(
-    uint16_t l1_qa_pix      /* I: Level-1 QA value for current pixel */
-)
-{
-    return ((l1_qa_pix >> ESPA_L1_CIRRUS_CONF_BIT) & ESPA_L1_DOUBLE_BIT);
-}
 
 #endif

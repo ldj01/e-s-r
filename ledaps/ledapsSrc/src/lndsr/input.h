@@ -108,13 +108,14 @@ typedef struct {
   int nband;               /* Number of input image bands */
   Img_coord_int_t size;    /* Input file size */
   char *file_name[NBAND_REFL_MAX];  /* Name of the input image files */
-  char *file_name_qa;      /* Name of the input QA file */
+  char *file_name_qa[2];   /* Name of the input QA files
+                              first is bqa_pixel, second is bqa_radsat */
   FILE *fp_bin[NBAND_REFL_MAX];  /* File pointer for input binary files */
   bool open[NBAND_REFL_MAX]; /* Flag to indicate whether the specific input
                                 file is open for access; 'true' = open, 
                                 'false' = not open */
-  FILE *fp_bin_qa;         /* File pointer for QA binary file */
-  bool open_qa;            /* Flag to indicate whether the specific input
+  FILE *fp_bin_qa[2];         /* File pointers for QA binary files */
+  bool open_qa[2];            /* Flag to indicate whether the specific input
                               file is open for access; 'true' = open, 
                               'false' = not open */
 } Input_t;
@@ -127,6 +128,6 @@ bool CloseInput(Input_t *this);
 void FreeInput(Input_t *this);
 bool InputMetaCopy(Input_meta_t *this, int nband, Input_meta_t *copy);
 bool GetXMLInput(Input_t *this, Espa_internal_meta_t *metadata, bool thermal);
-bool GetInputQALine(Input_t *this, int iline, uint8 *line);
+bool GetInputQALine(Input_t *this, int iline, uint16_t *line,  uint16_t *line2);
 
 #endif

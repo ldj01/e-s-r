@@ -324,8 +324,6 @@ int memory_allocation_main
     int nsamps,          /* I: number of samples in the scene */
     int16 **sza,         /* O: solar zenith angle, nlines x nsamps  */
     uint16 **qaband,     /* O: QA band for the input image, nlines x nsamps */
-    uint16 **radsat,     /* O: radiometric saturation band for the input image,
-                               nlines x nsamps */
     float ***sband,      /* O: output surface reflectance and brightness temp
                                bands */
     uint16 **out_band    /* O: scaled output, nlines x nsamps */

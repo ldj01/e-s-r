@@ -28,13 +28,15 @@ void fill_cld_diags(cld_diags_t *cld_diags);
 void interpol_clddiags_1pixel(cld_diags_t *cld_diags, int img_line,
                               int img_sample,float *inter_value);
 bool cloud_detection_pass1(Lut_t *lut, int nsamp, int il, uint16_t **line_in,
-                           uint8 *qa_line, uint16_t *b6_line,float *atemp_line,
+                           uint16_t *qa_line, uint16_t *qa2_line,
+                           uint16_t *b6_line,float *atemp_line,
                            atmos_t *atmos_coef, atmos_t *interpol_atmos_coef,
                            cld_diags_t *cld_diags);
 bool cloud_detection_pass2(Lut_t *lut, int nsamp, int il, uint16_t **line_in,
-                           uint8 *qa_line, uint16_t *b6_line,
-                           atmos_t *atmos_coef, atmos_t *interpol_atmos_coef,
-                           cld_diags_t *cld_diags, char *ddv_line);
+                           uint16_t *qa_line, uint16_t *qa2_line,
+                           uint16_t *b6_line, atmos_t *atmos_coef,
+                           atmos_t *interpol_atmos_coef, cld_diags_t *cld_diags,
+                           char *ddv_line);
 void cast_cloud_shadow(Lut_t *lut, int nsamp, int il_start, uint16_t ***line_in,
                        uint16_t **b6_line, cld_diags_t *cld_diags,
                        char ***cloud_buf, Ar_gridcell_t *ar_gridcell,

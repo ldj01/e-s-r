@@ -96,11 +96,17 @@ Input_t *OpenInput(Espa_internal_meta_t *metadata, bool thermal)
 
   /* Open QA file for access, if not processing thermal band */
   if (!thermal) {
-    this->fp_bin_qa = fopen(this->file_name_qa, "r");
-    if (this->fp_bin_qa == NULL) 
-      error_string = "opening QA binary file";
+    this->fp_bin_qa[0] = fopen(this->file_name_qa[0], "r");
+    if (this->fp_bin_qa[0] == NULL) 
+      error_string = "opening first QA binary file";
     else
-      this->open_qa = true;
+      this->open_qa[0] = true;
+
+    this->fp_bin_qa[1] = fopen(this->file_name_qa[1], "r");
+    if (this->fp_bin_qa[1] == NULL) 
+      error_string = "opening second QA binary file";
+    else
+      this->open_qa[1] = true;
   }
 
   if (error_string != NULL) {
@@ -114,11 +120,17 @@ Input_t *OpenInput(Espa_internal_meta_t *metadata, bool thermal)
       }
     }
     if (!thermal) {
-      free(this->file_name_qa);
-      this->file_name_qa = NULL;
-      if (this->open_qa)
-          fclose(this->fp_bin_qa);  
-      this->open_qa = false;
+      free(this->file_name_qa[0]);
+      this->file_name_qa[0] = NULL;
+      if (this->open_qa[0])
+          fclose(this->fp_bin_qa[0]);
+      this->open_qa[0] = false;
+
+      free(this->file_name_qa[1]);
+      this->file_name_qa[1] = NULL;
+      if (this->open_qa[1])
+          fclose(this->fp_bin_qa[1]);
+      this->open_qa[1] = false;
     }
 
     free(this);
@@ -166,10 +178,15 @@ bool CloseInput(Input_t *this)
     }
   }
 
-  /*** now close the QA file, if it's open ***/
-  if (this->open_qa) {
-    fclose(this->fp_bin_qa);
-    this->open_qa = false;
+  /* now close the QA files, if they are open */
+  if (this->open_qa[0]) {
+    fclose(this->fp_bin_qa[0]);
+    this->open_qa[0] = false;
+  }
+
+  if (this->open_qa[1]) {
+    fclose(this->fp_bin_qa[1]);
+    this->open_qa[1] = false;
   }
 
   if (none_open)
@@ -199,7 +216,8 @@ void FreeInput(Input_t *this)
     for (ib = 0; ib < this->nband; ib++) {
       free(this->file_name[ib]);
     }
-    free(this->file_name_qa);
+    free(this->file_name_qa[0]);
+    free(this->file_name_qa[1]);
 
     free(this);
     this = NULL;
@@ -235,25 +253,35 @@ bool GetInputLine(Input_t *this, int iband, int iline, uint16_t *line)
 }
 
 
-bool GetInputQALine(Input_t *this, int iline, uint8 *line) 
+bool GetInputQALine(Input_t *this, int iline, uint16_t *line,  uint16_t *line2) 
 {
   long loc;
-  void *buf_void = NULL;
 
   if (this == NULL) 
     RETURN_ERROR("invalid input structure", "GetInputQALine", false);
   if (iline < 0  ||  iline >= this->size.l) 
     RETURN_ERROR("line index out of range", "GetInputQALine", false);
-  if (!this->open_qa)
+  if (!this->open_qa[0])
+    RETURN_ERROR("QA band not open", "GetInputQALine", false);
+  if (!this->open_qa[1])
     RETURN_ERROR("QA band not open", "GetInputQALine", false);
 
-  buf_void = (void *)line;
-  loc = (long) (iline * this->size.s * sizeof(uint8));
-  if (fseek(this->fp_bin_qa, loc, SEEK_SET))
+  loc = (long) (iline * this->size.s * sizeof(uint16_t));
+  if (fseek(this->fp_bin_qa[0], loc, SEEK_SET))
     RETURN_ERROR("error seeking line (binary)", "GetInputQALine", false);
-  if (fread(buf_void, sizeof(uint8), (size_t)this->size.s, 
-            this->fp_bin_qa) != (size_t)this->size.s)
+  if (fread(line, sizeof(uint16_t), (size_t)this->size.s, 
+            this->fp_bin_qa[0]) != (size_t)this->size.s)
     RETURN_ERROR("error reading line (binary)", "GetInputQALine", false);
+
+  /* Second QA band is not always needed */
+  if (line2 != NULL)
+  {
+    if (fseek(this->fp_bin_qa[1], loc, SEEK_SET))
+      RETURN_ERROR("error seeking line (binary)", "GetInputQALine", false);
+    if (fread(line2, sizeof(uint16_t), (size_t)this->size.s, 
+              this->fp_bin_qa[1]) != (size_t)this->size.s)
+      RETURN_ERROR("error reading line (binary)", "GetInputQALine", false);
+  }
 
   return true;
 }
@@ -348,9 +376,12 @@ bool GetXMLInput(Input_t *this, Espa_internal_meta_t *metadata, bool thermal)
         this->open[ib] = false;
         this->fp_bin[ib] = NULL;
     }
-    this->open_qa = false;
-    this->file_name_qa = NULL;
-    this->fp_bin_qa = NULL;
+    this->open_qa[0] = false;
+    this->open_qa[1] = false;
+    this->file_name_qa[0] = NULL;
+    this->file_name_qa[1] = NULL;
+    this->fp_bin_qa[0] = NULL;
+    this->fp_bin_qa[1] = NULL;
 
     /* Pull the appropriate data from the XML file */
     if (!strcmp (gmeta->satellite, "LANDSAT_1"))
@@ -481,10 +512,13 @@ bool GetXMLInput(Input_t *this, Espa_internal_meta_t *metadata, bool thermal)
                 this->file_name[5] = strdup (metadata->band[i].file_name);
             }
 
-            if (!strcmp (metadata->band[i].name, "radsat_qa") &&
-                !strcmp (metadata->band[i].product, "toa_refl"))
+            if (!strcmp (metadata->band[i].name, "bqa_pixel"))
             {
-                this->file_name_qa = strdup (metadata->band[i].file_name);
+                this->file_name_qa[0] = strdup (metadata->band[i].file_name);
+            }
+            if (!strcmp (metadata->band[i].name, "bqa_radsat"))
+            {
+                this->file_name_qa[1] = strdup (metadata->band[i].file_name);
             }
         }  /* for i */
     }  /* reflective bands */

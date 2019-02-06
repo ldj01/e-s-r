@@ -62,8 +62,6 @@ int main (int argc, char *argv[])
     Input_t *input = NULL;       /* input structure for the Landsat product */
     Output_t *toa_output = NULL; /* output structure and metadata for the TOA
                                     product */
-    Output_t *radsat_output = NULL; /* output structure and metadata for the
-                                       RADSAT product */
     Espa_internal_meta_t xml_metadata;  /* XML metadata structure */
     Espa_global_meta_t *gmeta = NULL;   /* pointer to global meta */
     Envi_header_t envi_hdr;      /* output ENVI header information */
@@ -74,8 +72,6 @@ int main (int argc, char *argv[])
                                  temp bands, qa band is separate as a uint16 */
     uint16 *out_band = NULL;  /* scaled output */
     uint16 *qaband = NULL;    /* QA band for the input image, nlines x nsamps */
-    uint16 *radsat = NULL;    /* QA band for radiometric saturation of the
-                                 Level-1 product, nlines x nsamps */
 
     float xts;           /* scene center solar zenith angle (deg) */
     float xmus;          /* cosine of solar zenith angle */
@@ -218,7 +214,7 @@ int main (int argc, char *argv[])
     /* Allocate memory for all the data arrays */
     if (verbose)
         printf ("Allocating memory for the data arrays ...\n");
-    retval = memory_allocation_main (nlines, nsamps, &sza, &qaband, &radsat, 
+    retval = memory_allocation_main (nlines, nsamps, &sza, &qaband,
                                      &sband, &out_band);
     if (retval != SUCCESS)
     {   /* get_args already printed the error message */
@@ -338,7 +334,7 @@ int main (int argc, char *argv[])
     /* Compute the TOA reflectance and TOA brightness temp */
     printf ("Calculating TOA reflectance and TOA brightness temps...\n");
     retval = compute_toa_refl (input, &xml_metadata, qaband, nlines, nsamps,
-        gmeta->instrument, sza, sband, radsat);
+        gmeta->instrument, sza, sband);
     if (retval != SUCCESS)
     {
         sprintf (errmsg, "Error computing TOA reflectance and TOA brightness "
@@ -468,58 +464,6 @@ int main (int argc, char *argv[])
     }
     free_output (toa_output, OUTPUT_TOA);
 
-    /* Open the RADSAT output file */
-    radsat_output = open_output (&xml_metadata, input, OUTPUT_RADSAT);
-    if (radsat_output == NULL)
-    {   /* error message already printed */
-        error_handler (true, FUNC_NAME, errmsg);
-        exit (ERROR);
-    }
-    printf ("Writing RADSAT data to the output files ...\n");
-
-    /* Write the RADSAT band */
-    if (put_output_lines (radsat_output, radsat, 0, 0, nlines,
-        sizeof (uint16)) != SUCCESS)
-    {
-        sprintf (errmsg, "Writing output RADSAT data");
-        error_handler (true, FUNC_NAME, errmsg);
-        exit (ERROR);
-    }
-
-    /* Create the ENVI header file this band */
-    if (create_envi_struct (&radsat_output->metadata.band[SR_RADSAT],
-        &xml_metadata.global, &envi_hdr) != SUCCESS)
-    {
-        sprintf (errmsg, "Creating ENVI header structure.");
-        error_handler (true, FUNC_NAME, errmsg);
-        exit (ERROR);
-    }
-      
-    /* Write the ENVI header */
-    strcpy (envi_file, radsat_output->metadata.band[SR_RADSAT].file_name);
-    cptr = strchr (envi_file, '.');
-    strcpy (cptr, ".hdr");
-    if (write_envi_hdr (envi_file, &envi_hdr) != SUCCESS)
-    {
-        sprintf (errmsg, "Writing ENVI header file.");
-        error_handler (true, FUNC_NAME, errmsg);
-        exit (ERROR);
-    }
-
-    /* Append the RADSAT band to the XML file */
-    if (append_metadata (1, &radsat_output->metadata.band[SR_RADSAT],
-        xml_infile) != SUCCESS)
-    {
-        sprintf (errmsg, "Appending the RADSAT band to XML file.");
-        error_handler (true, FUNC_NAME, errmsg);
-        exit (ERROR);
-    }
-
-    /* Close the output radsat product, cleanup bands, and free the memory */
-    close_output (radsat_output, OUTPUT_RADSAT);
-    free_output (radsat_output, OUTPUT_RADSAT);
-    free (radsat);
-
     /* Only continue with the surface reflectance corrections if SR processing
        has been requested and is possible due to the solar zenith angle */
     if (process_sr)
@@ -635,29 +579,3 @@ void usage ()
     printf ("   ==> Writes bands 1-11 as TOA reflectance and brightness "
             "temperature.  Surface reflectance corrections are not applied.\n");
 }
-
-
-/******************************************************************************
-MODULE:  btest
-
-PURPOSE:  Tests to see if bit n is set in the byte_val variable.
-
-RETURN VALUE:
-Type = bool
-Value      Description
------      -----------
-false      bit n is not set in byte_val
-true       bit n is set in byte_val
-
-NOTES:
-******************************************************************************/
-bool btest
-(
-    uint8 byte_val,   /* I: byte value to be tested with the bit n */
-    byte n            /* I: bit number to be tested (0 is rightmost bit) */
-)
-{
-    /* Take 2 ** n, then AND that result with the byte value */
-    return (byte_val & (1 << n));
-}
-

@@ -107,12 +107,6 @@ typedef enum {DN_BAND1=0, DN_BAND2, DN_BAND3, DN_BAND4, DN_BAND5, DN_BAND6,
 typedef enum {SR_BAND1=0, SR_BAND2, SR_BAND3, SR_BAND4, SR_BAND5, SR_BAND6,
     SR_BAND7, SR_BAND10, SR_BAND11, SR_AEROSOL, SR_TTL} Mysr_band_t;
 
-/* Definte the RADSAT band */
-#define SR_RADSAT 0
-
-/* High confidence Level-1 QA values */
-#define L1QA_HIGH_CONF 3
-
 /* Bit values of ipflag (interpolation flag) QA, which includes aerosol
    levels */
 typedef enum {

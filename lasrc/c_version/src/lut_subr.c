@@ -2022,8 +2022,6 @@ int memory_allocation_main
     int nsamps,          /* I: number of samples in the scene */
     int16 **sza,         /* O: solar zenith angle, nlines x nsamps  */
     uint16 **qaband,     /* O: QA band for the input image, nlines x nsamps */
-    uint16 **radsat,     /* O: radiometric saturation band for the input image,
-                               nlines x nsamps */
     float ***sband,      /* O: output surface reflectance and brightness temp
                                bands */
     uint16 **out_band    /* O: scaled output, nlines x nsamps */
@@ -2053,14 +2051,6 @@ int memory_allocation_main
     if (*out_band == NULL)
     {
         sprintf (errmsg, "Error allocating memory for out_band");
-        error_handler (true, FUNC_NAME, errmsg);
-        return (ERROR);
-    }
-
-    *radsat = calloc (nlines*nsamps, sizeof (uint16));
-    if (*radsat == NULL)
-    {
-        sprintf (errmsg, "Error allocating memory for radsat");
         error_handler (true, FUNC_NAME, errmsg);
         return (ERROR);
     }

@@ -2,6 +2,7 @@
 #include "time.h"
 #include "aero_interp.h"
 #include "poly_coeff.h"
+#include "read_level1_qa.h"
 
 /******************************************************************************
 MODULE:  compute_toa_refl
@@ -36,11 +37,8 @@ int compute_toa_refl
     char *instrument,   /* I: instrument to be processed (OLI, TIRS) */
     int16 *sza,         /* I: scaled per-pixel solar zenith angles (degrees),
                               nlines x nsamps */
-    float **sband,      /* O: output TOA reflectance and brightness temp
+    float **sband       /* O: output TOA reflectance and brightness temp
                               values (unscaled) */
-    uint16 *radsat      /* O: radiometric saturation QA band, nlines x nsamps;
-                              array should be all zeros on input to this
-                              routine*/
 )
 {
     char errmsg[STR_SIZE];                   /* error message */
@@ -157,16 +155,10 @@ int compute_toa_refl
                             sband[sband_ib][i] = MAX_VALID_REFL;
                         else
                             sband[sband_ib][i] = rotoa;
-
-                        /* Check for saturation. Saturation is when the pixel
-                           reaches the max allowed value. */
-                        if (uband[i] == L1_SATURATED)
-                            radsat[i] |= 1 << (ib+1);
                     }
                     else
                     {
                         sband[sband_ib][i] = FILL_VALUE;
-                        radsat[i] = RADSAT_FILL_VALUE;
                     }
                 }  /* for samp */
             }  /* for line */
@@ -208,15 +200,10 @@ int compute_toa_refl
                        will be scaled for output in convert_output() */
                     tmpf = k2b10 / log (k1b10 / tmpf + 1.0);
                     sband[SR_BAND10][i] = tmpf;
-
-                    /* Check for saturation */
-                    if (uband[i] == L1_SATURATED)
-                        radsat[i] |= 1 << (ib+3);
                 }
                 else
                 {
                     sband[SR_BAND10][i] = FILL_VALUE;
-                    radsat[i] = RADSAT_FILL_VALUE;
                 }
             }
         }  /* end if band 10 */
@@ -255,15 +242,10 @@ int compute_toa_refl
                        will be scaled for output in convert_output() */
                     tmpf = k2b11 / log (k1b11 / tmpf + 1.0);
                     sband[SR_BAND11][i] = tmpf;
-
-                    /* Check for saturation only */
-                    if (uband[i] == L1_SATURATED)
-                        radsat[i] |= 1 << (ib+3);
                 }
                 else
                 {
                     sband[SR_BAND11][i] = FILL_VALUE;
-                    radsat[i] = RADSAT_FILL_VALUE;
                 }
             }
         }  /* end if band 11 */
@@ -1062,12 +1044,11 @@ int compute_sr_refl
             /* If this non-fill pixel is water, then look for a pixel which is
                not water.  If none are found then the whole window is fill or
                water.  Flag this pixel as water. */
-            if (is_water (sband[SR_BAND4][curr_pix],
-                          sband[SR_BAND5][curr_pix]))
+            if (level1_qa_is_water (qaband[curr_pix]))
             {
                 /* Look for other non-fill/non-water pixels in the window.
                    Start with the center of the window and search outward. */
-                if (find_closest_non_water (qaband, sband, nlines, nsamps,
+                if (find_closest_non_water (qaband, nlines, nsamps,
                     center_line, center_samp, &nearest_line, &nearest_samp))
                 {
                     /* Use the line/sample location of the non-fill/non-water
@@ -1104,7 +1085,7 @@ int compute_sr_refl
                 /* Look for other non-fill/non-water/non-cloud/non-shadow
                    pixels in the window.  Start with the center of the window
                    and search outward. */
-                if (find_closest_non_cloud_shadow_water (qaband, sband, nlines,
+                if (find_closest_non_cloud_shadow_water (qaband, nlines,
                     nsamps, center_line, center_samp, &nearest_line,
                     &nearest_samp))
                 {
@@ -1599,7 +1580,7 @@ int compute_sr_refl
     mytime = time(NULL);
     printf ("Interpolating the aerosol values in the NxN windows %s",
         ctime(&mytime));
-    aerosol_interp (xml_metadata, sband, qaband, ipflag, taero, median_aerosol,
+    aerosol_interp (xml_metadata, qaband, ipflag, taero, median_aerosol,
         nlines, nsamps);
 
 #ifdef WRITE_TAERO
@@ -1620,7 +1601,7 @@ int compute_sr_refl
     mytime = time(NULL);
     printf ("Interpolating the teps values in the NxN windows %s",
         ctime(&mytime));
-    aerosol_interp (xml_metadata, sband, qaband, ipflag, teps, DEFAULT_EPS,
+    aerosol_interp (xml_metadata, qaband, ipflag, teps, DEFAULT_EPS,
         nlines, nsamps);
 
     /* Perform the second level of atmospheric correction using the aerosols */
@@ -2132,49 +2113,6 @@ bool is_shadow
         return (false);
 }
 
-
-/******************************************************************************
-MODULE:  is_water
-
-PURPOSE:  Determines if the pixel is water.  The NDVI is used to determine if
-this is a water pixel.
-
-RETURN VALUE:
-Type = boolean
-Value           Description
------           -----------
-false           Pixel is not water
-true            Pixel is water
-
-PROJECT:  Land Satellites Data System Science Research and Development (LSRD)
-at the USGS EROS
-
-NOTES:
-******************************************************************************/
-bool is_water
-(
-    float band4_pix,     /* I: Band 4 reflectance for current pixel */
-    float band5_pix      /* I: Band 5 reflectance for current pixel */
-)
-{
-    double ndvi;             /* use NDVI for flagging water pixels */
-
-    /* Calculate NDVI and flag water pixels */
-    /* This magic number is unscaled DN value */
-    if (band5_pix < 0.01)
-        ndvi = -0.01;
-    else
-        ndvi = ((double) band5_pix - (double) band4_pix) /
-               ((double) band5_pix + (double) band4_pix);
-
-    /* If the NDVI is low, then flag this as a water pixel */
-    if (ndvi < 0.01)
-        return (true);
-    else
-        return (false);
-}
-
-
 /******************************************************************************
 MODULE:  find_closest_non_fill
 
@@ -2264,7 +2202,6 @@ NOTES:
 bool find_closest_non_cloud_shadow_water
 (
     uint16 *qaband,    /* I: QA band for the input image, nlines x nsamps */
-    float **sband,     /* I: input surface reflectance, nlines x nsamps */
     int nlines,        /* I: number of lines in QA band */
     int nsamps,        /* I: number of samps in QA band */
     int center_line,   /* I: line for the center of the aerosol window */
@@ -2301,8 +2238,7 @@ bool find_closest_non_cloud_shadow_water
                    return. */
                 if (!level1_qa_is_fill (qaband[curr_pix]) &&
                     !is_cloud_or_shadow (qaband[curr_pix]) &&
-                    !is_water (sband[SR_BAND4][curr_pix],
-                               sband[SR_BAND5][curr_pix]))
+                    !level1_qa_is_water (qaband[curr_pix]))
                 {
                     *nearest_line = line;
                     *nearest_samp = samp;
@@ -2337,7 +2273,6 @@ NOTES:
 bool find_closest_non_water
 (
     uint16 *qaband,    /* I: QA band for the input image, nlines x nsamps */
-    float **sband,     /* I: input surface reflectance, nlines x nsamps */
     int nlines,        /* I: number of lines in QA band */
     int nsamps,        /* I: number of samps in QA band */
     int center_line,   /* I: line for the center of the aerosol window */
@@ -2372,8 +2307,7 @@ bool find_closest_non_water
                 /* If this pixel is not fill and is not water, then mark it as
                    the closest non-water pixel and return. */
                 if (!level1_qa_is_fill (qaband[curr_pix]) &&
-                    !is_water (sband[SR_BAND4][curr_pix],
-                               sband[SR_BAND5][curr_pix]))
+                    !level1_qa_is_water (qaband[curr_pix]))
                 {
                     *nearest_line = line;
                     *nearest_samp = samp;
@@ -2386,74 +2320,3 @@ bool find_closest_non_water
     /* No pixel was found that met the criteria */
     return (false);
 }
-
-
-/******************************************************************************
-MODULE:  mask_aero_window
-
-PURPOSE:  Masks the current pixel's quick use aerosol window for fill, cloud,
-and water pixels.
-
-RETURN VALUE: N/A
-
-PROJECT:  Land Satellites Data System Science Research and Development (LSRD)
-at the USGS EROS
-
-NOTES:
-******************************************************************************/
-void mask_aero_window
-(
-    uint16 *qaband,    /* I: QA band for the input image, nlines x nsamps */
-    float **sband,     /* I: input surface reflectance */
-    int nlines,        /* I: number of lines in QA band */
-    int nsamps,        /* I: number of samps in QA band */
-    int center_line,   /* I: line for the center of the aerosol window */
-    int center_samp,   /* I: sample for the center of the aerosol window */
-    bool *quick_qa     /* O: quick QA for the current aerosol window,
-                             AERO_WINDOW x AERO_WINDOW
-                             (true=not clear, false=clear) */
-)
-{
-    int curr_pix;            /* looping variable for current pixel in the
-                                level-1 QA */
-    int curr_qa_pix;         /* looping variable for current quick QA pixel */
-    int line, samp;          /* looping variables for lines and samples */
-
-    /* Initialize the quick QA window to not clear, which includes pixels
-       that go beyond the scene boundaries */
-    for (curr_qa_pix = 0; curr_qa_pix < AERO_WINDOW * AERO_WINDOW;
-         curr_qa_pix++)
-        quick_qa[curr_qa_pix] = true;
-
-    /* Loop around the current aerosol window flagging fill, cloudy, and water
-       pixels */
-    curr_qa_pix = 0;
-    for (line = center_line - HALF_AERO_WINDOW;
-         line <= center_line + HALF_AERO_WINDOW; line++)
-    {
-        /* Make sure the line is valid */
-        if (line < 0 || line >= nlines)
-            continue;
-
-        curr_pix = line * nsamps + center_samp - HALF_AERO_WINDOW;
-        for (samp = center_samp - HALF_AERO_WINDOW;
-             samp <= center_samp + HALF_AERO_WINDOW;
-             samp++, curr_pix++, curr_qa_pix++)
-        {
-            /* Make sure the sample is valid */
-            if (samp < 0 || samp >= nsamps)
-                continue;
-
-            /* If this pixel is not fill, is not cloud, is not shadow, and is
-               not water, then mark it as clear. */
-            if (!level1_qa_is_fill (qaband[curr_pix]) &&
-                !is_cloud_or_shadow (qaband[curr_pix]) &&
-                !is_water (sband[SR_BAND4][curr_pix],
-                           sband[SR_BAND5][curr_pix]))
-            { /* pixel is clear */
-                quick_qa[curr_qa_pix] = false;
-            }
-        }  /* for samp */
-    }  /* for line */
-}
-

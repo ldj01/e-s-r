@@ -6,7 +6,6 @@
 
 /* Define some of the constants to use in the output data products */
 #define FILL_VALUE 0
-#define RADSAT_FILL_VALUE 1
 #define CLOUD_FILL_VALUE 0
 #define SCALE_FACTOR 0.0000275
 #define SCALE_FACTOR_TH 0.0034
@@ -16,10 +15,9 @@
 #define MAX_VALID_REFL 1.60    /* unscaled */
 #define MIN_VALID_TH 150       /* unscaled */
 #define MAX_VALID_TH 350       /* unscaled */
-#define L1_SATURATED 65535     /* saturation value of the Level-1 pixel */
 
 /* Define the output product types */
-typedef enum {OUTPUT_TOA=0, OUTPUT_SR=1, OUTPUT_RADSAT=2} Myoutput_t;
+typedef enum {OUTPUT_TOA=0, OUTPUT_SR=1} Myoutput_t;
 
 /* Structure for the 'output' data type */
 typedef struct {
@@ -41,20 +39,19 @@ Output_t *open_output
 (
     Espa_internal_meta_t *in_meta,  /* I: input metadata structure */
     Input_t *input,                 /* I: input band data structure */
-    Myoutput_t output_type          /* I: are we processing TOA, SR, RADSAT
-                                          outputs? */
+    Myoutput_t output_type          /* I: are we processing TOA, SR outputs? */
 );
 
 int close_output
 (
     Output_t *output,       /* I/O: Output data structure to close */
-    Myoutput_t output_type  /* I: are we processing TOA, SR, RADSAT outputs? */
+    Myoutput_t output_type  /* I: are we processing TOA, SR outputs? */
 );
 
 int free_output
 (
     Output_t *output,       /* I/O: Output data structure to free */
-    Myoutput_t output_type  /* I: are we processing TOA, SR, RADSAT outputs? */
+    Myoutput_t output_type  /* I: are we processing TOA, SR outputs? */
 );
 
 int put_output_lines

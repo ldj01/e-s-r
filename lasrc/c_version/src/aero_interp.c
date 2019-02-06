@@ -1,5 +1,7 @@
 #include "aero_interp.h"
 #include "quick_select.h"
+#include "read_level1_qa.h"
+#include "read_level2_qa.h"
 
 /******************************************************************************
 MODULE:  aerosol_interp
@@ -19,7 +21,6 @@ NOTES:
 void aerosol_interp
 (
     Espa_internal_meta_t *xml_metadata, /* I: XML metadata information */
-    float **sband,     /* I/O: input TOA reflectance */
     uint16 *qaband,    /* I: QA band for the input image, nlines x nsamps */
     uint8 *ipflag,     /* I/O: QA flag to assist with aerosol interpolation,
                                nlines x nsamps.  It is expected that the ipflag
@@ -155,8 +156,7 @@ void aerosol_interp
 
             /* If this pixel is water, then don't process. Use default aerosol
                values. */
-            else if (is_water (sband[SR_BAND4][curr_pix],
-                               sband[SR_BAND5][curr_pix]))
+            else if (level1_qa_is_water (qaband[curr_pix]))
             {
                 taero[curr_pix] = median_aero;
                 ipflag[curr_pix] = (1 << IPFLAG_WATER);
@@ -243,10 +243,10 @@ void aerosol_interp
             /* If any of the window pixels used in the interpolation were
                water pixels, then mask this pixel with water (in addition to
                the interpolation bit already set) */
-            if (btest (ipflag[aero_pix11], IPFLAG_WATER) ||
-                btest (ipflag[aero_pix12], IPFLAG_WATER) ||
-                btest (ipflag[aero_pix21], IPFLAG_WATER) ||
-                btest (ipflag[aero_pix22], IPFLAG_WATER))
+            if (lasrc_qa_is_water (ipflag[aero_pix11]) ||
+                lasrc_qa_is_water (ipflag[aero_pix12]) ||
+                lasrc_qa_is_water (ipflag[aero_pix21]) ||
+                lasrc_qa_is_water (ipflag[aero_pix22]))
                 ipflag[curr_pix] |= (1 << IPFLAG_WATER);
         }  /* end for samp */
     }  /* end for line */
@@ -309,9 +309,9 @@ void aerosol_fill_median
         {
             /* Find cloud, shadow, and water pixels and reset the default
                aerosol value to that of the median aerosol value */
-            if (btest (ipflag[curr_pix], IPFLAG_CLOUD) ||
-                btest (ipflag[curr_pix], IPFLAG_SHADOW) ||
-                btest (ipflag[curr_pix], IPFLAG_WATER))
+            if (lasrc_qa_is_cloud_cirrus (ipflag[curr_pix]) ||
+                lasrc_qa_is_cloud_shadow (ipflag[curr_pix]) ||
+                lasrc_qa_is_water (ipflag[curr_pix]))
             {
                 taero[curr_pix] = median_aero;
             }
@@ -382,7 +382,7 @@ float find_median_aerosol
              samp += AERO_WINDOW, curr_pix += AERO_WINDOW)
         {
             /* Process clear aerosols */
-            if (btest (ipflag[curr_pix], IPFLAG_CLEAR))
+            if (lasrc_qa_is_valid_aerosol_retrieval (ipflag[curr_pix]))
             {
                 aero[nbclrpix] = taero[curr_pix];
                 nbclrpix++;

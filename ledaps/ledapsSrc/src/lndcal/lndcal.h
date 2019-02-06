@@ -13,9 +13,6 @@
 #include "envi_header.h"
 
 #define NBAND_REFL_MAX (6)
-#define NBAND_QA       (1)
-#define NBAND_CAL_MAX (NBAND_REFL_MAX + NBAND_QA)
-#define QA_BAND_NUM (6)
 
 typedef signed short int16;
 typedef unsigned char uint8;

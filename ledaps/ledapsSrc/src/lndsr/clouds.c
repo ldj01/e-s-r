@@ -3,6 +3,7 @@
 #include "error.h"
 #include "sixs_runs.h"
 #include "clouds.h"
+#include "read_level1_qa.h"
 
 /* #define VRA_THRESHOLD 0.1 */
 #define VRA_THRESHOLD 0.08
@@ -19,7 +20,8 @@ bool cloud_detection_pass1
     int nsamp,               /* I: number of samples to be processed */
     int il,                  /* I: current line being processed */
     uint16_t **line_in,      /* I: array of input lines, one for each band */
-    uint8 *qa_line,          /* I: array of QA data for the current line */
+    uint16_t *qa_line,       /* I: QA data (bqa_pixel) for the current line */
+    uint16_t *qa2_line,      /* I: QA data (bqa_radsat) for the current line */
     uint16_t *b6_line,       /* I: array of thermal data for the current line */
     float *atemp_line,       /* I: auxiliary temperature for the line */
     atmos_t *atmos_coef,     /* I: atmospheric coefficients */
@@ -29,7 +31,6 @@ bool cloud_detection_pass1
 )
 {
     int is;                   /* current sample in the line */
-    bool is_fill;             /* is the current pixel fill */
     float tmpflt;             /* temporary floating point value */
     float rho1, rho3, rho4, rho5, rho7, t6;  /* reflectance and temp values */
     int C1, C2=0, C3, C4=0, C5=0, water;  /* cloud and water
@@ -56,13 +57,8 @@ bool cloud_detection_pass1
             next_cld_step += cld_diags->cellwidth;
         }
 
-        if ((qa_line[is]&0x01)==0x01)
-            is_fill=true;
-        else
-            is_fill=false;
-
-        if (!is_fill &&
-            ((qa_line[is] & 0x08) == 0x00 ||
+        if (!level1_qa_is_fill(qa_line[is]) &&
+            (!level1_qa_is_saturated(qa2_line[is],3) ||
              (lut->meta.inst == INST_TM && line_in[2][is] < thresh_tm)))
         { /* not fill and no saturation in band 3 */
             /* Interpolate the atmospheric coefficients for the current
@@ -161,7 +157,8 @@ bool cloud_detection_pass2
     int nsamp,               /* I: number of samples to be processed */
     int il,                  /* I: current line being processed */
     uint16_t **line_in,      /* I: array of input lines, one for each band */
-    uint8 *qa_line,          /* I: array of QA data for the current line */
+    uint16_t *qa_line,       /* I: QA data (bqa_pixel) for the current line */
+    uint16_t *qa2_line,      /* I: QA data (bqa_radsat) for the current line */
     uint16_t *b6_line,       /* I: array of thermal data for the current line */
     atmos_t *atmos_coef,     /* I: atmospheric coefficients */
     atmos_t *interpol_atmos_coef, /* I: storage space for interpolated
@@ -180,7 +177,6 @@ bool cloud_detection_pass2
 )
 {
     int is;                   /* current sample in the line */
-    bool is_fill;             /* is the current pixel fill */
     int il_ar, is_ar;         /* line/sample in the aerosol region */
     bool thermal_band;        /* is thermal data available */
     float rho1, rho2, rho3, rho4, rho5, rho7;  /* reflectance & temp values */
@@ -236,27 +232,16 @@ bool cloud_detection_pass2
             ar_sample = 0;
         }
 
-        is_fill = false;
-        if (thermal_band) {
-            if (b6_line[is] == lut->b6_in_fill) {
-                is_fill = true;
-                ddv_line[is] = 0x08;
-            }
-        }
-
-        if ((qa_line[is] & 0x01) == 0x01) {
-            is_fill = true;
-            ddv_line[is] = 0x08;
-        }
-
         /* If fill, continue with the next sample. */
-        if (is_fill)
+        if (level1_qa_is_fill(qa_line[is])) {
+            ddv_line[is] = 0x08;
             continue;
+        }
 
         ddv_line[is] &= 0x44; /* reset all bits except cloud shadow and
                                  adjacent cloud */ 
 
-            if (((qa_line[is] & 0x08) == 0x08) ||
+            if (level1_qa_is_saturated(qa2_line[is],3) ||
                 ((lut->meta.inst == INST_TM) &&
                 (line_in[2][is] >= thresh_tm))) {
             if (thermal_band) {
@@ -281,7 +266,7 @@ bool cloud_detection_pass2
                     temp_thshld2 = temp_b6_clear - 2.;
                 }
 
-                    if ((((qa_line[is] & 0x20) == 0x20) ||
+                    if ((level1_qa_is_saturated(qa2_line[is],5) ||
                          ((lut->meta.inst == INST_TM) &&
                           (line_in[4][is] >= thresh_tm))) && (t6 < temp_thshld1)) {
                     /* saturated band 5 and t6 < threshold => cloudy */

@@ -459,7 +459,7 @@ static void comptrans
 
 /* Interpolate the reflectance as a function of the scattering angle given
    four points in the scattering grid. */
-static float interp_scattering_angle
+static float interp_refl_using_scat_angle
 (
     int its,          /* I: index for the sun angle table */
     int itv,          /* I: index for the view angle table */
@@ -652,15 +652,15 @@ static void comproatm
 
     /* Interpolate points vs scattering angle for ip1, iaot1. */
     iband_ip_iaot_indx = iband_indx + ip1_indx + iaot1_indx;
-    roiaot1 = interp_scattering_angle(its, itv, xtsmax, xtsmin, scaa,
-                                      nbficl, nbfil, indts, rolutt,
-                                      iband_ip_iaot_indx, t, u);
+    roiaot1 = interp_refl_using_scat_angle(its, itv, xtsmax, xtsmin, scaa,
+                                           nbficl, nbfil, indts, rolutt,
+                                           iband_ip_iaot_indx, t, u);
 
     /* Interpolate points vs scattering angle for ip1, iaot2. */
     iband_ip_iaot_indx = iband_indx + ip1_indx + iaot2_indx;
-    roiaot2 = interp_scattering_angle(its, itv, xtsmax, xtsmin, scaa,
-                                      nbficl, nbfil, indts, rolutt,
-                                      iband_ip_iaot_indx, t, u);
+    roiaot2 = interp_refl_using_scat_angle(its, itv, xtsmax, xtsmin, scaa,
+                                           nbficl, nbfil, indts, rolutt,
+                                           iband_ip_iaot_indx, t, u);
 
     /* Interpolation as log of tau */
     deltaaot = logaot550nm[iaot2] - logaot550nm[iaot1];
@@ -669,15 +669,15 @@ static void comproatm
 
     /* Interpolate points vs scattering angle for ip2, iaot1. */
     iband_ip_iaot_indx = iband_indx + ip2_indx + iaot1_indx;
-    roiaot1 = interp_scattering_angle(its, itv, xtsmax, xtsmin, scaa,
-                                      nbficl, nbfil, indts, rolutt,
-                                      iband_ip_iaot_indx, t, u);
+    roiaot1 = interp_refl_using_scat_angle(its, itv, xtsmax, xtsmin, scaa,
+                                           nbficl, nbfil, indts, rolutt,
+                                           iband_ip_iaot_indx, t, u);
 
     /* Interpolate points vs scattering angle for ip2, iaot2. */
     iband_ip_iaot_indx = iband_indx + ip2_indx + iaot2_indx;
-    roiaot2 = interp_scattering_angle(its, itv, xtsmax, xtsmin, scaa,
-                                      nbficl, nbfil, indts, rolutt,
-                                      iband_ip_iaot_indx, t, u);
+    roiaot2 = interp_refl_using_scat_angle(its, itv, xtsmax, xtsmin, scaa,
+                                           nbficl, nbfil, indts, rolutt,
+                                           iband_ip_iaot_indx, t, u);
 
     /* Interpolation as log of tau */
     rop2 = roiaot1 + (roiaot2 - roiaot1) * deltaaot;

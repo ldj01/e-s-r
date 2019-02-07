@@ -235,10 +235,6 @@ int memory_allocation_sr
                                (TOA refl), nlines x nsamps */
     uint8 **ipflag,      /* O: QA flag to assist with aerosol interpolation,
                                nlines x nsamps */
-    float **twvi,        /* O: interpolated water vapor value,
-                               nlines x nsamps */
-    float **tozi,        /* O: interpolated ozone value, nlines x nsamps */
-    float **tp,          /* O: interpolated pressure value, nlines x nsamps */
     float **taero,       /* O: aerosol values for each pixel, nlines x nsamps */
     float **teps,        /* O: eps (angstrom coefficient) for each pixel,
                                nlines x nsamps*/

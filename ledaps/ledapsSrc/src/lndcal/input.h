@@ -42,8 +42,8 @@
 
 #include <stdlib.h>
 #include <stdio.h>
+#include <stdbool.h>
 #include "lndcal.h"
-#include "bool.h"
 #include "const.h"
 #include "date.h"
 #include "param.h"
@@ -70,6 +70,8 @@ typedef struct {
   Date_t prod_date;        /* Production date (must be available for ETM) */
   float sun_zen;           /* Solar zenith angle (radians; scene center) */
   float sun_az;            /* Solar azimuth angle (radians; scene center) */
+  double szen_scale;       /* solar zenith angle scale factor */
+  double szen_offset;      /* solar zenith angle offset */
   float earth_sun_dist;    /* Earth-sun distance */
   Wrs_t wrs_sys;           /* WRS system */
   int ipath;               /* WRS path number */
@@ -104,16 +106,19 @@ typedef struct {
   char *file_name_th;      /* Name of the thermal input image files */
   char *file_name_sun_zen; /* Name of the represetative per-pixel solar zenith
                               file */
+  char *file_name_band_qa; /* Name of the L1 QA band*/
   bool open[NBAND_REFL_MAX]; 
                            /* Flag to indicate whether the specific input file 
 			      is open for access; 'true' = open, 
 			     'false' = not open */
   bool open_th;            /* thermal open flag */
   bool open_sun_zen;       /* solar zenith open flag */
+  bool open_band_qa;       /* band QA open flag */
   FILE *fp_bin[NBAND_REFL_MAX];  /* File pointer for binary files */
   FILE *fp_bin_th;         /* File pointer for thermal binary file */
   FILE *fp_bin_sun_zen;    /* File pointer for the representative per-pixel
                               array solar zenith band */
+  FILE *fp_bin_band_qa;    /* File pointer for the L1 QA band */
 } Input_t;
 
 /* Prototypes */
@@ -121,10 +126,10 @@ typedef struct {
 Input_t *OpenInput(Espa_internal_meta_t *metadata);
 bool GetInputLine(Input_t *this, int iband, int iline, unsigned char *line);
 bool GetInputLineTh(Input_t *this, int iline, unsigned char *line);
+bool GetInputLineQA(Input_t *this, int iline, uint16_t*line);
 bool GetInputLineSunZen(Input_t *this, int iline, int16 *line);
 bool CloseInput(Input_t *this);
 bool FreeInput(Input_t *this);
-bool InputMetaCopy(Input_meta_t *this, int nband, Input_meta_t *copy);
 bool GetXMLInput(Input_t *this, Espa_internal_meta_t *metadata);
 
 #endif

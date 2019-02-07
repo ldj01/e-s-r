@@ -3,6 +3,7 @@ include_directories(${XML_INCLUDES})
 include_directories(${HDF4_INCLUDES})
 
 link_directories(${ESPA_LIBS})
+link_directories(${HDF4_LIBRARY_DIRS})
 
 add_executable(combine_l8_aux_data get_args.c combine_l8_aux_data.c)
 target_link_libraries(combine_l8_aux_data -lespa_raw_binary -lespa_common

@@ -6,20 +6,18 @@
 
 /* Define some of the constants to use in the output data products */
 #define FILL_VALUE 0
-#define RADSAT_FILL_VALUE 1
 #define CLOUD_FILL_VALUE 0
-#define SCALE_FACTOR 0.000275
+#define SCALE_FACTOR 0.0000275
 #define SCALE_FACTOR_TH 0.0034
 #define OFFSET_REFL -0.20
 #define OFFSET_THERM 150
-#define MIN_VALID -0.20   /* unscaled */
-#define MAX_VALID 1.60    /* unscaled */
-#define MIN_VALID_TH 150  /* unscaled */
-#define MAX_VALID_TH 350  /* unscaled */
-#define L1_SATURATED 65535       /* saturation value of the Level-1 pixel */
+#define MIN_VALID_REFL -0.20   /* unscaled */
+#define MAX_VALID_REFL 1.60    /* unscaled */
+#define MIN_VALID_TH 150       /* unscaled */
+#define MAX_VALID_TH 350       /* unscaled */
 
 /* Define the output product types */
-typedef enum {OUTPUT_TOA=0, OUTPUT_SR=1, OUTPUT_RADSAT=2} Myoutput_t;
+typedef enum {OUTPUT_TOA=0, OUTPUT_SR=1} Myoutput_t;
 
 /* Structure for the 'output' data type */
 typedef struct {
@@ -41,20 +39,19 @@ Output_t *open_output
 (
     Espa_internal_meta_t *in_meta,  /* I: input metadata structure */
     Input_t *input,                 /* I: input band data structure */
-    Myoutput_t output_type          /* I: are we processing TOA, SR, RADSAT
-                                          outputs? */
+    Myoutput_t output_type          /* I: are we processing TOA, SR outputs? */
 );
 
 int close_output
 (
     Output_t *output,       /* I/O: Output data structure to close */
-    Myoutput_t output_type  /* I: are we processing TOA, SR, RADSAT outputs? */
+    Myoutput_t output_type  /* I: are we processing TOA, SR outputs? */
 );
 
 int free_output
 (
     Output_t *output,       /* I/O: Output data structure to free */
-    Myoutput_t output_type  /* I: are we processing TOA, SR, RADSAT outputs? */
+    Myoutput_t output_type  /* I: are we processing TOA, SR outputs? */
 );
 
 int put_output_lines
@@ -78,4 +75,13 @@ int get_output_lines
     void *buf         /* I: pointer to the buffer to be returned */
 );
 
+void convert_output
+(
+    float **sband,      /* I: unscaled SR or TOA bands */
+    int band,           /* I: Band number to convert */
+    uint16 *out_band,   /* O: scaled output for the processed band */
+    int nlines,         /* I: number of lines */
+    int nsamps,         /* I: number of samples */
+    bool thermal        /* I: flag to specifiy if processing a thermal band */
+);
 #endif

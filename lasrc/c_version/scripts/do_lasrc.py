@@ -1,8 +1,8 @@
-#! /usr/bin/env python
+#! /usr/bin/env python3
 import sys
 import os
 import re
-import commands
+import subprocess
 import datetime
 from optparse import OptionParser
 import logging
@@ -40,6 +40,7 @@ class SurfaceReflectance():
     #       should be completed.  True or False.  Default is True, otherwise
     #       the processing will halt after the TOA reflectance products are
     #       complete.
+    #   num_threads - number of threads used for processing
     #
     # Returns:
     #     ERROR - error running the surface reflectance application
@@ -54,13 +55,14 @@ class SurfaceReflectance():
     #      going to be grabbed from the command line, then it's assumed all
     #      the parameters will be pulled from the command line.
     #######################################################################
-    def runSr (self, xml_infile=None, process_sr=None, write_toa=False):
+    def runSr (self, xml_infile=None, process_sr=None, write_toa=False,
+               num_threads=None):
         # if no parameters were passed then get the info from the
         # command line
         if xml_infile == None:
             # Get version number
             cmdstr = ('lasrc --version')
-            (status, self.version) = commands.getstatusoutput(cmdstr)
+            (exit_code, self.version) = subprocess.getstatusoutput(cmdstr)
 
             # get the command line argument for the XML file
             parser = OptionParser(version = self.version)
@@ -84,15 +86,21 @@ class SurfaceReflectance():
                 type="float", help="scaling value for thermal bands")
             parser.add_option ("--offset_therm", dest="offset_therm",
                 type="float", help="offset value for thermal bands")
+            parser.add_option ("--num_threads", dest="num_threads",
+                type="int", help="number of threads used for processing")
             parser.add_option("--verbose", dest="verbose", default=False,
                 action="store_true", help="Turn verbose logging on")
+            parser.add_option("--use_l1_angle_bands", action="store_true",
+                              dest="use_l1_angle_bands", default=False,
+                              help=("flag to use level 1 angle bands rather"
+                                    " than create them"))
 
             (options, args) = parser.parse_args()
 
             # XML input file
             xml_infile = options.xml
             if xml_infile == None:
-                parser.error ('missing input XML file command-line argument');
+                parser.error ('missing input XML file command-line argument')
                 return ERROR
 
             # surface reflectance options
@@ -102,14 +110,16 @@ class SurfaceReflectance():
             offset_refl = options.offset_refl
             scale_therm = options.scale_therm
             offset_therm = options.offset_therm
+            num_threads = options.num_threads
             verbose = options.verbose
+            use_l1_angle_bands = options.use_l1_angle_bands
 
         # get the logger
         logger = logging.getLogger(__name__)
         msg = ('Surface reflectance processing of Landsat file: {}'
                .format(xml_infile))
         logger.info (msg)
-        
+
         # make sure the XML file exists
         if not os.path.isfile(xml_infile):
             msg = ('XML file does not exist or is not accessible: {}'
@@ -121,7 +131,7 @@ class SurfaceReflectance():
         base_xmlfile = os.path.basename (xml_infile)
         msg = 'Processing XML file: {}'.format(base_xmlfile)
         logger.info (msg)
-        
+
         # get the path of the XML file and change directory to that location
         # for running this script.  save the current working directory for
         # return to upon error or when processing is complete.  Note: use
@@ -163,28 +173,29 @@ class SurfaceReflectance():
             os.chdir (mydir)
             return ERROR
 
-        # generate per-pixel angle bands for band 4 (representative band)
-        cmdstr = 'create_l8_angle_bands --xml {}'.format(base_xmlfile)
-        logger.debug('per-pixel angles command: {0}'.format(cmdstr))
-        (status, output) = commands.getstatusoutput(cmdstr)
-        logger.info(output)
-        exit_code = status >> 8
-        if exit_code != 0:
-            logger.error('Error running create_l8_angle_bands. Processing '
-                         'will terminate.')
-            os.chdir(mydir)
-            return ERROR
+        # Generate per-pixel angle bands for band 4 (representative band)
+        # if directed to do so.  Otherwise, it's assumed the angle bands
+        # are available with the level 1 data.
+        if not use_l1_angle_bands:
+            cmdstr = 'create_l8_angle_bands --xml {}'.format(base_xmlfile)
+            logger.debug('per-pixel angles command: {0}'.format(cmdstr))
+            (exit_code, output) = subprocess.getstatusoutput(cmdstr)
+            logger.info(output)
+            if exit_code != 0:
+                logger.error('Error running create_l8_angle_bands. Processing '
+                             'will terminate.')
+                os.chdir(mydir)
+                return ERROR
 
-        # Mask the angle bands to match the band quality band
-        cmdstr = ('mask_per_pixel_angles.py --xml {}'
-                  .format(base_xmlfile))
-        (status, output) = commands.getstatusoutput(cmdstr)
-        logger.info(output)
-        exit_code = status >> 8
-        if exit_code != 0:
-            logger.error('Error masking angle bands with the band '
-                         'quality band. Processing will terminate.')
-            return ERROR
+            # Mask the angle bands to match the band quality band
+            cmdstr = ('mask_per_pixel_angles.py --xml {}'
+                      .format(base_xmlfile))
+            (exit_code, output) = subprocess.getstatusoutput(cmdstr)
+            logger.info(output)
+            if exit_code != 0:
+                logger.error('Error masking angle bands with the band '
+                             'quality band. Processing will terminate.')
+                return ERROR
 
         # run surface reflectance algorithm, checking the return status.  exit
         # if any errors occur.
@@ -195,6 +206,7 @@ class SurfaceReflectance():
         scale_therm_opt_str = ''
         offset_refl_opt_str = ''
         offset_therm_opt_str = ''
+        num_threads_opt_str = ''
 
         if process_sr == 'False':
             process_sr_opt_str = '--process_sr=false '
@@ -202,35 +214,37 @@ class SurfaceReflectance():
             write_toa_opt_str = '--write_toa '
         if verbose:
             verbose_opt_str = '--verbose '
-        if scale_refl != None:
+        if scale_refl is not None:
             scale_refl_opt_str = '--scale_refl={} '.format(scale_refl)
-        if scale_therm != None :
+        if scale_therm is not None :
             scale_therm_opt_str = '--scale_therm={} '.format(scale_therm)
-        if offset_refl != None:
+        if offset_refl is not None:
             offset_refl_opt_str = '--offset_refl={} '.format(offset_refl)
-        if offset_therm != None:
+        if offset_therm is not None:
             offset_therm_opt_str = '--offset_therm={} '.format(offset_therm)
+        if num_threads is not None:
+            num_threads_opt_str = '--num_threads={} '.format(num_threads)
 
         cmdstr = ('lasrc --xml={XML} --aux={AUX} '
                   '{SR}{TOA}{VERB}{SCALE_REF}{SCALE_THERM}{OFFSET_REF}'
-                  '{OFFSET_THERM}'
+                  '{OFFSET_THERM}{NUM_THREADS}'
                   .format(XML=xml_infile, AUX=aux_file, SR=process_sr_opt_str,
                           TOA=write_toa_opt_str, VERB=verbose_opt_str,
                           SCALE_REF=scale_refl_opt_str,
                           SCALE_THERM=scale_therm_opt_str,
                           OFFSET_REF=offset_refl_opt_str,
-                          OFFSET_THERM=offset_therm_opt_str))
+                          OFFSET_THERM=offset_therm_opt_str,
+                          NUM_THREADS=num_threads_opt_str))
         msg = 'Executing lasrc command: {}'.format(cmdstr)
         logger.debug (msg)
-        (status, output) = commands.getstatusoutput (cmdstr)
+        (exit_code, output) = subprocess.getstatusoutput (cmdstr)
         logger.info (output)
-        exit_code = status >> 8
         if exit_code != 0:
             msg = 'Error running lasrc.  Processing will terminate.'
             logger.error (msg)
             os.chdir (mydir)
             return ERROR
-        
+
         # successful completion.  return to the original directory.
         os.chdir (mydir)
         msg = 'Completion of surface reflectance.'

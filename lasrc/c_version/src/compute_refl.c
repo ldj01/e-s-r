@@ -2,6 +2,7 @@
 #include "time.h"
 #include "aero_interp.h"
 #include "poly_coeff.h"
+#include "read_level1_qa.h"
 
 #define DEM_FILL -9999  /* elevation fill value */
 
@@ -38,11 +39,8 @@ int compute_toa_refl
     char *instrument,   /* I: instrument to be processed (OLI, TIRS) */
     int16 *sza,         /* I: scaled per-pixel solar zenith angles (degrees),
                               nlines x nsamps */
-    uint16 **sband,     /* O: output TOA reflectance and brightness temp
-                              values (scaled) */
-    uint16 *radsat      /* O: radiometric saturation QA band, nlines x nsamps;
-                              array should be all zeros on input to this
-                              routine*/
+    float **sband       /* O: output TOA reflectance and brightness temp
+                              values (unscaled) */
 )
 {
     char errmsg[STR_SIZE];                   /* error message */
@@ -59,16 +57,9 @@ int compute_toa_refl
     uint16 *uband = NULL;  /* array for input image data for a single band,
                               nlines x nsamps */
     time_t mytime;       /* time variable */
+    double angband_scale = 1,  /* solar angle band scale factor */
+           angband_offset = 0; /* solar angle band offset */
 
-    double offset_refl;         /* add offset for reflective bands */
-    double offset_therm;        /* add offset for thermal bands */
-    double output_mult_refl;    /* output reflective scale factor */
-    double output_mult_therm;   /* output thermal scale factor */
-    double min_refl,            /* Minimum scaled reflective value */
-           max_refl;            /* Maximum scaled reflective value */
-    double min_therm,           /* Minimum scaled thermal value */
-           max_therm;           /* Maximum scaled thermal value */
-    float angle_sf = 0.01*DEG2RAD;  /* solar angle scale factor */
 
     /* Start the processing */
     mytime = time(NULL);
@@ -83,50 +74,38 @@ int compute_toa_refl
         return (ERROR);
     }
 
-    /* Create the scaled min/max values and validate against the data type 
-       of the desired output (sband) */
-    offset_refl = get_offset_refl();
-    output_mult_refl = get_mult_refl();
-    min_refl = (MIN_VALID - offset_refl) * output_mult_refl;
-    max_refl = (MAX_VALID - offset_refl) * output_mult_refl;
-    if (min_refl < 0)
-        min_refl = 0;
-    if (max_refl > USHRT_MAX)
-        max_refl = USHRT_MAX;
-
-    offset_therm = get_offset_therm();
-    output_mult_therm = get_mult_therm();
-    min_therm = (MIN_VALID_TH - offset_therm) * output_mult_therm;
-    max_therm = (MAX_VALID_TH - offset_therm) * output_mult_therm;
-    if (min_therm < 0)
-        min_therm = 0;
-    if (max_therm > USHRT_MAX)
-        max_therm = USHRT_MAX;
+    /* Get the solar angle band scale and offset factors. */
+    for (iband = 0; iband < xml_metadata->nbands; iband++)
+    {
+        Espa_band_meta_t *b = &xml_metadata->band[iband];
+        if (strcmp(b->name, "solar_zenith_band4") == 0)
+        {
+            if (b->scale_factor != ESPA_FLOAT_META_FILL)
+                angband_scale = b->scale_factor;
+            if (b->add_offset != ESPA_FLOAT_META_FILL)
+                angband_offset = b->add_offset;
+            break;
+        }
+    }
+    if (iband == xml_metadata->nbands)
+    {
+        error_handler(true, FUNC_NAME,
+                      "Error: Unable to locate solar angle band in metadata.");
+        return ERROR;
+    }
 
     /* Loop through all the bands (except the pan band) and compute the TOA
        reflectance and TOA brightness temp */
     for (ib = DN_BAND1; ib <= DN_BAND11; ib++)
     {
-        uint16 *band_ptr;  /* convenience pointer */
+        float *band_ptr;  /* convenience pointer */
 
-        /* Don't process the pan band */
-        if (ib == DN_BAND8)
-            continue;
-
-        /* Read the current band and calibrate bands 1-9 (except pan) to
-           obtain TOA reflectance. Bands are corrected for the sun angle. */
-        if (ib <= DN_BAND9)
+        /* Read the current band and calibrate bands 1-7 to obtain TOA
+           reflectance. Bands are corrected for the sun angle. */
+        if (ib <= DN_BAND7)
         {
-            if (ib <= DN_BAND7)
-            {
-                iband = ib;
-                band_ptr = sband[ib];
-            }
-            else
-            {  /* don't count the pan band */
-                iband = ib - 1;
-                band_ptr = sband[ib-1];
-            }
+            iband = ib;
+            band_ptr = sband[ib];
 
             if (get_input_refl_lines (input, iband, 0, nlines, uband) !=
                 SUCCESS)
@@ -142,7 +121,8 @@ int compute_toa_refl
             refl_add = input->meta.bias[iband];
 
 #ifdef _OPENMP
-            #pragma omp parallel for private (i)
+            #pragma omp parallel for private (i) \
+            num_threads(get_num_threads())
 #endif
             for (i = 0; i < nlines*nsamps; i++)
             {
@@ -153,35 +133,27 @@ int compute_toa_refl
                 if (level1_qa_is_fill(qaband[i]))
                 {
                     band_ptr[i] = FILL_VALUE;
-                    radsat[i] = RADSAT_FILL_VALUE;
                     continue;
                 }
 
                 /* Compute the TOA reflectance based on the per-pixel
                    sun angle (need to unscale). Scale the TOA value for
                    output. */
-                xmus = cos(sza[i] * angle_sf);
+                xmus = cos((sza[i]*angband_scale + angband_offset)*DEG2RAD);
                 rotoa = (uband[i] * refl_mult) + refl_add;
-                rotoa = rotoa / xmus;
-                rotoa = (rotoa - offset_refl) * output_mult_refl;
-    
-                /* Save the scaled TOA reflectance value, but make
-                   sure it falls within the defined valid range. */
-                if (rotoa < min_refl)
-                    band_ptr[i] = min_refl;
-                else if (rotoa > max_refl)
-                    band_ptr[i] = max_refl;
-                else
-                    band_ptr[i] = roundf (rotoa);
+                rotoa /= xmus;
 
-                /* Check for saturation. Saturation is when the pixel
-                   reaches the max allowed value.
-                   Clipped (i.e., saturated) TOA pixels computed above are
-                   not included in this check. */
-                if (uband[i] == L1_SATURATED)
-                    radsat[i] |= 1 << (ib+1);
+                /* Save the unscaled TOA reflectance value, but make
+                   sure it falls within the defined valid range of
+                   unscaled values. */
+                if (rotoa < MIN_VALID_REFL)
+                    band_ptr[i] = MIN_VALID_REFL;
+                else if (rotoa > MAX_VALID_REFL)
+                    band_ptr[i] = MAX_VALID_REFL;
+                else
+                    band_ptr[i] = rotoa;
             }  /* pixel loop */
-        }  /* end if band <= band 9 */
+        }  /* end if band <= band 7 */
 
         /* Read the current band and calibrate thermal bands.  Not available
            for OLI-only scenes. */
@@ -204,7 +176,7 @@ int compute_toa_refl
             if (get_input_th_lines(input, thermal_band_index, 0, nlines,
                                    uband) != SUCCESS)
             {
-                sprintf (errmsg, "Reading band %d", ib+1);
+                sprintf (errmsg, "Reading band %d", ib+3);
                 error_handler (true, FUNC_NAME, errmsg);
                 return (ERROR);
             }
@@ -219,7 +191,8 @@ int compute_toa_refl
                within the min/max range for the thermal bands. */
 
 #ifdef _OPENMP
-            #pragma omp parallel for private (i)
+            #pragma omp parallel for private (i) \
+            num_threads(get_num_threads())
 #endif
             for (i = 0; i < nlines*nsamps; i++)
             {
@@ -229,31 +202,15 @@ int compute_toa_refl
                 if (level1_qa_is_fill (qaband[i]))
                 {
                     band_ptr[i] = FILL_VALUE;
-                    radsat[i] = RADSAT_FILL_VALUE;
                     continue;
                 }
 
                 /* Compute the TOA spectral radiance */
                 tmpf = xcals * uband[i] + xcalo;
 
-                /* Compute TOA brightness temp (K) and scale for output */
-                tmpf = k2b/log(k1b/tmpf + 1.0);
-                tmpf = (tmpf - offset_therm) * output_mult_therm;
-
-                /* Make sure the brightness temp falls within the specified
-                   range */
-                if (tmpf < min_therm)
-                    band_ptr[i] = min_therm;
-                else if (tmpf > max_therm)
-                    band_ptr[i] = max_therm;
-                else
-                    band_ptr[i] = roundf (tmpf);
-
-                /* Check for saturation.
-                   Clipped (i.e., saturated) BT pixels computed above are
-                   not included in this check. */
-                if (uband[i] == L1_SATURATED)
-                    radsat[i] |= 1 << (ib+1);
+                /* Compute TOA brightness temp (K). The data
+                   will be scaled for output in convert_output() */
+                band_ptr[i] = k2b/log(k1b/tmpf + 1.0);
             } /* pixel loop */
         }  /* end if band 10 or 11 */
     }  /* end for ib */
@@ -603,7 +560,6 @@ NOTES:
 static bool find_closest_non_cloud_shadow_water
 (
     uint16 *qaband,    /* I: QA band for the input image, nlines x nsamps */
-    uint16 **sband,    /* I: input surface reflectance, nlines x nsamps */
     int nlines,        /* I: number of lines in QA band */
     int nsamps,        /* I: number of samps in QA band */
     int center_line,   /* I: line for the center of the aerosol window */
@@ -615,7 +571,7 @@ static bool find_closest_non_cloud_shadow_water
     int line, samp;          /* looping variables for lines and samples */
     int line_index;
     int aero_window;         /* looping variable for the aerosol window */
-    uint16 *qband_ptr, *s4band_ptr, *s5band_ptr;  /* band data pointers */
+    uint16 *qband_ptr;       /* band data pointer */
 
     /* Loop around the center pixel, moving outward with each loop, searching
        for a pixel that is not of the QA type specified and is not fill */
@@ -639,13 +595,11 @@ static bool find_closest_non_cloud_shadow_water
         {
             line_index = line*nsamps;
             qband_ptr = &qaband[line_index];
-            s4band_ptr = &sband[SR_BAND4][line_index];
-            s5band_ptr = &sband[SR_BAND5][line_index];
             for (samp = start_samp; samp <= end_samp; samp++)
             {
                 if (!level1_qa_is_fill(qband_ptr[samp]) &&
                     !is_cloud_or_shadow(qband_ptr[samp]) &&
-                    !is_water(s4band_ptr[samp], s5band_ptr[samp]))
+                    !level1_qa_is_water(qband_ptr[samp]))
                 {
                     *nearest_line = line;
                     *nearest_samp = samp;
@@ -654,20 +608,15 @@ static bool find_closest_non_cloud_shadow_water
             }
             line++;
             qband_ptr += nsamps;
-            s4band_ptr += nsamps;
-            s5band_ptr += nsamps;
         }
         else
         {
             line = 0;
             qband_ptr = qaband;
-            s4band_ptr = sband[SR_BAND4];
-            s5band_ptr = sband[SR_BAND5];
         }
 
         /* Check first and last samples of the sides of the current window. */
-        for (; line < center_line + aero_window;
-             line++, qband_ptr+=nsamps, s4band_ptr+=nsamps, s5band_ptr+=nsamps)
+        for (; line < center_line + aero_window; line++, qband_ptr+=nsamps)
         {
             /* If we hit the end of the image, we're done checking the
                sides. */
@@ -678,7 +627,7 @@ static bool find_closest_non_cloud_shadow_water
             if (samp >= 0 &&
                 !level1_qa_is_fill(qband_ptr[samp]) &&
                 !is_cloud_or_shadow(qband_ptr[samp]) &&
-                !is_water(s4band_ptr[samp], s5band_ptr[samp]))
+                !level1_qa_is_water(qband_ptr[samp]))
             {
                 *nearest_line = line;
                 *nearest_samp = samp;
@@ -689,7 +638,7 @@ static bool find_closest_non_cloud_shadow_water
             if (samp < nsamps &&
                 !level1_qa_is_fill(qband_ptr[samp]) &&
                 !is_cloud_or_shadow(qband_ptr[samp]) &&
-                !is_water(s4band_ptr[samp], s5band_ptr[samp]))
+                !level1_qa_is_water(qband_ptr[samp]))
             {
                 *nearest_line = line;
                 *nearest_samp = samp;
@@ -704,7 +653,7 @@ static bool find_closest_non_cloud_shadow_water
             {
                 if (!level1_qa_is_fill(qband_ptr[samp]) &&
                     !is_cloud_or_shadow(qband_ptr[samp]) &&
-                    !is_water(s4band_ptr[samp], s5band_ptr[samp]))
+                    !level1_qa_is_water(qband_ptr[samp]))
                 {
                     *nearest_line = line;
                     *nearest_samp = samp;
@@ -739,7 +688,6 @@ NOTES:
 static bool find_closest_non_water
 (
     uint16 *qaband,    /* I: QA band for the input image, nlines x nsamps */
-    uint16 **sband,    /* I: input surface reflectance, nlines x nsamps */
     int nlines,        /* I: number of lines in QA band */
     int nsamps,        /* I: number of samps in QA band */
     int center_line,   /* I: line for the center of the aerosol window */
@@ -751,7 +699,7 @@ static bool find_closest_non_water
     int line, samp;          /* looping variables for lines and samples */
     int line_index;
     int aero_window;         /* looping variable for the aerosol window */
-    uint16 *qband_ptr, *s4band_ptr, *s5band_ptr;  /* band data pointers */
+    uint16 *qband_ptr;       /* band data pointer */
 
     /* Loop around the center pixel, moving outward with each loop, searching
        for a pixel that is not of the QA type specified and is not fill */
@@ -775,12 +723,10 @@ static bool find_closest_non_water
         {
             line_index = line*nsamps;
             qband_ptr = &qaband[line_index];
-            s4band_ptr = &sband[SR_BAND4][line_index];
-            s5band_ptr = &sband[SR_BAND5][line_index];
             for (samp = start_samp; samp <= end_samp; samp++)
             {
                 if (!level1_qa_is_fill(qband_ptr[samp]) &&
-                    !is_water(s4band_ptr[samp], s5band_ptr[samp]))
+                    !level1_qa_is_water(qband_ptr[samp]))
                 {
                     *nearest_line = line;
                     *nearest_samp = samp;
@@ -789,20 +735,15 @@ static bool find_closest_non_water
             }
             line++;
             qband_ptr += nsamps;
-            s4band_ptr += nsamps;
-            s5band_ptr += nsamps;
         }
         else
         {
             line = 0;
             qband_ptr = qaband;
-            s4band_ptr = sband[SR_BAND4];
-            s5band_ptr = sband[SR_BAND5];
         }
 
         /* Check first and last samples of the sides of the current window. */
-        for (; line < center_line + aero_window;
-             line++, qband_ptr+=nsamps, s4band_ptr+=nsamps, s5band_ptr+=nsamps)
+        for (; line < center_line + aero_window; line++, qband_ptr+=nsamps)
         {
             /* If we hit the end of the image, we're done checking the
                sides. */
@@ -812,7 +753,7 @@ static bool find_closest_non_water
             samp = center_samp - aero_window;
             if (samp >= 0 &&
                 !level1_qa_is_fill(qband_ptr[samp]) &&
-                !is_water(s4band_ptr[samp], s5band_ptr[samp]))
+                !level1_qa_is_water(qband_ptr[samp]))
             {
                 *nearest_line = line;
                 *nearest_samp = samp;
@@ -822,7 +763,7 @@ static bool find_closest_non_water
             samp = center_samp + aero_window;
             if (samp < nsamps &&
                 !level1_qa_is_fill(qband_ptr[samp]) &&
-                !is_water(s4band_ptr[samp], s5band_ptr[samp]))
+                !level1_qa_is_water(qband_ptr[samp]))
             {
                 *nearest_line = line;
                 *nearest_samp = samp;
@@ -836,7 +777,7 @@ static bool find_closest_non_water
             for (samp = start_samp; samp <= end_samp; samp++)
             {
                 if (!level1_qa_is_fill(qband_ptr[samp]) &&
-                    !is_water(s4band_ptr[samp], s5band_ptr[samp]))
+                    !level1_qa_is_water(qband_ptr[samp]))
                 {
                     *nearest_line = line;
                     *nearest_samp = samp;
@@ -892,15 +833,7 @@ int compute_sr_refl
     int nlines,         /* I: number of lines in reflectance, thermal bands */
     int nsamps,         /* I: number of samps in reflectance, thermal bands */
     float pixsize,      /* I: pixel size for the reflectance bands */
-    uint16 **sband,     /* I/O: input TOA and output surface reflectance */
-    int16 *sza,         /* I: scaled per-pixel solar zenith angles (degrees),
-                              nlines x nsamps */
-    int16 *saa,         /* I: scaled per-pixel solar azimuth angles (degrees),
-                              nlines x nsamps */
-    int16 *vza,         /* I: scaled per-pixel view zenith angles (degrees),
-                              nlines x nsamps */
-    int16 *vaa,         /* I: scaled per-pixel view azimuth angles (degrees),
-                              nlines x nsamps */
+    float **sband,      /* I/O: input TOA and output surface reflectance */
     float xts,          /* I: scene center solar zenith angle (deg) */
     float xmus,         /* I: cosine of solar zenith angle */
     char *anglehdf,     /* I: angle HDF filename */
@@ -929,22 +862,22 @@ int compute_sr_refl
     float broatm[NSR_BANDS];   /* atmospheric reflectance for bands 1-7 */
     float bttatmg[NSR_BANDS];  /* ttatmg for bands 1-7 */
     float bsatm[NSR_BANDS];    /* atmosphere spherical albedo for bands 1-7 */
-
     float median_aerosol; /* median aerosol value for clear pixels */
     uint8 *ipflag = NULL; /* QA flag to assist with aerosol interpolation,
                              nlines x nsamps */
     float *taero = NULL;  /* aerosol values for each pixel, nlines x nsamps */
     float *teps = NULL;   /* angstrom coeff for each pixel, nlines x nsamps */
-    uint16 *aerob1 = NULL; /* atmospherically corrected band 1 data
+    float *aerob1 = NULL; /* atmospherically corrected band 1 data
                              (TOA refl), nlines x nsamps */
-    uint16 *aerob2 = NULL; /* atmospherically corrected band 2 data
+    float *aerob2 = NULL; /* atmospherically corrected band 2 data
                              (TOA refl), nlines x nsamps */
-    uint16 *aerob4 = NULL; /* atmospherically corrected band 4 data
+    float *aerob4 = NULL; /* atmospherically corrected band 4 data
                              (TOA refl), nlines x nsamps */
-    uint16 *aerob5 = NULL; /* atmospherically corrected band 5 data
+    float *aerob5 = NULL; /* atmospherically corrected band 5 data
                              (TOA refl), nlines x nsamps */
-    uint16 *aerob7 = NULL; /* atmospherically corrected band 7 data
+    float *aerob7 = NULL; /* atmospherically corrected band 7 data
                              (TOA refl), nlines x nsamps */
+    uint16 *out_band = NULL;  /* scaled output */
 
     /* Vars for forward/inverse mapping space */
     Geoloc_t *space = NULL;       /* structure for geolocation information */
@@ -1063,12 +996,6 @@ int compute_sr_refl
         {9.57011e-16, 9.57011e-16, 9.57011e-16, -0.348785, 0.275239, 0.0117192,
          0.0616101, 0.04728};
 
-    double scale_refl;          /* scale for reflective bands */
-    double offset_refl;         /* add offset for reflective bands */
-    double output_mult_refl;    /* output reflective scale factor */
-    double min_refl,            /* Minimum scaled reflective value */
-           max_refl;            /* Maximum scaled reflective value */
-
 #ifdef WRITE_TAERO
     FILE *aero_fptr=NULL;   /* file pointer for aerosol files */
 #endif
@@ -1077,18 +1004,14 @@ int compute_sr_refl
     mytime = time(NULL);
     printf ("Start surface reflectance corrections: %s", ctime(&mytime));
 
-    /* Load some values */
-    scale_refl = get_scale_refl();
-    offset_refl = get_offset_refl();
-    output_mult_refl = get_mult_refl();
-
     /* Allocate memory for the many arrays needed to do the surface reflectance
        computations */
     retval = memory_allocation_sr (nlines, nsamps, &aerob1, &aerob2, &aerob4,
         &aerob5, &aerob7, &ipflag, &taero, &teps, &dem,
         &andwi, &sndwi, &ratiob1, &ratiob2, &ratiob7, &intratiob1, &intratiob2,
         &intratiob7, &slpratiob1, &slpratiob2, &slpratiob7, &wv, &oz, &rolutt,
-        &transt, &sphalbt, &normext, &tsmax, &tsmin, &nbfic, &nbfi, &ttv);
+        &transt, &sphalbt, &normext, &tsmax, &tsmin, &nbfic, &nbfi, &ttv,
+        &out_band);
     if (retval != SUCCESS)
     {
         sprintf (errmsg, "Error allocating memory for the data arrays needed "
@@ -1140,10 +1063,10 @@ int compute_sr_refl
     mytime = time(NULL);
     printf ("Performing atmospheric corrections for each reflectance "
             "band.  %s", ctime(&mytime));
-    for (ib = 0; ib <= SR_BAND7; ib++)
+    for (ib = SR_BAND1; ib <= SR_BAND7; ib++)
     {
-        uint16 *source_ptr = sband[ib];/* TOA band pointer pointer */
-        uint16 *band_ptr;              /* convenience pointer */
+        float *source_ptr = sband[ib];/* TOA band pointer */
+        float *band_ptr;               /* convenience pointer */
         float rotoa;                   /* top of atmosphere reflectance */
         float roslamb;                 /* lambertian surface reflectance */
 
@@ -1174,7 +1097,7 @@ int compute_sr_refl
         bsatm[ib] = satm;
 
         /* Before completing atmospheric corrections, swap the band pointers
-           in order to retain the TOA scaled reflectance values for later
+           in order to retain the unscaled TOA reflectance values for later
            use. */
         if (ib == DN_BAND1)
         {
@@ -1205,11 +1128,11 @@ int compute_sr_refl
 
         /* Perform atmospheric corrections for bands 1-7 */
 #ifdef _OPENMP
-        #pragma omp parallel for private (i)
+        #pragma omp parallel for private (i) \
+        num_threads(get_num_threads())
 #endif
         for (i = 0; i < nlines*nsamps; i++)
         {
-            float rotoa;   /* top of atmosphere reflectance */
             float roslamb; /* lambertian surface reflectance */
 
             /* Skip fill pixels, which have already been marked in the
@@ -1219,12 +1142,11 @@ int compute_sr_refl
 
             /* Apply the atmospheric corrections (ignoring the Rayleigh
                scattering component and water vapor), and store the
-               scaled value for further corrections.  (NOTE: the full
+               unscaled value for further corrections.  (NOTE: the full
                computations are in atmcorlamb2) */
-            rotoa = source_ptr[i] * scale_refl + offset_refl;
-            roslamb = rotoa - tgo*roatm;
+            roslamb = source_ptr[i] - tgo*roatm;
             roslamb /= tgo*ttatmg + satm*roslamb;
-            band_ptr[i] = (roslamb - offset_refl)*output_mult_refl;
+            band_ptr[i] = roslamb;
         }  /* pixel loop */
     }  /* for ib */
 
@@ -1232,7 +1154,7 @@ int compute_sr_refl
     mytime = time(NULL);
     printf ("Starting retrieval of atmospheric correction parameters.  %s",
         ctime(&mytime));
-    for (ib = 0; ib <= SR_BAND7; ib++)
+    for (ib = SR_BAND1; ib <= SR_BAND7; ib++)
     {
         float rotoa;   /* top of atmosphere reflectance */
         float roslamb; /* lambertian surface reflectance */
@@ -1276,7 +1198,7 @@ int compute_sr_refl
         xrorayp_arr[ib] = xrorayp;
     }
 
-    for (ib = 0; ib <= SR_BAND7; ib++)
+    for (ib = SR_BAND1; ib <= SR_BAND7; ib++)
     {
         iaMaxTemp = 1;
 
@@ -1312,7 +1234,8 @@ int compute_sr_refl
     printf ("Aerosol Inversion using %d x %d aerosol window  %s",
         AERO_WINDOW, AERO_WINDOW, ctime(&mytime));
 #ifdef _OPENMP
-    #pragma omp parallel for private (center_line)
+    #pragma omp parallel for private (center_line) \
+    num_threads(get_num_threads())
 #endif
     for (center_line = HALF_AERO_WINDOW; center_line < nlines;
          center_line += AERO_WINDOW)
@@ -1403,12 +1326,11 @@ int compute_sr_refl
             /* If this non-fill pixel is water, then look for a pixel which is
                not water.  If none are found then the whole window is fill or
                water.  Flag this pixel as water. */
-            if (is_water (sband[SR_BAND4][nearest_pix],
-                          sband[SR_BAND5][nearest_pix]))
+            if (level1_qa_is_water (qaband[nearest_pix]))
             {
                 /* Look for other non-fill/non-water pixels in the window.
                    Start with the center of the window and search outward. */
-                if (find_closest_non_water (qaband, sband, nlines, nsamps,
+                if (find_closest_non_water (qaband, nlines, nsamps,
                                             center_line, center_samp,
                                             &nearest_line, &nearest_samp))
                 {
@@ -1436,7 +1358,7 @@ int compute_sr_refl
                 /* Look for other non-fill/non-water/non-cloud/non-shadow
                    pixels in the window.  Start with the center of the window
                    and search outward. */
-                if (find_closest_non_cloud_shadow_water (qaband, sband, nlines,
+                if (find_closest_non_cloud_shadow_water (qaband, nlines,
                     nsamps, center_line, center_samp, &nearest_line,
                     &nearest_samp))
                 {
@@ -1619,10 +1541,10 @@ int compute_sr_refl
             erelc[DN_BAND7] = xndwi * slprb[2] + intrb[2];
 
             /* Retrieve the TOA reflectance values for the current pixel */
-            troatm[DN_BAND1] = aerob1[nearest_pix] * scale_refl + offset_refl;
-            troatm[DN_BAND2] = aerob2[nearest_pix] * scale_refl + offset_refl;
-            troatm[DN_BAND4] = aerob4[nearest_pix] * scale_refl + offset_refl;
-            troatm[DN_BAND7] = aerob7[nearest_pix] * scale_refl + offset_refl;
+            troatm[DN_BAND1] = aerob1[nearest_pix];
+            troatm[DN_BAND2] = aerob2[nearest_pix];
+            troatm[DN_BAND4] = aerob4[nearest_pix];
+            troatm[DN_BAND7] = aerob7[nearest_pix];
 
             /* Retrieve the aerosol information for eps 1.0 */
             iband1 = DN_BAND4;
@@ -1691,7 +1613,7 @@ int compute_sr_refl
             {
                 /* Test if band 5 makes sense */
                 iband = DN_BAND5;
-                rotoa = aerob5[nearest_pix] * scale_refl + offset_refl;
+                rotoa = aerob5[nearest_pix];
                 atmcorlamb2_new (tgo_arr[iband], xrorayp_arr[iband],
                     aot550nm[roatm_iaMax[iband]], &roatm_coef[iband][0],
                     &ttatmg_coef[iband][0], &satm_coef[iband][0], raot,
@@ -1700,7 +1622,7 @@ int compute_sr_refl
 
                 /* Test if band 4 makes sense */
                 iband = DN_BAND4;
-                rotoa = aerob4[nearest_pix] * scale_refl + offset_refl;
+                rotoa = aerob4[nearest_pix];
                 atmcorlamb2_new (tgo_arr[iband], xrorayp_arr[iband],
                     aot550nm[roatm_iaMax[iband]], &roatm_coef[iband][0],
                     &ttatmg_coef[iband][0], &satm_coef[iband][0], raot,
@@ -1805,7 +1727,7 @@ int compute_sr_refl
     mytime = time(NULL);
     printf ("Interpolating the aerosol values in the NxN windows %s",
         ctime(&mytime));
-    aerosol_interp (xml_metadata, sband, qaband, ipflag, taero, median_aerosol,
+    aerosol_interp (xml_metadata, qaband, ipflag, taero, median_aerosol,
         nlines, nsamps);
 
 #ifdef WRITE_TAERO
@@ -1826,31 +1748,24 @@ int compute_sr_refl
     mytime = time(NULL);
     printf ("Interpolating the teps values in the NxN windows %s",
         ctime(&mytime));
-    aerosol_interp (xml_metadata, sband, qaband, ipflag, teps, DEFAULT_EPS,
+    aerosol_interp (xml_metadata, qaband, ipflag, teps, DEFAULT_EPS,
         nlines, nsamps);
 
     /* Perform the second level of atmospheric correction using the aerosols */
     mytime = time(NULL);
     printf ("Performing atmospheric correction.  %s", ctime(&mytime));
 
-    /* Create the scaled min/max values */
-    min_refl = (MIN_VALID - offset_refl) * output_mult_refl;
-    max_refl = (MAX_VALID - offset_refl) * output_mult_refl;
-    if (min_refl < 0)
-        min_refl = 0;
-    if (max_refl > USHRT_MAX)
-        max_refl = USHRT_MAX;
-
     /* 0 .. DN_BAND7 is the same as 0 .. SR_BAND7 here, since the pan band
        isn't spanned */
-    for (ib = 0; ib <= DN_BAND7; ib++)
+    for (ib = DN_BAND1; ib <= DN_BAND7; ib++)
     {
-        uint16 *band_ptr = sband[ib];  /* convenience pointer */
+        float *band_ptr = sband[ib];   /* convenience pointer */
         int curr_pix;                  /* current pixel being processed */
 
         printf ("  Band %d\n", ib+1);
 #ifdef _OPENMP
-        #pragma omp parallel for private (curr_pix)
+        #pragma omp parallel for private (curr_pix) \
+        num_threads(get_num_threads())
 #endif
         for (curr_pix = 0; curr_pix < nlines*nsamps; curr_pix++)
         {
@@ -1870,7 +1785,7 @@ int compute_sr_refl
                 continue;
 
             /* Correct all pixels */
-            rsurf = band_ptr[curr_pix] * scale_refl + offset_refl;
+            rsurf = band_ptr[curr_pix];
             rotoa = (rsurf * bttatmg[ib] / (1.0 - bsatm[ib] * rsurf) +
                      broatm[ib]) * btgo[ib];
             atmcorlamb2_new (tgo_arr[ib], xrorayp_arr[ib],
@@ -1900,15 +1815,9 @@ int compute_sr_refl
                 }
             }  /* end if this is the coastal aerosol band */
 
-            /* Save the scaled surface reflectance value, but make sure it
-               falls within the defined valid range. */
-            roslamb = (roslamb - offset_refl) * output_mult_refl;
-            if (roslamb < min_refl)
-                band_ptr[curr_pix] = min_refl;
-            else if (roslamb > max_refl)
-                band_ptr[curr_pix] = max_refl;
-            else
-                band_ptr[curr_pix] = roundf (roslamb);
+            /* Save the unscaled surface reflectance value.  The data will be
+               scaled for output and range checked in convert_output(). */
+            band_ptr[curr_pix] = roslamb;
         }  /* pixel loop */
     }  /* end for ib */
 
@@ -1930,13 +1839,12 @@ int compute_sr_refl
     }
 
     /* Loop through the reflectance bands and write the data */
-    for (ib = 0; ib <= DN_BAND7; ib++)
+    for (ib = DN_BAND1; ib <= DN_BAND7; ib++)
     {
-        uint16 *band_ptr = sband[ib];  /* convenience pointer */
-
         printf ("  Band %d: %s\n", ib+1,
             sr_output->metadata.band[ib].file_name);
-        if (put_output_lines (sr_output, band_ptr, ib, 0, nlines,
+        convert_output (sband, ib, out_band, nlines, nsamps, false);
+        if (put_output_lines (sr_output, out_band, ib, 0, nlines,
             sizeof (uint16)) != SUCCESS)
         {
             sprintf (errmsg, "Writing output data for band %d", ib);
@@ -2035,6 +1943,7 @@ int compute_sr_refl
     free (nbfic);
     free (nbfi);
     free (ttv);
+    free (out_band);
 
     /* Successful completion */
     mytime = time(NULL);
@@ -2139,47 +2048,6 @@ bool is_shadow
     /* If the confidence level is high for cloud shadow, then flag this as a
        cloud */
     if (level1_qa_cloud_shadow_confidence (l1_qa_pix) == L1QA_HIGH_CONF)
-        return (true);
-    else
-        return (false);
-}
-
-
-/******************************************************************************
-MODULE:  is_water
-
-PURPOSE:  Determines if the pixel is water.  The NDVI is used to determine if
-this is a water pixel.
-
-RETURN VALUE:
-Type = boolean
-Value           Description
------           -----------
-false           Pixel is not water
-true            Pixel is water
-
-PROJECT:  Land Satellites Data System Science Research and Development (LSRD)
-at the USGS EROS
-
-NOTES:
-******************************************************************************/
-bool is_water
-(
-    uint16 band4_pix,     /* I: Band 4 reflectance for current pixel */
-    uint16 band5_pix      /* I: Band 5 reflectance for current pixel */
-)
-{
-    double ndvi;             /* use NDVI for flagging water pixels */
-
-    /* Calculate NDVI and flag water pixels */
-    if (band5_pix < 100)
-        ndvi = -0.01;
-    else
-        ndvi = ((double) band5_pix - (double) band4_pix) /
-               ((double) band5_pix + (double) band4_pix);
-
-    /* If the NDVI is low, then flag this as a water pixel */
-    if (ndvi < 0.01)
         return (true);
     else
         return (false);

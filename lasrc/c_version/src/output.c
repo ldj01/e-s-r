@@ -36,8 +36,7 @@ Output_t *open_output
 (
     Espa_internal_meta_t *in_meta,  /* I: input metadata structure */
     Input_t *input,                 /* I: input band data structure */
-    Myoutput_t output_type          /* I: are we processing TOA, SR, RADSAT
-                                          outputs? */
+    Myoutput_t output_type          /* I: are we processing TOA, SR outputs? */
 )
 {
     char FUNC_NAME[] = "open_output";   /* function name */
@@ -100,11 +99,8 @@ Output_t *open_output
     /* Copy the instrument type */
     output->inst = input->meta.inst;
 
-    /* Allocate memory for the total bands; radsat is only one band */
-    if (output_type == OUTPUT_RADSAT)
-        nband = 1;
-    else
-        nband = NBAND_TTL_OUT;
+    /* Allocate memory for the total bands */
+    nband = NBAND_TTL_OUT;
     if (allocate_band_metadata (&output->metadata, nband) != SUCCESS)
     {
         sprintf (errmsg, "Allocating band metadata.");
@@ -178,12 +174,6 @@ Output_t *open_output
             strcat (bmeta[ib].short_name, "SR");
             strcpy (bmeta[ib].product, "sr_refl");
         }
-        else if (output_type == OUTPUT_RADSAT)
-        {
-            strcat (bmeta[ib].short_name, "RADSAT");
-            strcpy (bmeta[ib].product, "toa_refl");
-            strcpy (bmeta[ib].source, "level1");
-        }
 
         bmeta[ib].nlines = output->nlines;
         bmeta[ib].nsamps = output->nsamps;
@@ -196,12 +186,11 @@ Output_t *open_output
 
         /* Handle the aerosol band differently.  If this is only TOA then we
            don't need to process the aerosol mask.  If this is SR, then we
-           don't need to process the cirrus or thermal bands.  If this is
-           RADSAT then we only have one band. */
+           don't need to process the cirrus or thermal bands. */
         if ((output_type == OUTPUT_TOA) && (ib == SR_AEROSOL))
             continue;
         else if ((output_type == OUTPUT_SR) &&
-            ((ib == SR_BAND9) || (ib == SR_BAND10) || (ib == SR_BAND11)))
+            ((ib == SR_BAND10) || (ib == SR_BAND11)))
             continue;
         else if ((output_type == OUTPUT_SR) && (ib == SR_AEROSOL))
         {
@@ -240,59 +229,6 @@ Output_t *open_output
             bmeta[ib].short_name[4] = '\0';
             strcat (bmeta[ib].short_name, "AERO");
         }
-        else if (output_type == OUTPUT_RADSAT)
-        {
-            /* Common QA band fields */
-            bmeta[ib].data_type = ESPA_UINT16;
-            bmeta[ib].fill_value = RADSAT_FILL_VALUE;
-            strcpy (bmeta[ib].name, "radsat_qa");
-            strcpy (bmeta[ib].long_name, "saturation mask");
-            strcpy (bmeta[ib].category, "qa");
-            strcpy (bmeta[ib].data_units, "bitmap");
-
-            /* Set up radsat bitmap information */
-            if (allocate_bitmap_metadata (&bmeta[ib], 12) != SUCCESS)
-            {
-                sprintf (errmsg, "Allocating radsat bitmap.");
-                error_handler (true, FUNC_NAME, errmsg);
-                return (NULL);
-            }
-
-            /* Identify the bitmap values for the mask */
-            strcpy (bmeta[ib].bitmap_description[0],
-                "Data Fill Flag (0 = valid data, 1 = invalid data)");
-            strcpy (bmeta[ib].bitmap_description[1],
-                "Band 1 Data Saturation Flag (0 = valid data, "
-                    "1 = saturated data)");
-            strcpy (bmeta[ib].bitmap_description[2],
-                "Band 2 Data Saturation Flag (0 = valid data, "
-                    "1 = saturated data)");
-            strcpy (bmeta[ib].bitmap_description[3],
-                "Band 3 Data Saturation Flag (0 = valid data, "
-                    "1 = saturated data)");
-            strcpy (bmeta[ib].bitmap_description[4],
-                "Band 4 Data Saturation Flag (0 = valid data, "
-                    "1 = saturated data)");
-            strcpy (bmeta[ib].bitmap_description[5],
-                "Band 5 Data Saturation Flag (0 = valid data, "
-                    "1 = saturated data)");
-            strcpy (bmeta[ib].bitmap_description[6],
-                "Band 6 Data Saturation Flag (0 = valid data, "
-                    "1 = saturated data)");
-            strcpy (bmeta[ib].bitmap_description[7],
-                "Band 7 Data Saturation Flag (0 = valid data, "
-                    "1 = saturated data)");
-            strcpy (bmeta[ib].bitmap_description[8], "N/A");
-            strcpy (bmeta[ib].bitmap_description[9],
-                "Band 9 Data Saturation Flag (0 = valid data, "
-                    "1 = saturated data)");
-            strcpy (bmeta[ib].bitmap_description[10],
-                "Band 10 Data Saturation Flag (0 = valid data, "
-                    "1 = saturated data)");
-            strcpy (bmeta[ib].bitmap_description[11],
-                "Band 11 Data Saturation Flag (0 = valid data, "
-                    "1 = saturated data)");
-        }
         else
         {
             bmeta[ib].data_type = ESPA_UINT16;
@@ -315,9 +251,9 @@ Output_t *open_output
             {
                 bmeta[ib].scale_factor = scale_refl;
                 bmeta[ib].valid_range[0] = 
-                    roundf ((MIN_VALID - offset_refl) * mult_refl);
+                    roundf ((MIN_VALID_REFL - offset_refl) * mult_refl);
                 bmeta[ib].valid_range[1] = 
-                    roundf ((MAX_VALID - offset_refl) * mult_refl);
+                    roundf ((MAX_VALID_REFL - offset_refl) * mult_refl);
                 bmeta[ib].add_offset = offset_refl;
             }
 
@@ -336,17 +272,11 @@ Output_t *open_output
                         ib+1);
                 }
             }
-            else if (ib == SR_BAND9)  /* cirrus band */
-            {  /* band 9 is only atmospherically corrected */
-                sprintf (bmeta[ib].name, "toa_band%d", ib+2);
-                sprintf (bmeta[ib].long_name, "band %d top-of-atmosphere "
-                    "reflectance", ib+2);
-            }
             else if (ib == SR_BAND10 || ib == SR_BAND11)  /* thermal bands */
             {
-                sprintf (bmeta[ib].name, "bt_band%d", ib+2);
+                sprintf (bmeta[ib].name, "bt_band%d", ib+3);
                 sprintf (bmeta[ib].long_name, "band %d top-of-atmosphere "
-                    "brightness temperature", ib+2);
+                    "brightness temperature", ib+3);
                 sprintf (bmeta[ib].data_units, "temperature (kelvin)");
             }
         }
@@ -354,7 +284,8 @@ Output_t *open_output
         /* Set up the filename with the scene name and band name and open the
            file for read/write access.  Don't open if this is OLI-only and
            these are the thermal bands. */
-        if ((ib != SR_BAND10 && ib != SR_BAND11) || output->inst != INST_OLI)
+        if ((ib != SR_BAND10 && ib != SR_BAND11) ||
+            output->inst != INST_OLI)
         {
             sprintf (bmeta[ib].file_name, "%s_%s.img", scene_name,
                 bmeta[ib].name);
@@ -395,7 +326,7 @@ NOTES:
 int close_output
 (
     Output_t *output,       /* I/O: Output data structure to close */
-    Myoutput_t output_type  /* I: are we processing TOA, SR, RADSAT outputs? */
+    Myoutput_t output_type  /* I: are we processing TOA, SR outputs? */
 )
 {
     char FUNC_NAME[] = "close_output";   /* function name */
@@ -415,7 +346,7 @@ int close_output
         if ((output_type == OUTPUT_TOA) && (ib == SR_AEROSOL))
             continue;
         else if ((output_type == OUTPUT_SR) &&
-            ((ib == SR_BAND9) || (ib == SR_BAND10) || (ib == SR_BAND11)))
+            ((ib == SR_BAND10) || (ib == SR_BAND11)))
             continue;
         else
         {
@@ -448,7 +379,7 @@ NOTES:
 int free_output
 (
     Output_t *output,       /* I/O: Output data structure to free */
-    Myoutput_t output_type  /* I: are we processing TOA, SR, RADSAT outputs? */
+    Myoutput_t output_type  /* I: are we processing TOA, SR outputs? */
 )
 {
     char FUNC_NAME[] = "free_output";   /* function name */
@@ -464,21 +395,13 @@ int free_output
   
     if (output != NULL)
     {
-        /* Free the bitmap data for the aerosol and radsat bands */
+        /* Free the bitmap data for the aerosol bands */
         if (output_type == OUTPUT_SR &&
             output->metadata.band[SR_AEROSOL].nbits > 0)
         {
             for (b = 0; b < output->metadata.band[SR_AEROSOL].nbits; b++)
                 free (output->metadata.band[SR_AEROSOL].bitmap_description[b]);
             free (output->metadata.band[SR_AEROSOL].bitmap_description);
-        }
-
-        if (output_type == OUTPUT_RADSAT &&
-            output->metadata.band[SR_RADSAT].nbits > 0)
-        {
-            for (b = 0; b < output->metadata.band[SR_RADSAT].nbits; b++)
-                free (output->metadata.band[SR_RADSAT].bitmap_description[b]);
-            free (output->metadata.band[SR_RADSAT].bitmap_description);
         }
 
         /* Free the band data */
@@ -574,4 +497,72 @@ int put_output_lines
     }
     
     return (SUCCESS);
+}
+
+
+/******************************************************************************
+MODULE:  convert_output
+
+PURPOSE: Applies a scale and offset to the input data and assigns the output
+         to an unsigned short array
+
+RETURN VALUE: none
+
+NOTES:
+******************************************************************************/
+void convert_output
+(
+    float **sband,      /* I: unscaled SR or TOA bands */
+    int band,           /* I: Band number to convert */
+    uint16 *out_band,   /* O: scaled output for the processed band */
+    int nlines,         /* I: number of lines */
+    int nsamps,         /* I: number of samples */
+    bool thermal        /* I: flag to specifiy if processing a thermal band */
+)
+{
+    int curr_pix;           /* pixel loop counter */
+    float tmpf;             /* scaled output value */
+    double min_value,       /* Minimum scaled value */
+           max_value;       /* Maximum scaled value */
+    float offset_value,     /* Offset to apply */
+          mult_value;       /* Scale value to apply */
+
+    /* Set valid ranges for thermal or reflective bands as appropriate */
+    if (thermal)
+    {
+        offset_value = get_offset_therm();
+        mult_value = get_mult_therm();
+        min_value = (MIN_VALID_TH - offset_value) * mult_value;
+        max_value = (MAX_VALID_TH - offset_value) * mult_value;
+    }
+    else
+    {
+        offset_value = get_offset_refl();
+        mult_value = get_mult_refl();
+        min_value = (MIN_VALID_REFL - offset_value) * mult_value;
+        max_value = (MAX_VALID_REFL- offset_value) * mult_value;
+    }
+    if (min_value < 0)
+        min_value = 0;
+    if (max_value > USHRT_MAX)
+       max_value = USHRT_MAX;
+
+    /* Scale and validate the output */
+    for (curr_pix = 0; curr_pix < (nlines * nsamps); curr_pix++)
+    {
+        if (sband[band][curr_pix] != FILL_VALUE)
+        {
+            tmpf = (sband[band][curr_pix] - offset_value) * mult_value;
+
+            /* Verify the value falls within the specified range */
+            if (tmpf < min_value)
+                out_band[curr_pix] = min_value;
+            else if (tmpf > max_value)
+                out_band[curr_pix] = max_value;
+            else
+                out_band[curr_pix] = roundf (tmpf);
+        }
+        else
+            out_band[curr_pix] = FILL_VALUE;
+    }
 }

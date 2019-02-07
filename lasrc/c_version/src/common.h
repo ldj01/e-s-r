@@ -56,18 +56,17 @@ typedef char byte;
    go with that for the array size. */
 #define NSR_BANDS 8
 
-/* L8 Level-1 products have 8 reflectance bands (bands 1-7, and 9),
-   2 thermal bands (band 10 and 11), 1 pan band (band 8), and 1 QA band
-   (band 12) */
-#define NBAND_REFL_MAX 8
+/* L8 Level-1 products have 7 reflectance bands (bands 1-7) that we are
+   interested in, 2 thermal bands (band 10 and 11), and 1 QA band (band 12) */
+#define NBAND_REFL_MAX 7
 #define NBAND_THM_MAX 2
-#define NBAND_PAN_MAX 1
+#define NBAND_PAN_MAX 0
 #define NBAND_QA_MAX 1
 #define NBAND_TTL_MAX (NBAND_REFL_MAX + NBAND_THM_MAX + NBAND_PAN_MAX + NBAND_QA_MAX)
 
-/* L8 surface reflectance products have 8 reflectance bands, 2 thermal bands, 
+/* L8 surface reflectance products have 7 reflectance bands, 2 thermal bands, 
    0 pan bands, and 1 QA band */
-#define NBAND_REFL_OUT 8
+#define NBAND_REFL_OUT 7
 #define NBAND_THM_OUT 2
 #define NBAND_PAN_OUT 0
 #define NBAND_QA_OUT 1
@@ -102,19 +101,13 @@ typedef char byte;
 /* Define the input products to be processed.  NOTE: DN_TTL should be the same
    as NBAND_TTL_MAX. */
 typedef enum {DN_BAND1=0, DN_BAND2, DN_BAND3, DN_BAND4, DN_BAND5, DN_BAND6,
-    DN_BAND7, DN_BAND8, DN_BAND9, DN_BAND10, DN_BAND11, DN_QA, DN_TTL}
+    DN_BAND7, DN_BAND10, DN_BAND11, DN_QA, DN_TTL}
     Mydn_band_t;
 
 /* Define the output products to be processed. NOTE: SR_TTL should be the same
    as NBAND_TTL_OUT */
 typedef enum {SR_BAND1=0, SR_BAND2, SR_BAND3, SR_BAND4, SR_BAND5, SR_BAND6,
-    SR_BAND7, SR_BAND9, SR_BAND10, SR_BAND11, SR_AEROSOL, SR_TTL} Mysr_band_t;
-
-/* Definte the RADSAT band */
-#define SR_RADSAT 0
-
-/* High confidence Level-1 QA values */
-#define L1QA_HIGH_CONF 3
+    SR_BAND7, SR_BAND10, SR_BAND11, SR_AEROSOL, SR_TTL} Mysr_band_t;
 
 /* Bit values of ipflag (interpolation flag) QA, which includes aerosol
    levels */

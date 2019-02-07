@@ -54,7 +54,7 @@ void atmcorlamb2_new
     float ttatmg;          /* total atmospheric transmission */
     float satm;            /* spherical albedo */
 
-    /* Modifiy the AOT value based on the angstroem coefficient and lambda
+    /* Modify the AOT value based on the angstroem coefficient and lambda
        values */
     if  (eps < 0.0 || iband > DN_BAND7)
         mraot550nm = raot550nm;
@@ -211,8 +211,6 @@ NOTES:
 static void comptg
 (
     int iband,                   /* I: band index (0-based) */
-    float xts,                   /* I: solar zenith angle */
-    float xtv,                   /* I: view zenith angle */
     float xmus,                  /* I: cosine of solar zenith angle */
     float xmuv,                  /* I: cosine of view zenith angle */
     float uoz,                   /* I: total column ozone */
@@ -791,7 +789,7 @@ int atmcorlamb2
                             4.0, 4.0, 4.0, 4.0, 4.0, 4.0, 4.0, 4.0};
     static const float lambda_sf = 1/0.55; /* lambda scale factor */
 
-    /* Modifiy the AOT value based on the angstroem coefficient and lambda
+    /* Modify the AOT value based on the angstroem coefficient and lambda
        values */
     if  (eps < 0.0)
         mraot550nm = raot550nm;
@@ -870,7 +868,7 @@ int atmcorlamb2
         sphalbt, normext, satm, next);
 
     atm_pres = pres * ONE_DIV_ATMOS_PRES_0;
-    comptg (iband, xts, xtv, xmus, xmuv, uoz, uwv, atm_pres, ogtransa1,
+    comptg (iband, xmus, xmuv, uoz, uwv, atm_pres, ogtransa1,
         ogtransb0, ogtransb1, wvtransa, wvtransb, oztransa, &tgoz, &tgwv,
         &tgwvhalf, &tgog);
 
@@ -1556,14 +1554,10 @@ int memory_allocation_main
     int nlines,          /* I: number of lines in the scene */
     int nsamps,          /* I: number of samples in the scene */
     int16 **sza,         /* O: solar zenith angle, nlines x nsamps  */
-    int16 **saa,         /* O: solar azimuth angle table, nlines x nsamps */
-    int16 **vza,         /* O: view zenith angle, nlines x nsamps  */
-    int16 **vaa,         /* O: view azimuth angle table, nlines x nsamps */
     uint16 **qaband,     /* O: QA band for the input image, nlines x nsamps */
-    uint16 **radsat,     /* O: radiometric saturation band for the input image,
-                               nlines x nsamps */
-    uint16 ***sband      /* O: output surface reflectance and brightness temp
+    float ***sband,      /* O: output surface reflectance and brightness temp
                                bands */
+    uint16 **out_band    /* O: scaled output, nlines x nsamps */
 )
 {
     char FUNC_NAME[] = "memory_allocation_main"; /* function name */
@@ -1579,30 +1573,6 @@ int memory_allocation_main
         return (ERROR);
     }
 
-    *saa = malloc(npixels * sizeof(int16));
-    if (*saa == NULL)
-    {
-        sprintf (errmsg, "Error allocating memory for saa");
-        error_handler (true, FUNC_NAME, errmsg);
-        return (ERROR);
-    }
-
-    *vza = malloc(npixels * sizeof(int16));
-    if (*vza == NULL)
-    {
-        sprintf (errmsg, "Error allocating memory for vza");
-        error_handler (true, FUNC_NAME, errmsg);
-        return (ERROR);
-    }
-
-    *vaa = malloc(npixels * sizeof(int16));
-    if (*vaa == NULL)
-    {
-        sprintf (errmsg, "Error allocating memory for vaa");
-        error_handler (true, FUNC_NAME, errmsg);
-        return (ERROR);
-    }
-
     *qaband = malloc(npixels * sizeof(uint16));
     if (*qaband == NULL)
     {
@@ -1611,17 +1581,17 @@ int memory_allocation_main
         return (ERROR);
     }
 
-    *radsat = malloc(npixels * sizeof(uint16));
-    if (*radsat == NULL)
+    *out_band = malloc(npixels * sizeof(uint16));
+    if (*out_band == NULL)
     {
-        sprintf (errmsg, "Error allocating memory for radsat");
+        sprintf (errmsg, "Error allocating memory for out_band");
         error_handler (true, FUNC_NAME, errmsg);
         return (ERROR);
     }
 
     /* Given that the QA band is its own separate array of uint16s, we need
        one less band for the signed image data */
-    *sband = malloc((NBAND_TTL_OUT - 1) * sizeof(uint16*));
+    *sband = malloc((NBAND_TTL_OUT - 1) * sizeof(float*));
     if (*sband == NULL)
     {
         sprintf (errmsg, "Error allocating memory for sband");
@@ -1630,7 +1600,7 @@ int memory_allocation_main
     }
     for (i = 0; i < NBAND_TTL_OUT-1; i++)
     {
-        (*sband)[i] = malloc(npixels * sizeof(uint16));
+        (*sband)[i] = malloc(npixels * sizeof(float));
         if ((*sband)[i] == NULL)
         {
             sprintf (errmsg, "Error allocating memory for sband");
@@ -1667,15 +1637,15 @@ int memory_allocation_sr
 (
     int nlines,          /* I: number of lines in the scene */
     int nsamps,          /* I: number of samples in the scene */
-    uint16 **aerob1,     /* O: atmospherically corrected band 1 data
+    float **aerob1,      /* O: atmospherically corrected band 1 data
                                (TOA refl), nlines x nsamps */
-    uint16 **aerob2,     /* O: atmospherically corrected band 2 data
+    float **aerob2,      /* O: atmospherically corrected band 2 data
                                (TOA refl), nlines x nsamps */
-    uint16 **aerob4,     /* O: atmospherically corrected band 4 data
+    float **aerob4,      /* O: atmospherically corrected band 4 data
                                (TOA refl), nlines x nsamps */
-    uint16 **aerob5,     /* O: atmospherically corrected band 5 data
+    float **aerob5,      /* O: atmospherically corrected band 5 data
                                (TOA refl), nlines x nsamps */
-    uint16 **aerob7,      /* O: atmospherically corrected band 7 data
+    float **aerob7,      /* O: atmospherically corrected band 7 data
                                (TOA refl), nlines x nsamps */
     uint8 **ipflag,      /* O: QA flag to assist with aerosol interpolation,
                                nlines x nsamps */
@@ -1713,15 +1683,16 @@ int memory_allocation_sr
                                [NVIEW_ZEN_VALS x NSOLAR_ZEN_VALS] */
     float **nbfi,        /* O: number of azimuth angles
                                [NVIEW_ZEN_VALS x NSOLAR_ZEN_VALS] */
-    float **ttv          /* O: view angle table
+    float **ttv,         /* O: view angle table
                                [NVIEW_ZEN_VALS x NSOLAR_ZEN_VALS] */
+    uint16 **out_band    /* O: scaled output, nlines x nsamps */
 )
 {
     char FUNC_NAME[] = "memory_allocation_sr"; /* function name */
     char errmsg[STR_SIZE];   /* error message */
     int npixels = nlines*nsamps;
 
-    *aerob1 = malloc(npixels * sizeof(uint16));
+    *aerob1 = malloc(npixels * sizeof(float));
     if (*aerob1 == NULL)
     {
         sprintf (errmsg, "Error allocating memory for aerob1");
@@ -1729,7 +1700,7 @@ int memory_allocation_sr
         return (ERROR);
     }
 
-    *aerob2 = malloc(npixels * sizeof(uint16));
+    *aerob2 = malloc(npixels * sizeof(float));
     if (*aerob2 == NULL)
     {
         sprintf (errmsg, "Error allocating memory for aerob2");
@@ -1737,7 +1708,7 @@ int memory_allocation_sr
         return (ERROR);
     }
 
-    *aerob4 = malloc(npixels * sizeof(uint16));
+    *aerob4 = malloc(npixels * sizeof(float));
     if (*aerob4 == NULL)
     {
         sprintf (errmsg, "Error allocating memory for aerob4");
@@ -1745,7 +1716,7 @@ int memory_allocation_sr
         return (ERROR);
     }
 
-    *aerob5 = malloc(npixels * sizeof(uint16));
+    *aerob5 = malloc(npixels * sizeof(float));
     if (*aerob5 == NULL)
     {
         sprintf (errmsg, "Error allocating memory for aerob5");
@@ -1753,7 +1724,7 @@ int memory_allocation_sr
         return (ERROR);
     }
 
-    *aerob7 = malloc(npixels * sizeof(uint16));
+    *aerob7 = malloc(npixels * sizeof(float));
     if (*aerob7 == NULL)
     {
         sprintf (errmsg, "Error allocating memory for aerob7");
@@ -1969,6 +1940,14 @@ int memory_allocation_sr
     if (*ttv == NULL)
     {
         sprintf (errmsg, "Error allocating memory for ttv");
+        error_handler (true, FUNC_NAME, errmsg);
+        return (ERROR);
+    }
+
+    *out_band = malloc(npixels * sizeof(uint16));
+    if (*out_band == NULL)
+    {
+        sprintf (errmsg, "Error allocating memory for out_band");
         error_handler (true, FUNC_NAME, errmsg);
         return (ERROR);
     }

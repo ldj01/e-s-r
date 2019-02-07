@@ -1,4 +1,4 @@
-#! /usr/bin/env python
+#! /usr/bin/env python3
 from numpy import *
 from osgeo import gdal
 from osgeo import ogr
@@ -8,7 +8,6 @@ from osgeo import gdalconst
 from gdalconst import *
 import sys
 import os
-import commands
 import datetime
 import logging
 from optparse import OptionParser

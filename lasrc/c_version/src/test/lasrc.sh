@@ -11,18 +11,16 @@ if [ "$#" -ne 1 ]; then
 fi
 bin_dir=$1
 
-data_files=(${LEVEL2_UNIT_TEST_DATA}/espa-surface-reflectance/lasrc_ref/*)
-input_dir=$LEVEL2_UNIT_TEST_DATA/espa-surface-reflectance/input_l8
 
 rm -rf lasrc
 mkdir lasrc && cd lasrc
 
-cp $input_dir/*.img .
-cp $input_dir/*.hdr .
+ln -s $input_dir/*.img .
+ln -s $input_dir/*.hdr .
+cp $input_dir/*.xml .
+chmod u+w *.xml
 
-sed -e s%LEVEL2_UNIT_TEST_DATA%${LEVEL2_UNIT_TEST_DATA}% \
-    ${input_dir}/${base_scene}.xml > ${base_scene}.xml
-$bin_dir/lasrc --xml=${base_scene}.xml --aux=${aux_file}
+$bin_dir/lasrc --xml=${base_scene}.xml --aux=${aux_file} --num_threads 6
 if [ $? -ne 0 ]; then
     echo "Error: lasrc processing failed."
     exit 1
@@ -33,12 +31,27 @@ status=0
 for i in "${data_files[@]}"; do
     base_name=`basename $i`
 
-    echo "Comparing $base_name..."
+    echo "Comparing $base_name... "
 
+    if [ ! -f $base_name ]; then
+        echo "Warn ${base_name} does not exist."
+        continue;
+    fi
+
+    # For the XML file, ignore the records that vary from one run to the next.
     # If the file is an ASCII header file, use diff.  Otherwise, assume it's
     # a binary file, and use cmp to dump the octal differences.
     ext="${i##*.}"
-    if [ "$ext" = "hdr" ]; then
+    if [ "$ext" = "xml" ]; then
+        sed -e 's%<production_date>.*<%<production_date><%' $i > tmp1.xml
+        sed -e 's%<production_date>.*<%<production_date><%' $base_name > \
+                                                                      tmp2.xml
+        diff tmp1.xml tmp2.xml
+        if [ $? -ne 0 ]; then
+            echo "${base_name} differs from reference version."
+            status=1
+        fi
+    elif [ "$ext" = "hdr" ]; then
         diff $i $base_name
         if [ $? -ne 0 ]; then
             echo "${base_name} differs from reference version."
@@ -55,7 +68,7 @@ for i in "${data_files[@]}"; do
         fi
         numdiffs=`compare -metric AE -depth $depth -size ${samples}x${lines} \
                       gray:$i gray:${base_name} null: 2>&1`
-        if [ $numdiffs != "0" ]; then
+        if [ "x$numdiffs" != "x0" ]; then
             echo "${base_name} differs from reference version in $numdiffs " \
                  "pixels."
             status=1

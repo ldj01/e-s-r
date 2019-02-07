@@ -103,6 +103,12 @@ Input_t *OpenInput(Espa_internal_meta_t *metadata)
       error_string = "opening solar zenith representative band binary file";
     else
       this->open_sun_zen = true;
+
+    this->fp_bin_band_qa = fopen(this->file_name_band_qa, "r");
+    if (this->fp_bin_band_qa == NULL)
+      error_string = "opening QA band binary file";
+    else
+      this->open_band_qa = true;
   } else 
     error_string = "invalid file type";
 
@@ -184,6 +190,31 @@ bool GetInputLineTh(Input_t *this, int iline, unsigned char *line)
   return true;
 }
 
+bool GetInputLineQA(Input_t *this, int iline, uint16_t *line)
+{
+  long loc;
+  void *buf_void = NULL;
+
+  if (this == NULL)
+    RETURN_ERROR("invalid input structure", "GetInputLineQA", false);
+  if (iline < 0  ||  iline >= this->size.l)
+    RETURN_ERROR("line index out of range", "GetInputLineQA", false);
+  if (!this->open_band_qa)
+    RETURN_ERROR("band not open", "GetInputLineQA", false);
+
+  buf_void = (void *)line;
+  if (this->file_type == INPUT_TYPE_BINARY) {
+    loc = (long) (iline * this->size.s * sizeof(uint16_t));
+    if (fseek(this->fp_bin_band_qa, loc, SEEK_SET))
+      RETURN_ERROR("error seeking line (binary)", "GetInputLineQA", false);
+    if (fread(buf_void, sizeof(uint16_t), (size_t)this->size.s,
+              this->fp_bin_band_qa) != (size_t)this->size.s)
+      RETURN_ERROR("error reading line (binary)", "GetInputLineQA", false);
+  }
+
+  return true;
+}
+
 bool GetInputLineSunZen(Input_t *this, int iline, int16 *line)
 {
   long loc;
@@ -259,6 +290,11 @@ bool CloseInput(Input_t *this)
       fclose(this->fp_bin_sun_zen);
     this->open_sun_zen = false;
   }
+  if (this->open_band_qa) {
+    if (this->file_type == INPUT_TYPE_BINARY)
+      fclose(this->fp_bin_band_qa);
+    this->open_band_qa = false;
+  }
 
   if (none_open)
     RETURN_ERROR("no files open", "CloseInput", false);
@@ -303,44 +339,6 @@ bool FreeInput(Input_t *this)
     this = NULL;
   }
 
-  return true;
-}
-
-bool InputMetaCopy(Input_meta_t *this, int nband, Input_meta_t *copy) 
-{
-  int ib;
-
-  if (this == NULL) 
-    RETURN_ERROR("invalid input structure", "InputMetaCopy", false);
-
-  copy->sat = this->sat;
-  copy->inst = this->inst;
-  if (!DateCopy(&this->acq_date, &copy->acq_date)) 
-    RETURN_ERROR("copying acquisition date/time", "InputMetaCopy", false);
-  if (!DateCopy(&this->prod_date, &copy->prod_date)) 
-    RETURN_ERROR("copying production date/time", "InputMetaCopy", false);
-  copy->time_fill = this->time_fill;
-  copy->sun_zen = this->sun_zen;
-  copy->sun_az = this->sun_az;
-  copy->earth_sun_dist = this->earth_sun_dist;
-  copy->wrs_sys = this->wrs_sys;
-  copy->ipath = this->ipath;
-  copy->irow = this->irow;
-  copy->fill = this->fill;
-
-  copy->iband_th = this->iband_th;
-  for (ib = 0; ib < nband; ib++) {
-    copy->iband[ib] = this->iband[ib];
-    copy->rad_gain[ib] = this->rad_gain[ib];
-    copy->rad_bias[ib] = this->rad_bias[ib];
-    copy->refl_gain[ib] = this->refl_gain[ib];
-    copy->refl_bias[ib] = this->refl_bias[ib];
-  }
-  copy->rad_gain_th = this->rad_gain_th;
-  copy->rad_bias_th = this->rad_bias_th;
-  copy->k1_const = this->k1_const;
-  copy->k2_const = this->k2_const;
-  copy->use_toa_refl_consts = this->use_toa_refl_consts;
   return true;
 }
 
@@ -395,6 +393,8 @@ bool GetXMLInput(Input_t *this, Espa_internal_meta_t *metadata)
     this->meta.prod_date.fill = true;
     this->meta.sun_zen = ANGLE_FILL;
     this->meta.sun_az = ANGLE_FILL;
+    this->meta.szen_scale = 1.0;
+    this->meta.szen_offset = 0.0;
     this->meta.wrs_sys = (Wrs_t)WRS_FILL;
     this->meta.ipath = -1;
     this->meta.irow = -1;
@@ -424,6 +424,10 @@ bool GetXMLInput(Input_t *this, Espa_internal_meta_t *metadata)
     this->open_sun_zen = false;
     this->file_name_sun_zen = NULL;
     this->fp_bin_sun_zen = NULL;
+
+    this->open_band_qa = false;
+    this->file_name_band_qa = NULL;
+    this->fp_bin_band_qa = NULL;
 
     /* Pull the appropriate data from the XML file */
     acq_date[0] = acq_time[0] = '\0';
@@ -650,6 +654,15 @@ bool GetXMLInput(Input_t *this, Espa_internal_meta_t *metadata)
         {
             /* get the solar zenith representative band info */
             this->file_name_sun_zen = strdup (metadata->band[i].file_name);
+            if (metadata->band[i].scale_factor != ESPA_FLOAT_META_FILL)
+                this->meta.szen_scale = metadata->band[i].scale_factor;
+            if (metadata->band[i].add_offset != ESPA_FLOAT_META_FILL)
+                this->meta.szen_offset = metadata->band[i].add_offset;
+        }
+        else if (!strcmp (metadata->band[i].name, "bqa_pixel"))
+        {
+            /* get the L1 qa band file */
+            this->file_name_band_qa = strdup (metadata->band[i].file_name);
         }
     }  /* for i */
 
@@ -663,6 +676,14 @@ bool GetXMLInput(Input_t *this, Espa_internal_meta_t *metadata)
     if (this->file_name_sun_zen == NULL)
     {
         sprintf (temp, "Representative band for the solar zenith data was "
+            "not found in the XML file.");
+        RETURN_ERROR (temp, "GetXMLInput", false);
+    }
+
+    /* Make sure the L1 QA band was found */
+    if (this->file_name_band_qa == NULL)
+    {
+        sprintf (temp, "Representative band for the QA data was "
             "not found in the XML file.");
         RETURN_ERROR (temp, "GetXMLInput", false);
     }
@@ -716,18 +737,18 @@ bool GetXMLInput(Input_t *this, Espa_internal_meta_t *metadata)
             this->meta.sat != SAT_LANDSAT_3 &&
             this->meta.sat != SAT_LANDSAT_4 &&
             this->meta.sat != SAT_LANDSAT_5)
-            error_string = "invalid insturment/satellite combination";
+            error_string = "invalid instrument/satellite combination";
     }
     else if (this->meta.inst == INST_TM)
     {
         if (this->meta.sat != SAT_LANDSAT_4 &&
             this->meta.sat != SAT_LANDSAT_5)
-            error_string = "invalid insturment/satellite combination";
+            error_string = "invalid instrument/satellite combination";
     }
     else if (this->meta.inst == INST_ETM)
     {
         if (this->meta.sat != SAT_LANDSAT_7)
-            error_string = "invalid insturment/satellite combination";
+            error_string = "invalid instrument/satellite combination";
     }
     else
         error_string = "invalid instrument type";

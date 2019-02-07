@@ -11,6 +11,8 @@ if [ "$#" -ne 1 ]; then
 fi
 bin_dir=$1
 
+data_files=(${ESPA_UNIT_TEST_DATA_DIR}/espa-surface-reflectance/lasrc_ref/*)
+input_dir=$ESPA_UNIT_TEST_DATA_DIR/espa-surface-reflectance/input_l8
 
 rm -rf lasrc
 mkdir lasrc && cd lasrc

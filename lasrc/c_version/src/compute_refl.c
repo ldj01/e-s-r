@@ -1578,7 +1578,18 @@ int compute_sr_refl
             residual3 = residual;
             sraot3 = raot;
 
-            /* Find the eps that minimizes the residual */
+            /* Find the eps that minimizes the residual.  This is performed
+               by applying a parabolic (quadratic) fit to the three
+               (epsilon, residual) pairs found above:
+                   r = a\eps^2 + b\eps + c
+               The minimum occurs where the first derivative is zero:
+                   r' = 2a\eps + b = 0
+                   \eps_min = -b/2a
+
+               The a and b coefficients are solved for in the three
+               r (residual) equations by eliminating c:
+                   r_1 - r_3 = a(\eps_1^2 - \eps_3^2) + b(\eps_1 - \eps_3)
+                   r_2 - r_3 = a(\eps_2^2 - \eps_3^2) + b(\eps_2 - \eps_3) */
             xa = (residual1 - residual3)*(eps2 - eps3);
             xb = (residual2 - residual3)*(eps1 - eps3);
             epsmin = 0.5*(xa*(eps2 + eps3) - xb*(eps1 + eps3))/(xa - xb);

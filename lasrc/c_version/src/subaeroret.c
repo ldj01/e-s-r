@@ -176,7 +176,17 @@ void subaeroret_new
     }
     else
     {
-        /* Refine the AOT ratio */
+        /* Refine the AOT ratio.  This is performed by applying a parabolic
+           (quadratic) fit to the three (raot, residual) pairs found above:
+                   res = a(raot)^2 + b(raot) + c
+               The minimum occurs where the first derivative is zero:
+                   res' = 2a(raot) + b = 0
+                   raot_min = -b/2a
+
+               The a and b coefficients are solved for in the three
+               residual equations by eliminating c:
+                   r_1 - r = a(raot_1^2 - raot^2) + b(raot_1 - raot)
+                   r_2 - r = a(raot_2^2 - raot^2) + b(raot_2 - raot) */
         *raot = raot550nm;
         raotsaved = *raot;
         xa = (residual1 - *residual)*(raot2 - *raot);

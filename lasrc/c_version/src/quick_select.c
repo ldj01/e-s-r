@@ -30,7 +30,7 @@ at the USGS EROS
 
 NOTES:
 ******************************************************************************/
-void swap
+static inline void swap
 (
     float *x,   /* I/O: first value to swap */
     float *y    /* I/O: second value to swap */

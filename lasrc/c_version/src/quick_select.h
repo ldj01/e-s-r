@@ -6,12 +6,6 @@
 #include <stdint.h>
 #include <string.h>
 
-void swap
-(
-    float *x,   /* I/O: first value to swap */
-    float *y    /* I/O: second value to swap */
-);
-
 float quick_select
 (
     float *arr,  /* I/O: input floating point array to be sorted; output

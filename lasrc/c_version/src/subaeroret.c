@@ -62,8 +62,7 @@ void subaeroret_new
     double residualm;       /* local model residual */
     int nbval;              /* number of values meeting criteria */
     bool testth;            /* surface reflectance test variable */
-    double xa, xb, xc, xd, xe, xf;  /* AOT ratio values */
-    double coefa, coefb;    /* AOT ratio coefficients */
+    double xa, xb;          /* AOT ratio values */
     double raotmin;         /* minimum AOT ratio */
     int iaot1, iaot2;       /* AOT indices (0-based) */
     float tth[NSR_BANDS] = {1.0e-03, 1.0e-03, 0.0, 1.0e-03, 0.0, 0.0, 1.0e-04,
@@ -102,7 +101,7 @@ void subaeroret_new
     for (ib = DN_BAND1; ib <= DN_BAND7; ib++)
     {
         /* Don't reprocess iband1 */
-        if ((erelc[ib] > 0.0) && (ib != iband1))
+        if (ib != iband1 && erelc[ib] > 0.0)
         {
             atmcorlamb2_new (tgo_arr[ib], xrorayp_arr[ib],
                 aot550nm[roatm_iaMax[ib]], &roatm_coef[ib][0],
@@ -111,8 +110,8 @@ void subaeroret_new
 
             if (roslamb - tth[ib] < 0.0)
                 testth = true;
-            *residual += (roslamb - erelc[ib] * ros1) *
-                         (roslamb - erelc[ib] * ros1);
+            double point_error = roslamb - erelc[ib]*ros1;
+            *residual += point_error*point_error;
             nbval++;
         }
     }
@@ -149,7 +148,7 @@ void subaeroret_new
         for (ib = DN_BAND1; ib <= DN_BAND7; ib++)
         {
             /* Don't reprocess iband1 */
-            if ((erelc[ib] > 0.0) && (ib != iband1))
+            if (ib != iband1 && erelc[ib] > 0.0)
             {
                 atmcorlamb2_new (tgo_arr[ib], xrorayp_arr[ib],
                     aot550nm[roatm_iaMax[ib]], &roatm_coef[ib][0],
@@ -158,8 +157,8 @@ void subaeroret_new
 
                 if (roslamb - tth[ib] < 0.0)
                     testth = true;
-                *residual += (roslamb - erelc[ib] * ros1) *
-                             (roslamb - erelc[ib] * ros1);
+                double point_error = roslamb - erelc[ib]*ros1;
+                *residual += point_error*point_error;
                 nbval++;
             }
         }
@@ -177,18 +176,22 @@ void subaeroret_new
     }
     else
     {
-        /* Refine the AOT ratio */
+        /* Refine the AOT ratio.  This is performed by applying a parabolic
+           (quadratic) fit to the three (raot, residual) pairs found above:
+                   res = a(raot)^2 + b(raot) + c
+               The minimum occurs where the first derivative is zero:
+                   res' = 2a(raot) + b = 0
+                   raot_min = -b/2a
+
+               The a and b coefficients are solved for in the three
+               residual equations by eliminating c:
+                   r_1 - r = a(raot_1^2 - raot^2) + b(raot_1 - raot)
+                   r_2 - r = a(raot_2^2 - raot^2) + b(raot_2 - raot) */
         *raot = raot550nm;
         raotsaved = *raot;
-        xa = (raot1 * raot1) - (*raot * *raot);
-        xd = (raot2 * raot2) - (*raot * *raot);
-        xb = raot1 - *raot;
-        xe = raot2 - *raot;
-        xc = residual1 - *residual;
-        xf = residual2 - *residual;
-        coefa = (xc * xe - xb * xf) / (xa * xe - xb * xd);
-        coefb = (xa * xf - xc * xd) / (xa * xe - xb * xd);
-        raotmin = -coefb / (2.0 * coefa);
+        xa = (residual1 - *residual)*(raot2 - *raot);
+        xb = (residual2 - *residual)*(raot1 - *raot);
+        raotmin = 0.5*(xa*(raot2 + *raot) - xb*(raot1 + *raot))/(xa - xb);
 
         /* Validate the min AOT ratio */
         if (raotmin < 0.01 || raotmin > 4.0)
@@ -213,7 +216,7 @@ void subaeroret_new
         for (ib = DN_BAND1; ib <= DN_BAND7; ib++)
         {
             /* Don't reprocess iband1 */
-            if ((erelc[ib] > 0.0) && (ib != iband1))
+            if (ib != iband1 && erelc[ib] > 0.0)
             {
                 atmcorlamb2_new (tgo_arr[ib], xrorayp_arr[ib],
                     aot550nm[roatm_iaMax[ib]], &roatm_coef[ib][0],
@@ -222,8 +225,8 @@ void subaeroret_new
 
                 if (roslamb - tth[ib] < 0.0)
                     testth = true;
-                residualm += (roslamb - erelc[ib] * ros1) *
-                             (roslamb - erelc[ib] * ros1);
+                double point_error = roslamb - erelc[ib]*ros1;
+                residualm += point_error*point_error;
                 nbval++;
             }
         }
@@ -349,8 +352,7 @@ int subaeroret
     double residualm;       /* local model residual */
     int nbval;              /* number of values meeting criteria */
     bool testth;            /* surface reflectance test variable */
-    double xa, xb, xc, xd, xe, xf;  /* AOT ratio values */
-    double coefa, coefb;    /* AOT ratio coefficients */
+    double xa, xb;          /* AOT ratio values */
     double raotmin;         /* minimum AOT ratio */
     int iaot1, iaot2;       /* AOT indices (0-based) */
     float tth[NSR_BANDS] = {1.0e-03, 1.0e-03, 0.0, 1.0e-03, 0.0, 0.0, 1.0e-04,
@@ -396,7 +398,7 @@ int subaeroret
     for (ib = DN_BAND1; ib <= DN_BAND7; ib++)
     {
         /* Don't reprocess iband1 */
-        if ((erelc[ib] > 0.0) && (ib != iband1))
+        if (ib != iband1 && erelc[ib] > 0.0)
         {
             retval = atmcorlamb2 (xts, xtv, xmus, xmuv, xfi, cosxfi, raot550nm,
                 ib, pres, tpres, aot550nm, rolutt, transt, xtsstep, xtsmin,
@@ -414,8 +416,8 @@ int subaeroret
 
             if (roslamb - tth[ib] < 0.0)
                 testth = true;
-            *residual += (roslamb - erelc[ib] * ros1) *
-                         (roslamb - erelc[ib] * ros1);
+            double point_error = roslamb - erelc[ib]*ros1;
+            *residual += point_error*point_error;
             nbval++;
         }
     }
@@ -461,7 +463,7 @@ int subaeroret
         for (ib = DN_BAND1; ib <= DN_BAND7; ib++)
         {
             /* Don't reprocess iband1 */
-            if ((erelc[ib] > 0.0) && (ib != iband1))
+            if (ib != iband1 && erelc[ib] > 0.0)
             {
                 retval = atmcorlamb2 (xts, xtv, xmus, xmuv, xfi, cosxfi,
                     raot550nm, ib, pres, tpres, aot550nm, rolutt, transt,
@@ -480,8 +482,8 @@ int subaeroret
     
                 if (roslamb - tth[ib] < 0.0)
                     testth = true;
-                *residual += (roslamb - erelc[ib] * ros1) *
-                             (roslamb - erelc[ib] * ros1);
+                double point_error = roslamb - erelc[ib]*ros1;
+                *residual += point_error*point_error;
                 nbval++;
             }
         }
@@ -502,15 +504,9 @@ int subaeroret
         /* Refine the AOT ratio */
         *raot = raot550nm;
         raotsaved = *raot;
-        xa = (raot1 * raot1) - (*raot * *raot);
-        xd = (raot2 * raot2) - (*raot * *raot);
-        xb = raot1 - *raot;
-        xe = raot2 - *raot;
-        xc = residual1 - *residual;
-        xf = residual2 - *residual;
-        coefa = (xc * xe - xb * xf) / (xa * xe - xb * xd);
-        coefb = (xa * xf - xc * xd) / (xa * xe - xb * xd);
-        raotmin = -coefb / (2.0 * coefa);
+        xa = (residual1 - *residual)*(raot2 - *raot);
+        xb = (residual2 - *residual)*(raot1 - *raot);
+        raotmin = 0.5*(xa*(raot2 + *raot) - xb*(raot1 + *raot))/(xa - xb);
 
         /* Validate the min AOT ratio */
         if (raotmin < 0.01 || raotmin > 4.0)
@@ -544,7 +540,7 @@ int subaeroret
         for (ib = DN_BAND1; ib <= DN_BAND7; ib++)
         {
             /* Don't reprocess iband1 */
-            if ((erelc[ib] > 0.0) && (ib != iband1))
+            if (ib != iband1 && erelc[ib] > 0.0)
             {
                 retval = atmcorlamb2 (xts, xtv, xmus, xmuv, xfi, cosxfi,
                     raot550nm, ib, pres, tpres, aot550nm, rolutt, transt,
@@ -563,8 +559,8 @@ int subaeroret
 
                 if (roslamb - tth[ib] < 0.0)
                     testth = true;
-                residualm += (roslamb - erelc[ib] * ros1) *
-                             (roslamb - erelc[ib] * ros1);
+                double point_error = roslamb - erelc[ib]*ros1;
+                residualm += point_error*point_error;
                 nbval++;
             }
         }

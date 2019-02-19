@@ -45,8 +45,10 @@ typedef char byte;
 #define DEG2RAD 0.017453293
 #define RAD2DEG 57.29577951
 
+#define ATMOS_PRES_0 1013.0 /* mean atmospheric pressure (mbar) at sea level */
+
 /* For divisions - to minimize processing time */
-#define ONE_DIV_1013 0.000987166
+#define ONE_DIV_ATMOS_PRES_0 0.000987166
 #define ONE_DIV_8500 0.000117647
 
 /* Number of bands corrected to surface reflectance (bands 1-7).  The
@@ -126,24 +128,21 @@ typedef enum {
    supported if needed */
 typedef enum {
   SAT_NULL = -1,
-  SAT_LANDSAT_8 = 0, 
-  SAT_MAX
+  SAT_LANDSAT_8 = 0
 } Sat_t;
 
 /* Instrument type definition */
 typedef enum {
   INST_NULL = -1,
   INST_OLI_TIRS = 0, 
-  INST_OLI, 
-  INST_MAX
+  INST_OLI
 } Inst_t;
 
 /* World Reference System (WRS) type definition */
 typedef enum {
   WRS_NULL = -1,
   WRS_1 = 0, 
-  WRS_2,
-  WRS_MAX
+  WRS_2
 } Wrs_t;
 
 typedef struct {

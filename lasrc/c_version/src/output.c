@@ -58,8 +58,8 @@ Output_t *open_output
     double offset_refl;   /* add offset for reflective bands */
     double scale_therm;   /* scale for thermal bands */
     double offset_therm;  /* add offset for thermal bands */
-    double mult_refl;     /* scale_refl inverse */
-    double mult_therm;    /* scale_therm inverse */
+    double mult_refl;     /* output reflective scale factor */
+    double mult_therm;    /* output thermal scale factor */
 
     /* Create the Output data structure */
     output = (Output_t *) malloc (sizeof (Output_t));
@@ -499,39 +499,6 @@ int put_output_lines
     return (SUCCESS);
 }
 
-
-/******************************************************************************
-MODULE:  upper_case_str
-
-PURPOSE:  Returns the upper case version of the input string.
-
-RETURN VALUE:
-Type = char *
-Value      Description
------      -----------
-up_str     Upper case version of the input string
-
-NOTES:
-******************************************************************************/
-char *upper_case_str
-(
-    char *str    /* I: string to be converted to upper case */
-)
-{
-    char *up_str = NULL;    /* upper case version of the input string */
-    char *ptr = NULL;       /* pointer to the upper case string */
-
-    up_str = strdup (str);
-    ptr = up_str;
-    while (*ptr != '\0')
-    {
-        if (islower (*ptr))
-            *ptr = toupper (*ptr);
-        ptr++;
-    }
-
-    return up_str;
-}
 
 /******************************************************************************
 MODULE:  convert_output

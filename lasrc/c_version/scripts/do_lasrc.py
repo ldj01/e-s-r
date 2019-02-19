@@ -225,12 +225,16 @@ class SurfaceReflectance():
         if num_threads is not None:
             num_threads_opt_str = '--num_threads={} '.format(num_threads)
 
-        cmdstr = ('lasrc --xml={} --aux={} {}{}{}{}{}{}{}{}'
-                  .format(xml_infile, aux_file, process_sr_opt_str,
-                          write_toa_opt_str, verbose_opt_str,
-                          scale_refl_opt_str, scale_therm_opt_str,
-                          offset_refl_opt_str, offset_therm_opt_str,
-                          num_threads_opt_str))
+        cmdstr = ('lasrc --xml={XML} --aux={AUX} '
+                  '{SR}{TOA}{VERB}{SCALE_REF}{SCALE_THERM}{OFFSET_REF}'
+                  '{OFFSET_THERM}{NUM_THREADS}'
+                  .format(XML=xml_infile, AUX=aux_file, SR=process_sr_opt_str,
+                          TOA=write_toa_opt_str, VERB=verbose_opt_str,
+                          SCALE_REF=scale_refl_opt_str,
+                          SCALE_THERM=scale_therm_opt_str,
+                          OFFSET_REF=offset_refl_opt_str,
+                          OFFSET_THERM=offset_therm_opt_str,
+                          NUM_THREADS=num_threads_opt_str))
         msg = 'Executing lasrc command: {}'.format(cmdstr)
         logger.debug (msg)
         (exit_code, output) = subprocess.getstatusoutput (cmdstr)
